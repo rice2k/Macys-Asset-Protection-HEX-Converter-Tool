@@ -1,0 +1,37 @@
+{
+  "name": "ap-access-control-converter-desktop",
+  "version": "1.0.0",
+  "description": "Desktop AP access control hex converter with native import and export.",
+  "main": "src/main.js",
+  "author": "AP Operations",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "test": "node tests/converter-core.test.js",
+    "build": "electron-builder --win portable"
+  },
+  "build": {
+    "appId": "com.ap.accesscontrol.converter",
+    "productName": "AP Access Control Converter",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "src/**/*",
+      "node_modules/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": "portable",
+      "icon": "src/assets/app-icon.ico"
+    },
+    "portable": {
+      "artifactName": "AP_Access_Control_Converter_${version}.exe"
+    },
+    "asar": true
+  },
+  "dependencies": {
+    "xlsx": "^0.18.5"
+  }
+}
