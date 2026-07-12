@@ -1,2 +1,3 @@
-Build request: Macy's AP China Grove Hex Utility v1.0.3
+Build request: AP HEX Converter Tool v1.0.3
 Requested: 2026-07-12
+Trigger: direct main-branch Windows build
