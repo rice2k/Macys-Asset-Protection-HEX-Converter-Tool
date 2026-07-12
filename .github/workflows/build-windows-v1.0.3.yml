@@ -8,6 +8,12 @@ on:
       - 'AP_HEX_Converter_Tool.spec'
       - '.github/workflows/build-windows-v1.0.3.yml'
       - '.build/build-now.txt'
+  pull_request:
+    paths:
+      - 'desktop_app.py'
+      - 'AP_HEX_Converter_Tool.spec'
+      - '.github/workflows/build-windows-v1.0.3.yml'
+      - '.build/pr-build-trigger.txt'
   workflow_dispatch:
 
 permissions:
