@@ -1,0 +1,41 @@
+         subtitle.alignment = Alignment(horizontal="center")
+         subtitle.fill = dark_fill
+@@ -3113,21 +3387,21 @@
+             title="Save TXT report",
+             defaultextension=".txt",
+             initialdir=self.default_export_dir(),
+-            initialfile=f"Macys_AP_China_Grove_Hex_Utility_{stamp}.txt",
++            initialfile=f"AP_HEX_Converter_Tool_{stamp}.txt",
+             filetypes=[("Text Report", "*.txt")],
+         )
+         if not path_text:
+             return
+         path = Path(path_text)
+         path.write_text(self._build_text_report(), encoding="utf-8")
+-        self.set_status(f"Saved TXT report: {path_text}")
++        self.set_status(f"Saved TXT report: {path.name} — click to open", path)
+         self.show_export_complete(path, "TXT")
+ 
+     def _build_text_report(self) -> str:
+         records = self._export_records()
+         lines = [
+             f"{APP_SHORT_NAME} Conversion Report",
+-            "Macy's Asset Protection - China Grove",
++            "AP HEX Converter Tool",
+             "=" * 88,
+             f"Generated       : {datetime.now().strftime('%m/%d/%Y %I:%M:%S %p')}",
+             f"App Version     : {APP_VERSION}",
+@@ -3329,7 +3603,12 @@
+             [[["Candidate Name", "Colleague #"], ["Christopher Benson", "88984765"], ["Supervisor", "88123456"]]],
+             "sample.xlsx",
+         )
+-        assert imported["lines"] == ["Christopher Benson, 88984765"]
++        assert imported["lines"] == ["Christopher Benson, 88984765", "88123456"]
++        number_only = extract_name_id_lines_from_tables(
++            [[[88803101], [88803102.0], ["Employee 88803103"]]],
++            "numbers.xlsx",
++        )
++        assert number_only["lines"] == ["88803101", "88803102", "88803103"]
+         return
+     app = ConverterApp()
+     app.mainloop()

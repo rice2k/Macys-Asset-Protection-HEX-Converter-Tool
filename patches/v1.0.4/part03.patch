@@ -1,0 +1,100 @@
+         self.set_status("Unconvert workspace cleared.")
+ 
++    def show_results_popout(self) -> None:
++        if self.results_popout is not None and self.results_popout.winfo_exists():
++            self.results_popout.deiconify()
++            self.results_popout.lift()
++            self.results_popout.focus_force()
++            self.refresh_results_popout()
++            return
++
++        dialog = tk.Toplevel(self)
++        self.results_popout = dialog
++        dialog.title(f"{APP_SHORT_NAME} - Full Results")
++        dialog.configure(bg=UI_BG)
++        dialog.geometry("1180x720")
++        dialog.minsize(850, 500)
++        try:
++            dialog.iconbitmap(str(asset_path("app-icon.ico")))
++        except tk.TclError:
++            pass
++
++        header = tk.Frame(dialog, bg=UI_HEADER, height=72)
++        header.pack(fill="x")
++        header.pack_propagate(False)
++        tk.Frame(header, bg=UI_RED, width=6).pack(side="left", fill="y")
++        title_box = tk.Frame(header, bg=UI_HEADER)
++        title_box.pack(side="left", fill="both", expand=True, padx=18, pady=12)
++        tk.Label(title_box, text="Full Conversion Results", bg=UI_HEADER, fg=UI_TEXT, font=("Segoe UI", 17, "bold")).pack(anchor="w")
++        self.results_popout_count_var = tk.StringVar(value="0 rows")
++        tk.Label(title_box, textvariable=self.results_popout_count_var, bg=UI_HEADER, fg=UI_MUTED, font=("Segoe UI", 9)).pack(anchor="w", pady=(3, 0))
++
++        actions = tk.Frame(header, bg=UI_HEADER)
++        actions.pack(side="right", padx=16, pady=13)
++        self._button(actions, "Copy All", self.copy_all_pairs, icon="icon-copy.png", tooltip="Copy every valid FC,CN pair.").pack(side="left", padx=(0, 6))
++        self._button(actions, "Copy Pair", lambda: self.copy_popout_selected("pair"), icon="icon-copy.png", tooltip="Copy the selected FC,CN pair.").pack(side="left", padx=(0, 6))
++        self._button(actions, "Export", self.export_default, True, icon="icon-excel.png", tooltip="Export the current conversion report.").pack(side="left", padx=(0, 6))
++        self._button(actions, "Close", self.close_results_popout, icon="icon-clear.png").pack(side="left")
++
++        filters = tk.Frame(dialog, bg=UI_SURFACE_ALT, highlightthickness=1, highlightbackground=UI_BORDER)
++        filters.pack(fill="x", padx=14, pady=(14, 10))
++        tk.Label(filters, text="Search", bg=UI_SURFACE_ALT, fg=UI_MUTED, font=("Segoe UI", 9, "bold")).pack(side="left", padx=(12, 8), pady=10)
++        self.results_popout_search_var = tk.StringVar()
++        search = tk.Entry(
++            filters,
++            textvariable=self.results_popout_search_var,
++            bg=UI_INPUT,
++            fg=UI_TEXT,
++            insertbackground=UI_RED,
++            selectbackground=UI_BLUE,
++            selectforeground="#ffffff",
++            relief="flat",
++            bd=0,
++            highlightthickness=2,
++            highlightbackground=UI_INPUT_BORDER,
++            highlightcolor=UI_INPUT_FOCUS,
++            width=38,
++            font=("Segoe UI", 10),
++        )
++        search.pack(side="left", ipady=7, padx=(0, 16), pady=8)
++        self.results_popout_search_var.trace_add("write", lambda *_args: self.refresh_results_popout())
++        tk.Label(filters, text="Status", bg=UI_SURFACE_ALT, fg=UI_MUTED, font=("Segoe UI", 9, "bold")).pack(side="left", padx=(0, 8))
++        self.results_popout_status_var = tk.StringVar(value="All")
++        status_menu = tk.OptionMenu(filters, self.results_popout_status_var, "All", "Valid", "Warning", "Invalid", command=lambda _value: self.refresh_results_popout())
++        status_menu.configure(bg="#202633", fg="#ffffff", activebackground="#2c3444", activeforeground="#ffffff", relief="flat", highlightthickness=1, highlightbackground="#4a5261")
++        status_menu["menu"].configure(bg="#151922", fg="#ffffff", activebackground="#e51b2d", activeforeground="#ffffff")
++        status_menu.pack(side="left", pady=8)
++
++        table_frame = tk.Frame(dialog, bg=UI_SURFACE)
++        table_frame.pack(fill="both", expand=True, padx=14, pady=(0, 14))
++        table_frame.rowconfigure(0, weight=1)
++        table_frame.columnconfigure(0, weight=1)
++        columns = ("Line", "Hex ID", "FC", "CN", "Status", "Notes")
++        tree = ttk.Treeview(table_frame, columns=columns, show="headings")
++        self.results_popout_tree = tree
++        for col in columns:
++            tree.heading(col, text=col)
++        widths = {"Line": 70, "Hex ID": 170, "FC": 110, "CN": 110, "Status": 130, "Notes": 520}
++        for col, width in widths.items():
++            tree.column(col, width=width, minwidth=65, stretch=col == "Notes")
++        yscroll = ttk.Scrollbar(table_frame, orient="vertical", command=tree.yview, style="Dark.Vertical.TScrollbar")
++        xscroll = ttk.Scrollbar(table_frame, orient="horizontal", command=tree.xview, style="Dark.Horizontal.TScrollbar")
++        tree.configure(yscrollcommand=yscroll.set, xscrollcommand=xscroll.set)
++        tree.grid(row=0, column=0, sticky="nsew")
++        yscroll.grid(row=0, column=1, sticky="ns")
++        xscroll.grid(row=1, column=0, sticky="ew")
++        tree.tag_configure("invalid", background=UI_BAD_SOFT, foreground=UI_BAD_TEXT)
++        tree.tag_configure("warning", background=UI_WARN_SOFT, foreground=UI_WARN_TEXT)
++        tree.tag_configure("empty", foreground=UI_MUTED)
++        tree.bind("<Double-1>", lambda _event: self.copy_popout_selected("pair"))
++        self._enable_mousewheel(tree, tree, tree)
++        dialog.protocol("WM_DELETE_WINDOW", self.close_results_popout)
++        self.refresh_results_popout()
++        search.focus_set()
++        try:
++            dialog.state("zoomed")
++        except tk.TclError:
++            pass
++
++    def close_results_popout(self) -> None:
++        if self.results_popout is not None and self.results_popout.winfo_exists():

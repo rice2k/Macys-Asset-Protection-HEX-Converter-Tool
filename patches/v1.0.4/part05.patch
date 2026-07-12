@@ -1,0 +1,100 @@
++            return versioned_exe
++        return legacy_exe if legacy_exe.exists() else Path(sys.executable)
+ 
+     def create_desktop_shortcut(self) -> None:
+         desktop = Path(os.environ.get("USERPROFILE", str(Path.home()))) / "Desktop"
+         desktop.mkdir(parents=True, exist_ok=True)
+         target = self.app_launch_target()
+         icon = asset_path("app-icon.ico")
+-        shortcut_path = desktop / "Macy's AP China Grove Hex Utility.lnk"
++        shortcut_path = desktop / "AP HEX Converter Tool.lnk"
+ 
+         def ps_quote(value: str) -> str:
+             return "'" + value.replace("'", "''") + "'"
+@@ -2596,13 +2866,17 @@
+             self.set_status(f"Desktop shortcut created: {shortcut_path}")
+             messagebox.showinfo("Shortcut created", f"Desktop shortcut created:\n\n{shortcut_path}")
+         except Exception:
+-            fallback = desktop / "Macy's AP China Grove Hex Utility.url"
++            fallback = desktop / "AP HEX Converter Tool.url"
+             icon_text = str(icon).replace("\\", "/")
+             target_text = str(target).replace("\\", "/")
+             fallback.write_text(f"[InternetShortcut]\nURL=file:///{target_text}\nIconFile={icon_text}\nIconIndex=0\n", encoding="utf-8")
+             self.set_status(f"Desktop launcher created: {fallback}")
+             messagebox.showinfo("Launcher created", f"A desktop launcher was created:\n\n{fallback}")
+ 
++    def open_salesforce_employees(self) -> None:
++        webbrowser.open(SALESFORCE_EMPLOYEES_URL)
++        self.set_status("Opened Salesforce Employees in your browser.")
++
+     def open_bluewave(self) -> None:
+         webbrowser.open(BLUEWAVE_URL)
+         self.set_status("Opened BlueWave in your browser.")
+@@ -2880,14 +3154,14 @@
+             title="Save Excel report",
+             defaultextension=".xlsx",
+             initialdir=self.default_export_dir(),
+-            initialfile=f"Macys_AP_China_Grove_Hex_Utility_{stamp}.xlsx",
++            initialfile=f"AP_HEX_Converter_Tool_{stamp}.xlsx",
+             filetypes=[("Excel Workbook", "*.xlsx")],
+         )
+         if not path_text:
+             return
+         path = Path(path_text)
+         self._write_excel(path)
+-        self.set_status(f"Saved Excel report: {path_text}")
++        self.set_status(f"Saved Excel report: {path.name} — click to open", path)
+         self.show_export_complete(path, "Excel Workbook")
+ 
+     def export_csv(self) -> None:
+@@ -2899,14 +3173,14 @@
+             title="Save CSV report",
+             defaultextension=".csv",
+             initialdir=self.default_export_dir(),
+-            initialfile=f"Macys_AP_China_Grove_Hex_Utility_{stamp}.csv",
++            initialfile=f"AP_HEX_Converter_Tool_{stamp}.csv",
+             filetypes=[("CSV Report", "*.csv")],
+         )
+         if not path_text:
+             return
+         path = Path(path_text)
+         self._write_csv(path)
+-        self.set_status(f"Saved CSV report: {path_text}")
++        self.set_status(f"Saved CSV report: {path.name} — click to open", path)
+         self.show_export_complete(path, "CSV")
+ 
+     def _write_csv(self, path: Path) -> None:
+@@ -2925,7 +3199,7 @@
+             title="Save PDF report",
+             defaultextension=".pdf",
+             initialdir=self.default_export_dir(),
+-            initialfile=f"Macys_AP_China_Grove_Hex_Utility_{stamp}.pdf",
++            initialfile=f"AP_HEX_Converter_Tool_{stamp}.pdf",
+             filetypes=[("PDF Report", "*.pdf")],
+         )
+         if not path_text:
+@@ -2935,7 +3209,7 @@
+             return
+         path = Path(path_text)
+         self._write_pdf(path)
+-        self.set_status(f"Saved PDF report: {path_text}")
++        self.set_status(f"Saved PDF report: {path.name} — click to open", path)
+         self.show_export_complete(path, "PDF")
+ 
+     def _write_pdf(self, path: Path) -> None:
+@@ -2946,7 +3220,7 @@
+         cell_style = ParagraphStyle("APCell", parent=styles["BodyText"], fontSize=7, leading=9)
+         story = [
+             Paragraph(f"{APP_SHORT_NAME} Conversion Report", title_style),
+-            Paragraph("Macy's Asset Protection - China Grove access-control conversion report", subtitle_style),
++            Paragraph("AP HEX Converter Tool access-control conversion report", subtitle_style),
+             Spacer(1, 12),
+         ]
+ 
+@@ -3032,7 +3306,7 @@
+ 
+         summary.merge_cells("A2:D2")
+         subtitle = summary["A2"]
+-        subtitle.value = "Macy's Asset Protection - China Grove"
++        subtitle.value = "AP HEX Converter Tool"
+         subtitle.font = Font(bold=True, color="FFFFFF")
