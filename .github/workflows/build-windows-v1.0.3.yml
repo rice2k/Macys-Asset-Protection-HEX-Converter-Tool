@@ -1,9 +1,9 @@
-name: Build Macy's AP Hex Utility v1.0.3
+name: Build AP HEX Converter Tool v1.0.3
 
 on:
   pull_request:
     paths:
-      - '.build/v1.0.3/**'
+      - '.build/ap-hex-v1.0.3/**'
       - '.github/workflows/build-windows-v1.0.3.yml'
   workflow_dispatch:
 
@@ -19,16 +19,16 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Reassemble v1.0.3 build package
+      - name: Reassemble AP HEX Converter Tool package
         shell: pwsh
         run: |
-          $parts = Get-ChildItem '.build/v1.0.3/part*.b64' | Sort-Object Name
+          $parts = Get-ChildItem '.build/ap-hex-v1.0.3/part*.b64' | Sort-Object Name
           if ($parts.Count -ne 9) { throw "Expected 9 package parts, found $($parts.Count)." }
           $base64 = ($parts | ForEach-Object { Get-Content $_.FullName -Raw }) -join ''
-          $zip = 'Macys_AP_China_Grove_Hex_Utility_v1.0.3_Windows_Build_Package.zip'
+          $zip = 'AP_HEX_Converter_Tool_v1.0.3_Windows_Build_Package.zip'
           [IO.File]::WriteAllBytes($zip, [Convert]::FromBase64String($base64))
           $actual = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLower()
-          $expected = '2cc459de2802fff6bcf44ad1ddb06f85450dcdb5f6bec4ca674a081b7ce31adb'
+          $expected = '1468bd77c2c285989e35c90343000a676a88d30b7dc59830fe60522de89a9ad5'
           if ($actual -ne $expected) { throw "Package checksum mismatch. Expected $expected, got $actual." }
           Expand-Archive $zip -DestinationPath 'package' -Force
 
@@ -52,20 +52,18 @@ jobs:
         run: |
           $project = Get-ChildItem 'package' -Directory | Select-Object -First 1
           Set-Location $project.FullName
-          python -m PyInstaller --noconfirm --clean Macys_AP_China_Grove_Hex_Utility.spec
-          $source = Join-Path $PWD 'dist\Macys_AP_China_Grove_Hex_Utility.exe'
-          $target = Join-Path $PWD 'dist\Macys_AP_China_Grove_Hex_Utility_v1.0.3.exe'
-          if (!(Test-Path $source)) { throw "PyInstaller did not create $source" }
-          Move-Item $source $target -Force
+          python -m PyInstaller --noconfirm --clean AP_HEX_Converter_Tool.spec
+          $target = Join-Path $PWD 'dist\AP_HEX_Converter_Tool_v1.0.3.exe'
+          if (!(Test-Path $target)) { throw "PyInstaller did not create $target" }
           $hash = (Get-FileHash $target -Algorithm SHA256).Hash.ToLower()
-          "$hash  Macys_AP_China_Grove_Hex_Utility_v1.0.3.exe" | Set-Content (Join-Path $PWD 'dist\Macys_AP_China_Grove_Hex_Utility_v1.0.3.exe.sha256.txt') -Encoding ascii
+          "$hash  AP_HEX_Converter_Tool_v1.0.3.exe" | Set-Content (Join-Path $PWD 'dist\AP_HEX_Converter_Tool_v1.0.3.exe.sha256.txt') -Encoding ascii
 
       - name: Upload Windows build
         uses: actions/upload-artifact@v4
         with:
-          name: Macys_AP_China_Grove_Hex_Utility_v1.0.3_Windows
+          name: AP_HEX_Converter_Tool_v1.0.3_Windows
           path: |
-            package/**/dist/Macys_AP_China_Grove_Hex_Utility_v1.0.3.exe
-            package/**/dist/Macys_AP_China_Grove_Hex_Utility_v1.0.3.exe.sha256.txt
+            package/**/dist/AP_HEX_Converter_Tool_v1.0.3.exe
+            package/**/dist/AP_HEX_Converter_Tool_v1.0.3.exe.sha256.txt
           if-no-files-found: error
           retention-days: 30
