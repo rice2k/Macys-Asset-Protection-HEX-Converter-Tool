@@ -1,0 +1,270 @@
+ML/HTML files onto this box. Excel import scans every row, column, and worksheet for 8-digit IDs.",
+             bg="#10141b",
+             fg="#a8b2c2",
+             font=("Segoe UI", 9),
+             wraplength=650,
+             justify="left",
+-        ).pack(anchor="w", padx=12, pady=(0, 8))
++            anchor="w",
++        )
++        self.queue_help_label.pack(fill="x", padx=12, pady=(0, 8))
+         tk.Label(
+             input_panel,
+             text="DROP FILES HERE  •  OR CLICK INSIDE TO TYPE / PASTE",
+@@ -1546,17 +1615,17 @@
+             padx=12,
+             pady=12,
+             font=("Cascadia Mono", 11),
+-            wrap="none",
++            wrap="word",
++            spacing1=2,
++            spacing3=2,
+         )
+         self.multi_text.tag_configure("input_valid", background=UI_GREEN_SOFT, foreground=UI_GREEN_TEXT)
+         self.multi_text.tag_configure("input_warning", background=UI_WARN_SOFT, foreground=UI_WARN_TEXT)
+         self.multi_text.tag_configure("input_invalid", background=UI_BAD_SOFT, foreground=UI_BAD_TEXT)
+         multi_scroll_y = ttk.Scrollbar(multi_frame, orient="vertical", command=self.multi_text.yview, style="Dark.Vertical.TScrollbar")
+-        multi_scroll_x = ttk.Scrollbar(multi_frame, orient="horizontal", command=self.multi_text.xview, style="Dark.Horizontal.TScrollbar")
+-        self.multi_text.configure(yscrollcommand=multi_scroll_y.set, xscrollcommand=multi_scroll_x.set)
++        self.multi_text.configure(yscrollcommand=multi_scroll_y.set)
+         self.multi_text.grid(row=0, column=0, sticky="nsew")
+         multi_scroll_y.grid(row=0, column=1, sticky="ns")
+-        multi_scroll_x.grid(row=1, column=0, sticky="ew")
+         self.multi_text.insert("1.0", "")
+         self.multi_text.bind("<<Modified>>", self.handle_batch_input_changed)
+         self._enable_mousewheel(self.multi_text, self.multi_text, self.multi_text)
+@@ -1612,6 +1681,7 @@
+         tk.Label(header, text="Results", bg="#10141b", fg="#ffffff", font=("Segoe UI", 12, "bold")).pack(side="left")
+         copy_row = tk.Frame(header, bg="#10141b")
+         copy_row.pack(side="right")
++        self._button(copy_row, "Pop Out Results", self.show_results_popout, icon="icon-folder.png", tooltip="Open the complete output in a separate full-size results window.").pack(side="left", padx=(0, 6))
+         self._button(copy_row, "Copy All", self.copy_all_pairs, icon="icon-copy.png", tooltip="Copy all valid FC,CN pairs to the clipboard.").pack(side="left", padx=(0, 6))
+         self._button(copy_row, "Clear Invalid", self.clear_invalid_rows, icon="icon-clear.png", tooltip="Remove invalid rows from the review table.").pack(side="left", padx=(0, 6))
+         self._button(copy_row, "Copy FC", lambda: self.copy_selected("fc"), icon="icon-copy.png", tooltip="Copy the selected row's Facility Code.").pack(side="left", padx=(0, 6))
+@@ -1960,11 +2030,47 @@
+         if index == 4:
+             self.render_history()
+ 
+-    def set_status(self, message: str) -> None:
++    def set_status(self, message: str, link_path: Path | str | None = None) -> None:
+         self.status_var.set(message)
+         if hasattr(self, "nav_status"):
+             self.nav_status.set(message)
+ 
++        self.status_link_path = Path(link_path) if link_path else None
++        is_link = self.status_link_path is not None
++        cursor = "hand2" if is_link else "arrow"
++        nav_font = ("Segoe UI", 9, "bold underline") if is_link else ("Segoe UI", 9, "bold")
++        footer_font = ("Segoe UI", 9, "underline") if is_link else ("Segoe UI", 9)
++
++        if hasattr(self, "nav_status_label"):
++            self.nav_status_label.configure(cursor=cursor, font=nav_font, fg=UI_BLUE)
++            self.nav_status_label.unbind("<Button-1>")
++            self.nav_status_label.unbind("<Enter>")
++            self.nav_status_label.unbind("<Leave>")
++            if is_link:
++                self.nav_status_label.bind("<Button-1>", self._open_status_link)
++                self.nav_status_label.bind("<Enter>", lambda _event: self.nav_status_label.configure(fg=UI_RED))
++                self.nav_status_label.bind("<Leave>", lambda _event: self.nav_status_label.configure(fg=UI_BLUE))
++
++        if hasattr(self, "footer_status_label"):
++            self.footer_status_label.configure(cursor=cursor, font=footer_font, fg=UI_BLUE if is_link else UI_MUTED)
++            self.footer_status_label.unbind("<Button-1>")
++            self.footer_status_label.unbind("<Enter>")
++            self.footer_status_label.unbind("<Leave>")
++            if is_link:
++                self.footer_status_label.bind("<Button-1>", self._open_status_link)
++                self.footer_status_label.bind("<Enter>", lambda _event: self.footer_status_label.configure(fg=UI_RED))
++                self.footer_status_label.bind("<Leave>", lambda _event: self.footer_status_label.configure(fg=UI_BLUE))
++
++        if hasattr(self, "nav_status_tooltip"):
++            if is_link:
++                self.nav_status_tooltip.text = f"Click to open the saved output file:\n{self.status_link_path}"
++            else:
++                self.nav_status_tooltip.text = "Shows the latest action or result from the current workspace."
++
++    def _open_status_link(self, _event: Any | None = None) -> None:
++        if self.status_link_path:
++            self.open_path(self.status_link_path, "file")
++
+     def _enable_drop_target(self, widget: tk.Widget) -> bool:
+         """Register a TkDND target and report whether registration succeeded."""
+         if DND_FILES is None or not hasattr(widget, "drop_target_register"):
+@@ -2213,17 +2319,17 @@
+ 
+     def load_sample(self) -> None:
+         self.multi_text.delete("1.0", "end")
+-        self.multi_text.insert("1.0", "88984717\n88984130\nActive Christopher Benson, 88984765\nBAD-LINE")
++        self.multi_text.insert("1.0", "88984717\n88984130\n88984765\n88984A20")
+         self.multi_text.edit_modified(True)
+         self.handle_batch_input_changed()
+-        self.set_status("Sample IDs loaded.")
++        self.set_status("Working HEX examples loaded. All sample rows are valid.")
+ 
+     def load_unconvert_sample(self) -> None:
+         self.unconvert_text.delete("1.0", "end")
+-        self.unconvert_text.insert("1.0", "34968,18199\nFC 34968 CN 18192\n34968\t18277\nBAD-LINE")
++        self.unconvert_text.insert("1.0", "34968,18199\n34968,16688\n34968,18277\n34968,18976")
+         self.unconvert_text.edit_modified(True)
+         self.handle_unconvert_input_changed()
+-        self.set_status("Unconvert sample loaded.")
++        self.set_status("Working FC/CN examples loaded. All sample rows are valid.")
+ 
+     def clear_workspace(self) -> None:
+         self.multi_text.delete("1.0", "end")
+@@ -2278,6 +2384,165 @@
+         self.render_unconvert_results()
+         self.set_status("Unconvert workspace cleared.")
+ 
++    def show_results_popout(self) -> None:
++        if self.results_popout is not None and self.results_popout.winfo_exists():
++            self.results_popout.deiconify()
++            self.results_popout.lift()
++            self.results_popout.focus_force()
++            self.refresh_results_popout()
++            return
++
++        dialog = tk.Toplevel(self)
++        self.results_popout = dialog
++        dialog.title(f"{APP_SHORT_NAME} - Full Results")
++        dialog.configure(bg=UI_BG)
++        dialog.geometry("1180x720")
++        dialog.minsize(850, 500)
++        try:
++            dialog.iconbitmap(str(asset_path("app-icon.ico")))
++        except tk.TclError:
++            pass
++
++        header = tk.Frame(dialog, bg=UI_HEADER, height=72)
++        header.pack(fill="x")
++        header.pack_propagate(False)
++        tk.Frame(header, bg=UI_RED, width=6).pack(side="left", fill="y")
++        title_box = tk.Frame(header, bg=UI_HEADER)
++        title_box.pack(side="left", fill="both", expand=True, padx=18, pady=12)
++        tk.Label(title_box, text="Full Conversion Results", bg=UI_HEADER, fg=UI_TEXT, font=("Segoe UI", 17, "bold")).pack(anchor="w")
++        tk.Label(title_box, text="View, search, copy, scroll, and export the complete conversion output.", bg=UI_HEADER, fg=UI_MUTED, font=("Segoe UI", 9)).pack(anchor="w", pady=(2, 0))
++
++        tools = tk.Frame(dialog, bg=UI_SURFACE, highlightbackground=UI_BORDER, highlightthickness=1)
++        tools.pack(fill="x", padx=16, pady=(16, 8))
++        tk.Label(tools, text="Search", bg=UI_SURFACE, fg=UI_MUTED, font=("Segoe UI", 9, "bold")).pack(side="left", padx=(12, 6), pady=10)
++        self.results_popout_search_var = tk.StringVar(value="")
++        search_entry = tk.Entry(tools, textvariable=self.results_popout_search_var, bg=UI_INPUT, fg=UI_TEXT, insertbackground=UI_TEXT, relief="flat", width=30, highlightthickness=1, highlightbackground=UI_BORDER)
++        search_entry.pack(side="left", padx=(0, 12), pady=8)
++        self.results_popout_search_var.trace_add("write", lambda *_args: self.refresh_results_popout())
++        tk.Label(tools, text="Status", bg=UI_SURFACE, fg=UI_MUTED, font=("Segoe UI", 9, "bold")).pack(side="left", padx=(0, 6))
++        self.results_popout_status_var = tk.StringVar(value="All")
++        status_menu = ttk.Combobox(tools, textvariable=self.results_popout_status_var, values=["All", "Valid", "Invalid", "Warning"], state="readonly", width=12)
++        status_menu.pack(side="left", padx=(0, 12), pady=8)
++        status_menu.bind("<<ComboboxSelected>>", lambda _event: self.refresh_results_popout())
++        self.results_popout_count_var = tk.StringVar(value="0 result(s)")
++        tk.Label(tools, textvariable=self.results_popout_count_var, bg=UI_SURFACE, fg=UI_BLUE, font=("Segoe UI", 9, "bold")).pack(side="left", padx=(0, 12))
++
++        for text, command, icon in [
++            ("Copy FC", lambda: self.copy_popout_selected("fc"), "icon-copy.png"),
++            ("Copy CN", lambda: self.copy_popout_selected("cn"), "icon-copy.png"),
++            ("Copy Pair", lambda: self.copy_popout_selected("pair"), "icon-copy.png"),
++            ("Export", self.export_excel, "icon-export.png"),
++        ]:
++            self._button(tools, text, command, icon=icon).pack(side="right", padx=(0, 8), pady=7)
++
++        table_frame = tk.Frame(dialog, bg=UI_SURFACE, highlightbackground=UI_BORDER, highlightthickness=1)
++        table_frame.pack(fill="both", expand=True, padx=16, pady=(0, 12))
++        table_frame.grid_rowconfigure(0, weight=1)
++        table_frame.grid_columnconfigure(0, weight=1)
++        columns = ("line", "hex", "fc", "cn", "status", "notes")
++        tree = ttk.Treeview(table_frame, columns=columns, show="headings", style="Results.Treeview")
++        self.results_popout_tree = tree
++        self.results_popout_lookup = {}
++        headings = {"line": "Line", "hex": "Hex ID", "fc": "FC", "cn": "CN", "status": "Status", "notes": "Notes"}
++        widths = {"line": 65, "hex": 145, "fc": 100, "cn": 100, "status": 110, "notes": 500}
++        for column in columns:
++            tree.heading(column, text=headings[column])
++            tree.column(column, width=widths[column], minwidth=60, anchor="w", stretch=column == "notes")
++        y_scroll = ttk.Scrollbar(table_frame, orient="vertical", command=tree.yview)
++        x_scroll = ttk.Scrollbar(table_frame, orient="horizontal", command=tree.xview)
++        tree.configure(yscrollcommand=y_scroll.set, xscrollcommand=x_scroll.set)
++        tree.grid(row=0, column=0, sticky="nsew")
++        y_scroll.grid(row=0, column=1, sticky="ns")
++        x_scroll.grid(row=1, column=0, sticky="ew")
++        tree.tag_configure("valid", background=UI_GREEN_SOFT, foreground=UI_GREEN_TEXT)
++        tree.tag_configure("warning", background=UI_WARN_SOFT, foreground=UI_WARN_TEXT)
++        tree.tag_configure("invalid", background=UI_BAD_SOFT, foreground=UI_BAD_TEXT)
++        tree.bind("<Double-1>", lambda _event: self.copy_popout_selected("pair"))
++
++        footer = tk.Frame(dialog, bg=UI_BG)
++        footer.pack(fill="x", padx=16, pady=(0, 14))
++        self._button(footer, "Close", self.close_results_popout, icon="icon-clear.png").pack(side="right")
++        dialog.protocol("WM_DELETE_WINDOW", self.close_results_popout)
++        self.refresh_results_popout()
++        try:
++            dialog.state("zoomed")
++        except tk.TclError:
++            pass
++
++    def close_results_popout(self) -> None:
++        if self.results_popout is not None:
++            try:
++                self.results_popout.destroy()
++            except tk.TclError:
++                pass
++        self.results_popout = None
++        self.results_popout_tree = None
++        self.results_popout_lookup = {}
++
++    def refresh_results_popout(self) -> None:
++        tree = self.results_popout_tree
++        if tree is None or not tree.winfo_exists():
++            return
++        for item in tree.get_children():
++            tree.delete(item)
++        self.results_popout_lookup = {}
++        search_text = getattr(self, "results_popout_search_var", tk.StringVar(value="")).get().strip().lower()
++        status_filter = getattr(self, "results_popout_status_var", tk.StringVar(value="All")).get().lower()
++        combined: list[ConvertedRow | InvalidRow] = list(self.results) + list(self.invalid)
++        combined.sort(key=lambda row: row.line)
++        shown = 0
++        for row in combined:
++            if isinstance(row, ConvertedRow):
++                status = row.status
++                values = (row.line, row.hex_value, row.facility, row.card, row.status, row.notes)
++                tag = "warning" if row.status == "Warning" else "valid"
++            else:
++                status = "Invalid"
++                values = (row.line, row.raw, "", "", "Invalid", row.reason)
++                tag = "invalid"
++            searchable = " ".join(str(value) for value in values).lower()
++            if search_text and search_text not in searchable:
++                continue
++            if status_filter != "all" and status.lower() != status_filter:
++                continue
++            item_id = tree.insert("", "end", values=values, tags=(tag,))
++            self.results_popout_lookup[item_id] = row
++            shown += 1
++        if hasattr(self, "results_popout_count_var"):
++            self.results_popout_count_var.set(f"Showing {shown} of {len(combined)} row(s)")
++
++    def copy_popout_selected(self, mode: str) -> None:
++        tree = self.results_popout_tree
++        if tree is None:
++            return
++        selected = tree.selection()
++        if not selected:
++            messagebox.showinfo("Select a result", "Select a valid result row first.", parent=self.results_popout)
++            return
++        row = self.results_popout_lookup.get(selected[0])
++        if row is None or isinstance(row, InvalidRow):
++            messagebox.showinfo("Invalid row", "The selected row does not contain a valid FC/CN result.", parent=self.results_popout)
++            return
++        values = {
++            "hex": row.hex_value,
++            "fc": str(row.facility),
++            "cn": str(row.card),
++            "pair": f"{row.facility},{row.card}",
++        }
++        self.clipboard_clear()
++        self.clipboard_append(values.get(mode, values["pair"]))
++        self.set_status("Selected result copied from the full results window.")
++
+     def sort_results_by(self, column: str) -> None:
+         if self.sort_column == column:
+             self.sort_reverse = not self.sort_reverse
