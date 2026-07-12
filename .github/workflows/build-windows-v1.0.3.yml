@@ -1,9 +1,10 @@
 name: Build Macy's AP Hex Utility v1.0.3
 
 on:
-  push:
+  pull_request:
     paths:
-      - '.build/build-now.txt'
+      - '.build/v1.0.3/**'
+      - '.github/workflows/build-windows-v1.0.3.yml'
   workflow_dispatch:
 
 permissions:
@@ -18,6 +19,19 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
+      - name: Reassemble v1.0.3 build package
+        shell: pwsh
+        run: |
+          $parts = Get-ChildItem '.build/v1.0.3/part*.b64' | Sort-Object Name
+          if ($parts.Count -ne 9) { throw "Expected 9 package parts, found $($parts.Count)." }
+          $base64 = ($parts | ForEach-Object { Get-Content $_.FullName -Raw }) -join ''
+          $zip = 'Macys_AP_China_Grove_Hex_Utility_v1.0.3_Windows_Build_Package.zip'
+          [IO.File]::WriteAllBytes($zip, [Convert]::FromBase64String($base64))
+          $actual = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLower()
+          $expected = '2cc459de2802fff6bcf44ad1ddb06f85450dcdb5f6bec4ca674a081b7ce31adb'
+          if ($actual -ne $expected) { throw "Package checksum mismatch. Expected $expected, got $actual." }
+          Expand-Archive $zip -DestinationPath 'package' -Force
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -27,12 +41,17 @@ jobs:
       - name: Install build dependencies
         shell: pwsh
         run: |
+          $project = Get-ChildItem 'package' -Directory | Select-Object -First 1
+          if (!$project) { throw 'Extracted project directory was not found.' }
+          Set-Location $project.FullName
           python -m pip install --upgrade pip
-          python -m pip install pyinstaller==6.14.2 openpyxl==3.1.5 Pillow==11.2.1 reportlab==4.4.2 xlrd==2.0.2 tkinterdnd2==0.4.3 windnd==1.0.7
+          python -m pip install -r requirements-build.txt
 
       - name: Build Windows executable
         shell: pwsh
         run: |
+          $project = Get-ChildItem 'package' -Directory | Select-Object -First 1
+          Set-Location $project.FullName
           python -m PyInstaller --noconfirm --clean Macys_AP_China_Grove_Hex_Utility.spec
           $source = Join-Path $PWD 'dist\Macys_AP_China_Grove_Hex_Utility.exe'
           $target = Join-Path $PWD 'dist\Macys_AP_China_Grove_Hex_Utility_v1.0.3.exe'
@@ -46,7 +65,7 @@ jobs:
         with:
           name: Macys_AP_China_Grove_Hex_Utility_v1.0.3_Windows
           path: |
-            dist/Macys_AP_China_Grove_Hex_Utility_v1.0.3.exe
-            dist/Macys_AP_China_Grove_Hex_Utility_v1.0.3.exe.sha256.txt
+            package/**/dist/Macys_AP_China_Grove_Hex_Utility_v1.0.3.exe
+            package/**/dist/Macys_AP_China_Grove_Hex_Utility_v1.0.3.exe.sha256.txt
           if-no-files-found: error
           retention-days: 30
