@@ -8,16 +8,10 @@ on:
       - 'AP_HEX_Converter_Tool.spec'
       - '.github/workflows/build-windows-v1.0.3.yml'
       - '.build/build-now.txt'
-  pull_request:
-    paths:
-      - 'desktop_app.py'
-      - 'AP_HEX_Converter_Tool.spec'
-      - '.github/workflows/build-windows-v1.0.3.yml'
-      - '.build/pr-build-trigger.txt'
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build-windows-exe:
@@ -25,42 +19,51 @@ jobs:
     timeout-minutes: 30
 
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
+      - name: Clone source without marketplace actions
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $repo = "https://x-access-token:$env:GH_TOKEN@github.com/$env:GITHUB_REPOSITORY.git"
+          git clone $repo source
+          Set-Location source
+          git checkout $env:GITHUB_SHA
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-          architecture: 'x64'
-
-      - name: Install build dependencies
+      - name: Install dependencies and validate
         shell: pwsh
         run: |
+          Set-Location source
+          python --version
           python -m pip install --upgrade pip
           python -m pip install pyinstaller==6.14.2 openpyxl==3.1.5 Pillow==11.2.1 reportlab==4.4.2 xlrd==2.0.2 tkinterdnd2==0.4.3 windnd==1.0.7
-
-      - name: Validate source
-        shell: pwsh
-        run: |
           python -m py_compile desktop_app.py
           if (!(Test-Path 'AP_HEX_Converter_Tool.spec')) { throw 'Build specification is missing.' }
 
-      - name: Build Windows executable
+      - name: Build AP HEX Converter Tool executable
         shell: pwsh
         run: |
+          Set-Location source
           python -m PyInstaller --noconfirm --clean AP_HEX_Converter_Tool.spec
           $target = Join-Path $PWD 'dist\AP_HEX_Converter_Tool_v1.0.3.exe'
           if (!(Test-Path $target)) { throw "PyInstaller did not create $target" }
           $hash = (Get-FileHash $target -Algorithm SHA256).Hash.ToLower()
           "$hash  AP_HEX_Converter_Tool_v1.0.3.exe" | Set-Content (Join-Path $PWD 'dist\AP_HEX_Converter_Tool_v1.0.3.exe.sha256.txt') -Encoding ascii
 
-      - name: Upload Windows build
-        uses: actions/upload-artifact@v4
-        with:
-          name: AP_HEX_Converter_Tool_v1.0.3_Windows
-          path: |
-            dist/AP_HEX_Converter_Tool_v1.0.3.exe
-            dist/AP_HEX_Converter_Tool_v1.0.3.exe.sha256.txt
-          if-no-files-found: error
-          retention-days: 30
+      - name: Publish executable to build-output branch
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $repo = "https://x-access-token:$env:GH_TOKEN@github.com/$env:GITHUB_REPOSITORY.git"
+          New-Item -ItemType Directory -Path publish | Out-Null
+          Copy-Item 'source\dist\AP_HEX_Converter_Tool_v1.0.3.exe' 'publish\AP_HEX_Converter_Tool_v1.0.3.exe'
+          Copy-Item 'source\dist\AP_HEX_Converter_Tool_v1.0.3.exe.sha256.txt' 'publish\AP_HEX_Converter_Tool_v1.0.3.exe.sha256.txt'
+          Set-Location publish
+          git init
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git remote add origin $repo
+          git add .
+          git commit -m 'Publish AP HEX Converter Tool v1.0.3 Windows executable'
+          git branch -M build-output-v1.0.3
+          git push --force origin build-output-v1.0.3
