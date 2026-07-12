@@ -1,10 +1,13 @@
 name: Build AP HEX Converter Tool v1.0.3
 
 on:
-  pull_request:
+  push:
+    branches: [main]
     paths:
-      - '.build/ap-hex-v1.0.3/**'
+      - 'desktop_app.py'
+      - 'AP_HEX_Converter_Tool.spec'
       - '.github/workflows/build-windows-v1.0.3.yml'
+      - '.build/build-now.txt'
   workflow_dispatch:
 
 permissions:
@@ -19,19 +22,6 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Reassemble AP HEX Converter Tool package
-        shell: pwsh
-        run: |
-          $parts = Get-ChildItem '.build/ap-hex-v1.0.3/part*.b64' | Sort-Object Name
-          if ($parts.Count -ne 9) { throw "Expected 9 package parts, found $($parts.Count)." }
-          $base64 = ($parts | ForEach-Object { Get-Content $_.FullName -Raw }) -join ''
-          $zip = 'AP_HEX_Converter_Tool_v1.0.3_Windows_Build_Package.zip'
-          [IO.File]::WriteAllBytes($zip, [Convert]::FromBase64String($base64))
-          $actual = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLower()
-          $expected = '1468bd77c2c285989e35c90343000a676a88d30b7dc59830fe60522de89a9ad5'
-          if ($actual -ne $expected) { throw "Package checksum mismatch. Expected $expected, got $actual." }
-          Expand-Archive $zip -DestinationPath 'package' -Force
-
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -41,17 +31,18 @@ jobs:
       - name: Install build dependencies
         shell: pwsh
         run: |
-          $project = Get-ChildItem 'package' -Directory | Select-Object -First 1
-          if (!$project) { throw 'Extracted project directory was not found.' }
-          Set-Location $project.FullName
           python -m pip install --upgrade pip
-          python -m pip install -r requirements-build.txt
+          python -m pip install pyinstaller==6.14.2 openpyxl==3.1.5 Pillow==11.2.1 reportlab==4.4.2 xlrd==2.0.2 tkinterdnd2==0.4.3 windnd==1.0.7
+
+      - name: Validate source
+        shell: pwsh
+        run: |
+          python -m py_compile desktop_app.py
+          if (!(Test-Path 'AP_HEX_Converter_Tool.spec')) { throw 'Build specification is missing.' }
 
       - name: Build Windows executable
         shell: pwsh
         run: |
-          $project = Get-ChildItem 'package' -Directory | Select-Object -First 1
-          Set-Location $project.FullName
           python -m PyInstaller --noconfirm --clean AP_HEX_Converter_Tool.spec
           $target = Join-Path $PWD 'dist\AP_HEX_Converter_Tool_v1.0.3.exe'
           if (!(Test-Path $target)) { throw "PyInstaller did not create $target" }
@@ -63,7 +54,7 @@ jobs:
         with:
           name: AP_HEX_Converter_Tool_v1.0.3_Windows
           path: |
-            package/**/dist/AP_HEX_Converter_Tool_v1.0.3.exe
-            package/**/dist/AP_HEX_Converter_Tool_v1.0.3.exe.sha256.txt
+            dist/AP_HEX_Converter_Tool_v1.0.3.exe
+            dist/AP_HEX_Converter_Tool_v1.0.3.exe.sha256.txt
           if-no-files-found: error
           retention-days: 30
