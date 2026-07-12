@@ -1,0 +1,100 @@
+--- /mnt/data/desktop_app.py	2026-07-12 21:55:41.358888802 +0000
++++ /mnt/data/AP_HEX_Converter_Tool_v1.0.4_Windows_Build/desktop_app.py	2026-07-12 21:58:36.081880965 +0000
+@@ -51,10 +51,11 @@
+     windnd = None
+ 
+ BLUEWAVE_URL = "http://ma000xsblw1001/"
++SALESFORCE_EMPLOYEES_URL = "https://thinklp-8717.lightning.force.com/lightning/o/Contact/list?filterName=AllContacts"
+ CONTACT_EMAIL = "christopher.schumacher@macys.com"
+-APP_DISPLAY_NAME = "Macy's Asset Protection - China Grove Hex Converter Utility"
+-APP_SHORT_NAME = "Macy's AP China Grove Hex Utility"
+-APP_VERSION = "1.0.1"
++APP_DISPLAY_NAME = "AP HEX Converter Tool"
++APP_SHORT_NAME = "AP HEX Converter Tool"
++APP_VERSION = "1.0.4"
+ APP_STATE_DIR = Path(os.environ.get("APPDATA", str(Path.home()))) / "AP_Access_Control_Converter"
+ SETTINGS_FILE = APP_STATE_DIR / "settings.json"
+ EXPORT_TYPE_CHOICES = ["Excel Workbook (.xlsx)", "CSV Report (.csv)", "TXT Report (.txt)", "PDF Report (.pdf)"]
+@@ -440,13 +441,41 @@
+     return best
+ 
+ 
++def extract_all_eight_digit_ids(value: Any) -> list[str]:
++    """Return every standalone 8-digit number contained in one imported cell."""
++    if isinstance(value, bool) or value is None:
++        return []
++    if isinstance(value, int):
++        raw = str(value)
++    elif isinstance(value, float) and value.is_integer():
++        raw = str(int(value))
++    else:
++        raw = cell_text(value)
++        # Excel and CSV exports sometimes render whole numbers with a trailing .0.
++        if re.fullmatch(r"\d{8}\.0+", raw):
++            raw = raw.split(".", 1)[0]
++    return re.findall(r"(?<!\d)(\d{8})(?!\d)", raw)
++
++
+ def extract_eight_digit_id(value: Any) -> str:
+-    raw = cell_text(value)
+-    preferred = re.search(r"\b(88\d{6})\b", raw)
+-    if preferred:
+-        return preferred.group(1)
+-    generic = re.search(r"\b(\d{8})\b", raw)
+-    return generic.group(1) if generic else ""
++    values = extract_all_eight_digit_ids(value)
++    if not values:
++        return ""
++    return next((item for item in values if item.startswith("88")), values[0])
++
++
++def extract_number_only_ids(tables: list[list[list[str]]]) -> list[str]:
++    """Scan every worksheet/table, row, column, and cell for 8-digit numbers."""
++    seen: set[str] = set()
++    found: list[str] = []
++    for rows in tables:
++        for row in rows:
++            for cell in row:
++                for emp_id in extract_all_eight_digit_ids(cell):
++                    if emp_id not in seen:
++                        seen.add(emp_id)
++                        found.append(emp_id)
++    return found
+ 
+ 
+ def is_noise_name(value: Any) -> bool:
+@@ -514,7 +543,7 @@
+ 
+ def extract_name_id_lines_from_tables(tables: list[list[list[str]]], source_label: str) -> dict[str, Any]:
+     pairs: list[tuple[str, str]] = []
+-    strategy = "fallback"
++    strategy = "numbers-only scan"
+     match_label = ""
+     for rows in tables:
+         header_pair = find_header_pair(rows)
+@@ -536,15 +565,33 @@
+                     strategy = "alternate headers"
+                     match_label = f"{header_pair['name_header']} + {header_pair['id_header']}"
+                 continue
+-        pairs.extend(fallback_extract_pairs(rows))
++        # Without recognized name/ID headers, import the numeric IDs only.
++        # This prevents notes or unrelated text from being mistaken for employee names.
++
++    unique_pairs = dedupe_pairs(pairs)
++    paired_ids = {emp_id for _name, emp_id in unique_pairs}
++    all_ids = extract_number_only_ids(tables)
++    number_only_ids = [emp_id for emp_id in all_ids if emp_id not in paired_ids]
++
++    lines = [f"{name}, {emp_id}" for name, emp_id in unique_pairs]
++    lines.extend(number_only_ids)
++
++    if unique_pairs and number_only_ids:
++        mode = "named employee rows plus numbers-only scan"
++    elif unique_pairs:
++        mode = f"{strategy} ({match_label})" if match_label else strategy
++    else:
++        mode = "numbers-only scan across every row, column, and worksheet"
+ 
+-    unique = dedupe_pairs(pairs)
+-    mode = f"{strategy} ({match_label})" if match_label else strategy
+     return {
