@@ -44,12 +44,11 @@ except Exception:  # pragma: no cover - drag/drop is optional
 
 
 BLUEWAVE_URL = "http://ma000xsblw1001/"
-SALESFORCE_URL = "https://macys.my.salesforce.com/"
 PROJECT_URL = "https://github.com/rice2k/Macys-Asset-Protection-HEX-Converter-Tool"
 CONTACT_EMAIL = "christopher.schumacher@macys.com"
 APP_DISPLAY_NAME = "Macy's Asset Protection - China Grove Hex Converter Utility"
 APP_SHORT_NAME = "Macy's AP China Grove Hex Utility"
-APP_VERSION = "1.0.8"
+APP_VERSION = "1.0.9"
 APP_STATE_DIR = Path(os.environ.get("APPDATA", str(Path.home()))) / "AP_Access_Control_Converter"
 SETTINGS_FILE = APP_STATE_DIR / "settings.json"
 EXPORT_TYPE_CHOICES = ["Excel Workbook (.xlsx)", "CSV Report (.csv)", "TXT Report (.txt)", "PDF Report (.pdf)"]
@@ -1401,8 +1400,6 @@ class ConverterApp(TkRoot):
         header.pack_propagate(False)
 
         logo_path = asset_path("macys-ap-icon.png")
-        if not logo_path.exists():
-            logo_path = asset_path("macys-ap-orb.png")
         if logo_path.exists():
             image = Image.open(logo_path).resize((50, 50), Image.LANCZOS)
             self.logo_photo = ImageTk.PhotoImage(image)
@@ -1460,13 +1457,6 @@ class ConverterApp(TkRoot):
             self.open_bluewave,
             icon="icon-bluewave.png",
             tooltip="Open the BlueWave access-control site in your browser.",
-        ).pack(side="right", padx=(0, 8), pady=8)
-        self._button(
-            toolbar,
-            "Salesforce",
-            self.open_salesforce,
-            icon="icon-salesforce.png",
-            tooltip="Open the Macy's Salesforce sign-in page in your browser.",
         ).pack(side="right", padx=(0, 8), pady=8)
 
         body = tk.Frame(self, bg=UI_BG)
@@ -1650,7 +1640,7 @@ class ConverterApp(TkRoot):
             bg="#10141b",
             fg="#a8b2c2",
             font=("Segoe UI", 9),
-            wraplength=650,
+            wraplength=520,
             justify="left",
         ).pack(anchor="w", padx=12, pady=(0, 8))
         multi_frame = tk.Frame(input_panel, bg="#10141b")
@@ -1670,6 +1660,7 @@ class ConverterApp(TkRoot):
             padx=10,
             pady=8,
             font=("Cascadia Mono", 10),
+            width=48,
             wrap="none",
         )
         self.multi_text.tag_configure("input_valid", background=UI_GREEN_SOFT, foreground=UI_GREEN_TEXT)
@@ -1688,12 +1679,17 @@ class ConverterApp(TkRoot):
         self._enable_drop_target(multi_frame)
         btns = tk.Frame(input_panel, bg="#10141b")
         btns.pack(fill="x", padx=12, pady=12)
-        self._button(btns, "Import", self.import_file, icon="icon-import.png", tooltip="Browse for one or more supported files and add extracted IDs to the queue.").pack(side="left", padx=(0, 8))
-        self._button(btns, "Sample", self.load_sample, icon="icon-sample.png", tooltip="Load sample data so you can see how conversion results look.").pack(side="left", padx=(0, 8))
-        self._button(btns, "Convert All", self.convert_batch, True, icon="icon-convert.png", tooltip="Convert every queued HEX ID into Facility Code and Card Number.").pack(side="left", padx=(0, 8))
-        self._button(btns, "Remove Duplicates", self.remove_duplicate_input_lines, icon="icon-clear.png", tooltip="Keep the first matching HEX ID and remove repeated valid IDs from the queue.").pack(side="left", padx=(0, 8))
-        self._button(btns, "Keep Valid", self.keep_only_valid_input_lines, icon="icon-status.png", tooltip="Remove rows that cannot be read as valid 8-character HEX IDs.").pack(side="left", padx=(0, 8))
-        self._button(btns, "Clear", self.clear_workspace, icon="icon-clear.png", tooltip="Clear input, results, and single-lookup fields.").pack(side="left")
+        batch_actions = [
+            ("Import", self.import_file, False, "icon-import.png", "Browse for one or more supported files and add extracted IDs to the queue."),
+            ("Sample", self.load_sample, False, "icon-sample.png", "Load numeric sample data so you can see conversion results."),
+            ("Convert", self.convert_batch, True, "icon-convert.png", "Convert every queued HEX ID into Facility Code and Card Number."),
+            ("Remove Duplicates", self.remove_duplicate_input_lines, False, "icon-clear.png", "Keep the first matching HEX ID and remove repeated valid IDs from the queue."),
+            ("Keep Valid", self.keep_only_valid_input_lines, False, "icon-status.png", "Remove rows that cannot be read as valid 8-character HEX IDs."),
+            ("Clear", self.clear_workspace, False, "icon-clear.png", "Clear input, results, and single-lookup fields."),
+        ]
+        for idx, (text, command, primary, icon, tooltip) in enumerate(batch_actions):
+            button = self._button(btns, text, command, primary, icon=icon, tooltip=tooltip)
+            button.grid(row=idx // 3, column=idx % 3, sticky="w", padx=(0, 8), pady=(0, 8) if idx < 3 else (0, 0))
 
         summary = self._panel(top)
         summary.pack(side="right", fill="y")
@@ -1927,6 +1923,7 @@ class ConverterApp(TkRoot):
             padx=12,
             pady=8,
             font=("Cascadia Mono", 10),
+            width=42,
             wrap="none",
         )
         unconvert_scroll_y = ttk.Scrollbar(unconvert_input_frame, orient="vertical", command=self.unconvert_text.yview, style="Dark.Vertical.TScrollbar")
@@ -1939,10 +1936,15 @@ class ConverterApp(TkRoot):
         self._enable_mousewheel(self.unconvert_text, self.unconvert_text, self.unconvert_text)
         row = tk.Frame(input_panel, bg="#10141b")
         row.pack(fill="x", padx=12, pady=12)
-        self._button(row, "Sample", self.load_unconvert_sample, icon="icon-sample.png", tooltip="Load sample FC/CN pairs for the unconvert workflow.").pack(side="left", padx=(0, 8))
-        self._button(row, "Unconvert All", self.convert_unconvert_batch, True, icon="icon-convert.png", tooltip="Convert every queued FC/CN pair back into HEX.").pack(side="left", padx=(0, 8))
-        self._button(row, "Copy All HEX", self.copy_all_unconverted_hex, icon="icon-copy.png", tooltip="Copy all valid unconverted HEX IDs.").pack(side="left", padx=(0, 8))
-        self._button(row, "Clear", self.clear_unconvert, icon="icon-clear.png", tooltip="Clear the unconvert input and results.").pack(side="left")
+        unconvert_actions = [
+            ("Sample", self.load_unconvert_sample, False, "icon-sample.png", "Load numeric FC/CN sample pairs for the unconvert workflow."),
+            ("Unconvert", self.convert_unconvert_batch, True, "icon-convert.png", "Convert every queued FC/CN pair back into HEX."),
+            ("Copy All HEX", self.copy_all_unconverted_hex, False, "icon-copy.png", "Copy all valid unconverted HEX IDs."),
+            ("Clear", self.clear_unconvert, False, "icon-clear.png", "Clear the unconvert input and results."),
+        ]
+        for idx, (text, command, primary, icon, tooltip) in enumerate(unconvert_actions):
+            button = self._button(row, text, command, primary, icon=icon, tooltip=tooltip)
+            button.grid(row=idx // 2, column=idx % 2, sticky="w", padx=(0, 8), pady=(0, 8) if idx < 2 else (0, 0))
 
         summary = self._panel(top)
         summary.pack(side="right", fill="y")
@@ -2786,10 +2788,6 @@ class ConverterApp(TkRoot):
     def open_bluewave(self) -> None:
         webbrowser.open(BLUEWAVE_URL)
         self.set_status("Opened BlueWave in your browser.")
-
-    def open_salesforce(self) -> None:
-        webbrowser.open(SALESFORCE_URL)
-        self.set_status("Opened Salesforce in your browser.")
 
     def render_history(self) -> None:
         if hasattr(self, "history_tree"):

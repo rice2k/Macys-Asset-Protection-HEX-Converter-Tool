@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.9
+
+- Removed the Salesforce toolbar shortcut and unused Salesforce icon asset.
+- Removed unused legacy visual assets from earlier layouts.
+- Cleaned the main toolbar so BlueWave and Help align cleanly on the right.
+- Improved compact-window alignment so summary panels do not get clipped by action buttons.
+- Performed a final visual polish pass on the main workspace, dialogs, status strip, and screenshots.
+- Rebuilt the Windows EXE and checksum from the cleaned project state.
+
 ## 1.0.8
 
 - Changed built-in samples to numeric-only data so Sample buttons do not insert employee text or bad-line examples.
@@ -11,7 +20,7 @@
 ## 1.0.7
 
 - Updated the app and EXE icon to a cleaner Macy's AP China Grove badge style.
-- Added a main-toolbar Salesforce shortcut and kept BlueWave as a main-app shortcut only.
+- Kept BlueWave as a main-app shortcut only.
 - Reworked first-open status text so the bottom strip no longer reads like duplicate Ready states.
 - Improved visibility for the search box, input queues, single lookup fields, and FC/CN fields.
 - Made Results and Unconvert Results easier to read with larger rows and valid/warning/invalid row colors.
