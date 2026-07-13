@@ -39,6 +39,17 @@ Current SHA-256:
 Windows may show a SmartScreen warning because the EXE is not code-signed yet.
 For testing, users can choose More info, then Run anyway.
 
+Source History
+--------------
+The original Access Control script document and earlier HTML versions are
+preserved in:
+
+docs\source-history
+
+Conversion rule:
+Facility Code (FC) is taken from the high 16 bits. Card Number (CN) is taken
+from the low 16 bits of the 32-bit HEX value.
+
 Main Functions
 --------------
 1. Batch Converter

@@ -1,0 +1,1823 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>AP - Access Control Hex Converter</title>
+<style>
+  :root{
+    --primary:#0078ff;
+    --muted:#f3f3f3;
+    --card:#ffffff;
+  }
+  body{font-family:Arial,Helvetica,sans-serif;background:var(--muted);padding:18px;}
+  .container{max-width:900px;margin:0 auto;background:var(--card);padding:18px;border-radius:10px;box-shadow:0 6px 18px rgba(0,0,0,0.08);}
+  h2{text-align:center;margin:4px 0 12px;}
+  label{display:block;margin-top:10px;font-weight:600;}
+  input[type="text"], input[type="number"], textarea{width:100%;padding:10px;margin-top:6px;border:1px solid #d0d0d0;border-radius:6px;box-sizing:border-box;font-size:15px;}
+  .row{display:flex;gap:10px;margin-top:10px;}
+  .row button{flex:1;padding:10px;border-radius:6px;border:none;background:var(--primary);color:#fff;cursor:pointer;}
+  .row button.ghost{background:#666;}
+  .actions{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;}
+  button.small{padding:6px 8px;font-size:13px;border-radius:6px;}
+  table{width:100%;border-collapse:collapse;margin-top:14px;}
+  th,td{border:1px solid #e0e0e0;padding:8px;text-align:center;font-size:14px;}
+  th{background:#f6f8ff;}
+  tr.invalid td{background:#fff4e8;border-color:#ffd199;color:#8a3f00;}
+  .controls{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;margin-top:10px;}
+  .muted{color:#666;font-size:13px;}
+  @media(max-width:700px){
+    .row{flex-direction:column;}
+    .controls{justify-content:stretch;}
+    th,td{font-size:13px;padding:6px;}
+  }
+  .inline-btn{display:inline-block;margin:0 4px;padding:6px 8px;border-radius:6px;border:none;background:#444;color:#fff;cursor:pointer;font-size:13px;}
+</style>
+
+  <style>
+    .topnav {
+      position: sticky;
+      top: 0;
+      z-index: 999;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      background: rgba(15, 18, 25, 0.92);
+      border-bottom: 1px solid rgba(255,255,255,0.12);
+      backdrop-filter: blur(8px);
+    }
+    .topnav .brand {
+      font-weight: 800;
+      letter-spacing: 0.3px;
+    }
+    .topnav .navlinks {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .nav-cluster {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+    .nav-sub-links {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .nav-sub-links a {
+      font-size: 11px;
+      padding: 5px 8px;
+      border-radius: 8px;
+      opacity: 0.94;
+    }
+    .topnav a, .topnav button {
+      appearance: none;
+      border: 1px solid rgba(255,255,255,0.18);
+      background: rgba(255,255,255,0.06);
+      color: inherit;
+      text-decoration: none;
+      padding: 8px 12px;
+      border-radius: 10px;
+      font: inherit;
+      cursor: pointer;
+      transition: transform 0.05s ease, background 0.15s ease, border-color 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      line-height: 1;
+    }
+    .topnav a:hover, .topnav button:hover {
+      background: rgba(255,255,255,0.10);
+      border-color: rgba(255,255,255,0.28);
+    }
+    .topnav a:active, .topnav button:active {
+      transform: translateY(1px);
+    }
+    /* Help modal */
+    .modalOverlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.55);
+      z-index: 2000;
+      padding: 24px;
+    }
+    .modal {
+      max-width: 860px;
+      margin: 0 auto;
+      background: rgba(20, 24, 34, 0.98);
+      border: 1px solid rgba(255,255,255,0.16);
+      border-radius: 14px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.35);
+      overflow: hidden;
+    }
+    .modalHeader {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.12);
+    }
+    .modalHeader h2 {
+      margin: 0;
+      font-size: 18px;
+      letter-spacing: 0.2px;
+    }
+    .modalClose {
+      border: 1px solid rgba(255,255,255,0.18);
+      background: rgba(255,255,255,0.06);
+      color: inherit;
+      border-radius: 10px;
+      padding: 8px 10px;
+      cursor: pointer;
+      font: inherit;
+    }
+    .modalBody {
+      padding: 16px;
+      max-height: min(72vh, 720px);
+      overflow: auto;
+    }
+    .modalBody h3 {
+      margin-top: 18px;
+      margin-bottom: 8px;
+      font-size: 15px;
+    }
+    .modalBody p, .modalBody li {
+      line-height: 1.5;
+    }
+    .helpCallout {
+      border: 1px solid rgba(255,255,255,0.14);
+      background: rgba(255,255,255,0.05);
+      padding: 12px 14px;
+      border-radius: 12px;
+      margin: 12px 0;
+    }
+    .modalBody a {
+      color: #9cc4ff;
+      font-weight: 700;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+    code.kbd {
+      padding: 2px 6px;
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.18);
+      background: rgba(255,255,255,0.06);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 0.95em;
+    }
+  </style>
+
+
+<style id="topnavOverrides">
+  /* Force top nav to be visible regardless of existing layout styles */
+  .topnav{
+    position: fixed !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    border-radius: 0 !important;
+  }
+  body{
+    /* prevent the fixed nav from covering the top content */
+    padding-top: 64px !important;
+  }
+</style>
+
+
+<style id="contrastFix">
+  /* Fix nav/button contrast */
+  .topnav { color: #f5f7ff !important; }
+  .topnav a, .topnav button { color: #f5f7ff !important; }
+  .topnav a:hover, .topnav button:hover { background: rgba(255,255,255,0.14) !important; }
+
+  /* Improve main action button readability + focus */
+  .row button{
+    background:#0b66ff !important;
+    color:#ffffff !important;
+    font-weight:700;
+    letter-spacing:0.2px;
+  }
+  .row button:hover{ filter: brightness(1.05); }
+  .row button:focus{ outline: 3px solid rgba(11,102,255,0.35); outline-offset: 2px; }
+
+  .row button.ghost{
+    background:#3f4652 !important;
+    color:#ffffff !important;
+    font-weight:700;
+  }
+  .inline-btn{
+    background:#2f3642 !important;
+    color:#ffffff !important;
+    border: 1px solid rgba(0,0,0,0.15);
+  }
+  .inline-btn:hover{ filter: brightness(1.06); }
+</style>
+
+
+<style id="navCenterLinks">
+  .topnav{
+    justify-content: center !important;
+  }
+  .topnav .brand{
+    position: absolute;
+    left: 14px;
+  }
+  .topnav .navlinks{
+    justify-content: center;
+  }
+  @media (max-width: 680px){
+    .topnav .brand{ position: static; margin-right: 10px; }
+    .topnav{ justify-content: space-between !important; }
+    .nav-cluster, .nav-sub-links { align-items: flex-start; justify-content: flex-start; }
+    .nav-sub-links a { font-size: 10px; padding: 4px 7px; }
+  }
+</style>
+
+
+<style id="helpContrastFix">
+  /* Help modal readability */
+  .modalHeader, .modalHeader h2 { color: #f5f7ff !important; }
+  .modalBody, .modalBody p, .modalBody li, .modalBody ol, .modalBody ul { color: #eef2ff !important; }
+  .modalBody h3 { color: #ffffff !important; }
+  .helpCallout { color: #f5f7ff !important; }
+  .modalClose { color: #f5f7ff !important; }
+  .modalOverlay { background: rgba(0,0,0,0.65) !important; }
+  .modal { background: rgba(20, 24, 34, 0.99) !important; }
+  code.kbd { color: #ffffff !important; }
+</style>
+
+
+<style id="visualRefresh">
+  :root{
+    --bg: #0b1020;
+    --panel: rgba(255,255,255,0.06);
+    --panel2: rgba(255,255,255,0.08);
+    --border: rgba(255,255,255,0.14);
+    --border2: rgba(255,255,255,0.20);
+    --text: #eef2ff;
+    --muted: rgba(238,242,255,0.70);
+    --accent: #0b66ff;
+    --accent2:#2f8bff;
+    --danger:#ff5d5d;
+    --ok:#2bd576;
+  }
+
+  /* Page background + base typography */
+  html, body{
+    background: radial-gradient(900px 600px at 20% -10%, rgba(11,102,255,0.25), transparent 60%),
+                radial-gradient(900px 600px at 90% 0%, rgba(43,213,118,0.14), transparent 55%),
+                var(--bg) !important;
+    color: var(--text) !important;
+    font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";
+  }
+
+  /* Centered content card */
+  .container{
+    max-width: 980px !important;
+    margin: 26px auto !important;
+    padding: 0 !important;
+    background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.05)) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 18px !important;
+    box-shadow: 0 18px 60px rgba(0,0,0,0.45) !important;
+    overflow: hidden !important;
+  }
+
+  /* Header title area (if page has h1) */
+  h1{
+    margin: 0 !important;
+    padding: 22px 22px 8px 22px !important;
+    font-size: 22px !important;
+    letter-spacing: 0.3px !important;
+  }
+  .subtitle, .hint, .note, small{
+    color: var(--muted) !important;
+  }
+
+  /* Section titles */
+  h2, h3{
+    color: var(--text) !important;
+    letter-spacing: 0.2px !important;
+  }
+  .section{
+    padding: 18px 22px !important;
+    border-top: 1px solid rgba(255,255,255,0.10) !important;
+  }
+
+  /* Inputs / textarea */
+  input[type="text"], input[type="number"], textarea{
+    background: rgba(10,14,25,0.65) !important;
+    color: var(--text) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 12px !important;
+    padding: 11px 12px !important;
+    outline: none !important;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.06) !important;
+  }
+  input::placeholder, textarea::placeholder{ color: rgba(238,242,255,0.50) !important; }
+  input:focus, textarea:focus{
+    border-color: rgba(11,102,255,0.55) !important;
+    box-shadow: 0 0 0 4px rgba(11,102,255,0.20) !important;
+  }
+
+  /* Button system */
+  .row button, button{
+    border-radius: 12px !important;
+    border: 1px solid rgba(255,255,255,0.14) !important;
+    padding: 10px 14px !important;
+    font-weight: 750 !important;
+    letter-spacing: 0.2px !important;
+    color: #fff !important;
+    background: linear-gradient(180deg, var(--accent2), var(--accent)) !important;
+    box-shadow: 0 10px 26px rgba(11,102,255,0.18) !important;
+  }
+  button:hover{ filter: brightness(1.05); }
+  button:active{ transform: translateY(1px); }
+  button.ghost{
+    background: rgba(255,255,255,0.08) !important;
+    border-color: rgba(255,255,255,0.16) !important;
+    box-shadow: none !important;
+    color: var(--text) !important;
+  }
+  .inline-btn{
+    background: rgba(255,255,255,0.10) !important;
+    border-color: rgba(255,255,255,0.16) !important;
+    box-shadow: none !important;
+    color: var(--text) !important;
+    padding: 8px 10px !important;
+    border-radius: 10px !important;
+    font-weight: 700 !important;
+  }
+
+  /* Table styling */
+  table{
+    width: 100% !important;
+    border-collapse: separate !important;
+    border-spacing: 0 !important;
+    overflow: hidden !important;
+    border-radius: 14px !important;
+    border: 1px solid var(--border) !important;
+    background: rgba(10,14,25,0.45) !important;
+  }
+  th, td{
+    padding: 10px 10px !important;
+    border-bottom: 1px solid rgba(255,255,255,0.10) !important;
+    text-align: left !important;
+  }
+  th{
+    background: rgba(255,255,255,0.08) !important;
+    font-size: 12px !important;
+    letter-spacing: 0.6px !important;
+    text-transform: uppercase !important;
+    color: rgba(238,242,255,0.85) !important;
+  }
+  tr:last-child td{ border-bottom: 0 !important; }
+  tbody tr:nth-child(odd) td{ background: rgba(255,255,255,0.02) !important; }
+
+  /* Valid/invalid cell coloring if present */
+  .ok{ color: var(--ok) !important; font-weight: 750 !important; }
+  .bad{ color: var(--danger) !important; font-weight: 750 !important; }
+
+  /* Nav polish */
+  .topnav{
+    background: rgba(10, 14, 25, 0.92) !important;
+    border-bottom: 1px solid rgba(255,255,255,0.12) !important;
+  }
+  .topnav .brand{
+    font-size: 13px !important;
+    opacity: 0.9 !important;
+  }
+
+  /* Help modal polish */
+  .modal{
+    border-radius: 16px !important;
+    border: 1px solid rgba(255,255,255,0.16) !important;
+    box-shadow: 0 22px 70px rgba(0,0,0,0.55) !important;
+  }
+  .modalHeader{
+    background: rgba(255,255,255,0.04) !important;
+  }
+  .helpCallout{
+    background: rgba(11,102,255,0.10) !important;
+    border-color: rgba(11,102,255,0.28) !important;
+  }
+
+  /* Mobile spacing */
+  @media (max-width: 720px){
+    .container{ margin: 14px 10px !important; }
+    h1{ padding: 18px 16px 6px 16px !important; font-size: 20px !important; }
+    .section{ padding: 14px 16px !important; }
+  }
+</style>
+
+
+<style id="outputContrastBoost">
+  /* Result / output panels: make readable on dark theme */
+  .output, .result, .results, #singleResult, #hexResult, #fcCnResult, .outbox, .resultBox {
+    background: rgba(10,14,25,0.78) !important;
+    color: #f5f7ff !important;
+    border: 1px solid rgba(255,255,255,0.16) !important;
+    border-radius: 14px !important;
+    padding: 12px 12px !important;
+  }
+
+  /* If the page uses <div class="out"> or <div class="output"> inside sections */
+  .output * , .result * , .results * , #singleResult * , #hexResult * , #fcCnResult * , .outbox * , .resultBox * {
+    color: #f5f7ff !important;
+  }
+
+  /* Make inline "Hex: ..." badges readable */
+  .badge, .pill, .chip, .tag, .mono {
+    background: rgba(255,255,255,0.10) !important;
+    border: 1px solid rgba(255,255,255,0.18) !important;
+    color: #ffffff !important;
+    border-radius: 10px !important;
+    padding: 3px 8px !important;
+  }
+
+  /* Copy buttons inside result panels */
+  .output button, .result button, .results button,
+  #singleResult button, #hexResult button, #fcCnResult button,
+  .outbox button, .resultBox button,
+  .output a.inline-btn, .result a.inline-btn, .results a.inline-btn {
+    background: rgba(255,255,255,0.10) !important;
+    border: 1px solid rgba(255,255,255,0.18) !important;
+    color: #ffffff !important;
+    box-shadow: none !important;
+  }
+  .output button:hover, .result button:hover, .results button:hover,
+  #singleResult button:hover, #hexResult button:hover, #fcCnResult button:hover,
+  .outbox button:hover, .resultBox button:hover {
+    background: rgba(255,255,255,0.16) !important;
+    border-color: rgba(255,255,255,0.26) !important;
+  }
+
+  /* Fix any "light output bar" specifically (your screenshot shows a pale bar) */
+  .outputBar, .resultBar, .output-row, .result-row {
+    background: rgba(10,14,25,0.78) !important;
+    color: #f5f7ff !important;
+    border: 1px solid rgba(255,255,255,0.16) !important;
+    border-radius: 14px !important;
+  }
+
+  /* Ensure selection highlight isn't blinding */
+  ::selection { background: rgba(11,102,255,0.35) !important; }
+</style>
+
+
+<style id="singleOutputsBoost">
+  /* Single Hex -> FC/CN output panel */
+  #singleResult{
+    background: rgba(10,14,25,0.78) !important;
+    color: #f5f7ff !important;
+    border: 1px solid rgba(255,255,255,0.16) !important;
+    border-radius: 14px !important;
+    padding: 12px 12px !important;
+  }
+  #singleResult *{ color:#f5f7ff !important; }
+
+  /* FC/CN -> Hex output panel */
+  #backResult{
+    background: rgba(10,14,25,0.78) !important;
+    color: #f5f7ff !important;
+    border: 1px solid rgba(255,255,255,0.16) !important;
+    border-radius: 14px !important;
+    padding: 12px 12px !important;
+  }
+  #backResult *{ color:#f5f7ff !important; }
+
+  /* Copy buttons inside these panels (if any) */
+  #singleResult button, #backResult button,
+  #singleResult .inline-btn, #backResult .inline-btn{
+    background: rgba(255,255,255,0.10) !important;
+    border: 1px solid rgba(255,255,255,0.18) !important;
+    color: #ffffff !important;
+    box-shadow: none !important;
+  }
+  #singleResult button:hover, #backResult button:hover{
+    background: rgba(255,255,255,0.16) !important;
+    border-color: rgba(255,255,255,0.26) !important;
+  }
+</style>
+
+
+<style id="enhancementStyles">
+  .helper-text{margin-top:6px;color:var(--muted);font-size:13px;line-height:1.4;}
+  .dropzone{
+    margin-top:12px;padding:16px;border:1px dashed rgba(255,255,255,0.24);border-radius:14px;
+    background:rgba(255,255,255,0.04);text-align:center;color:var(--text);transition:all .15s ease;
+  }
+  .dropzone.dragover{border-color:rgba(11,102,255,0.8);background:rgba(11,102,255,0.12);box-shadow:0 0 0 4px rgba(11,102,255,0.15) inset;}
+  .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-top:14px;}
+  .stat-card{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);border-radius:14px;padding:12px;}
+  .stat-label{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;}
+  .stat-value{font-size:22px;font-weight:800;margin-top:4px;}
+  .badge-valid,.badge-invalid,.badge-warning,.badge-info{
+    display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border-radius:999px;font-size:12px;font-weight:700;
+    border:1px solid rgba(255,255,255,0.12);margin:2px 6px 2px 0;
+  }
+  .badge-valid{background:rgba(43,213,118,0.15);color:#8ff0b4;}
+  .badge-invalid{background:rgba(255,93,93,0.15);color:#ffb3b3;}
+  .badge-warning{background:rgba(255,190,92,0.15);color:#ffd58a;}
+  .badge-info{background:rgba(11,102,255,0.16);color:#aaccff;}
+  .notice-box{margin-top:10px;padding:12px;border-radius:12px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);}
+  .notice-box ul{margin:8px 0 0 18px;padding:0;}
+  .import-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:10px;}
+  .file-input-label{display:inline-flex;align-items:center;gap:8px;padding:10px 12px;border-radius:12px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.14);cursor:pointer;font-weight:700;}
+  .file-input-label input{display:none;}
+  .subtle{color:var(--muted);font-size:12px;}
+  td .meta-line{display:block;color:var(--muted);font-size:12px;margin-top:4px;}
+  .export-options{margin-top:12px;padding:12px;border-radius:14px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);}
+  .export-options-title{font-weight:800;margin-bottom:8px;}
+  .export-options-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px 12px;}
+  .export-option-item{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--text);}
+  .export-option-item input{width:auto;margin:0;accent-color:var(--accent);}
+</style>
+
+
+<style id="invalidBadgeLighten">
+  .status-badge.invalid,
+  .badge.invalid,
+  .pill.invalid,
+  .chip.invalid,
+  .tag.invalid{
+    background:#ffe8c7 !important;
+    border:1px solid #ffbf66 !important;
+    color:#8a3f00 !important;
+  }
+  .invalid-line,
+  .invalid-reason,
+  .invalid-card,
+  .row-invalid,
+  .status-invalid{
+    background:#fff4e8 !important;
+    border-color:#ffd199 !important;
+    color:#8a3f00 !important;
+  }
+</style>
+
+</head>
+<body>
+  <div class="topnav" role="navigation" aria-label="Top Navigation">
+    <div class="brand">Macy's Asset Protection Control Converter</div>
+    <div class="navlinks">
+      <div class="nav-cluster">
+        <a href="https://urldefense.com/v3/__http:/ma000xsblw1001/__;!!EkHEP60!DMUbC2E74izjZB31HFulv4RhX_bjBMwB_oRMXpD77VjQZP7QsyH1XwS5ujTohZ_Uq0BRt3Znm6Tyg8Sm-C_5wz8mRw$" target="_blank" rel="noopener noreferrer" title="Open BlueWave Login">BlueWave</a>
+        <div class="nav-sub-links" aria-label="BlueWave Quick Links">
+          <a href="http://ma000xsblw1001/QuickLinks.aspx" target="_blank" rel="noopener noreferrer" title="Open BlueWave Home">Home</a>
+          <a href="http://ma000xsblw1001/People.aspx" target="_blank" rel="noopener noreferrer" title="Open BlueWave People">People</a>
+          <a href="http://ma000xsblw1001/Reports.aspx" target="_blank" rel="noopener noreferrer" title="Open BlueWave Reports">Reports</a>
+        </div>
+      </div>
+      <button type="button" id="helpBtn" title="Help / How this page works">Help</button>
+    </div>
+  </div>
+
+
+  <!-- Help Modal -->
+  <div class="modalOverlay" id="helpOverlay" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+      <div class="modalHeader">
+        <h2 id="helpTitle">Help — What this page does</h2>
+        <button class="modalClose" type="button" id="helpClose" aria-label="Close help">Close</button>
+      </div>
+      <div class="modalBody">
+      
+      <div class="helpCallout">
+        <b>Macy's Asset Protection Control Converter</b> converts 8-character access control values into <b>Facility Code (FC)</b> and <b>Card Number (CN)</b>, supports single and batch conversion, and can import supported text and Excel-style files for faster processing.
+      </div>
+
+      <h3>What this page does</h3>
+      <ul>
+        <li><b>Batch convert:</b> Convert multiple employee IDs / hex values at one time.</li>
+        <li><b>Single convert:</b> Convert one 8-character value into FC and CN.</li>
+        <li><b>FC/CN to Hex:</b> Build the 8-character value from a Facility Code and Card Number.</li>
+        <li><b>Import files:</b> Import <b>TXT</b>, <b>XLSX</b>, <b>XLSM</b>, <b>XML Spreadsheet</b>, and <b>HTML table-style Excel exports</b>.</li>
+        <li><b>Export results:</b> Export a formatted Excel report or TXT file using the output options you choose.</li>
+      </ul>
+
+      <h3>How Excel import works</h3>
+      <div class="helpCallout">
+        The importer first looks for the strongest header match, such as <b>Candidate Name</b> + <b>Colleague #</b>. If exact headers are not found, it falls back to trusted header variations such as <b>Colleague Name</b>, <b>Employee Name</b>, <b>Colleague ID</b>, or <b>Employee ID</b>. Loose row-by-row guessing is only used as a last resort.
+      </div>
+
+      <h3>How to use it</h3>
+      <ol>
+        <li><b>Batch convert:</b> Paste your list into the main box, one value per line, then click <b>Convert All</b>.</li>
+        <li><b>Import a file:</b> Use the import button or drag and drop a supported file into the drop area.</li>
+        <li><b>Choose export columns:</b> Select which fields to include before exporting.</li>
+        <li><b>Export:</b> Use <b>Export Excel (Formatted)</b> or <b>Download TXT</b> after converting.</li>
+        <li><b>Single / reverse convert:</b> Use the lower sections for one-off conversions.</li>
+      </ol>
+
+      <h3>Input rules</h3>
+      <ul>
+        <li><b>Hex / Employee ID values must be exactly 8 characters</b> using 0–9 and A–F.</li>
+        <li><b>FC and CN must be between 0 and 65535.</b></li>
+        <li>Full text lines such as <code class="kbd">Alan Blackmon, 88992972</code> are supported.</li>
+        <li>Invalid lines are flagged so they can be reviewed before export.</li>
+      </ul>
+
+      <h3>Output options</h3>
+      <ul>
+        <li>You can choose to include <b>Name</b>, <b>Employee ID / Hex</b>, <b>FC</b>, <b>CN</b>, <b>Warnings / Cleanup</b>, <b>Input Line Number</b>, and <b>Converted Time</b>.</li>
+        <li>If all output boxes are cleared, the export defaults back to <b>Employee ID / Hex</b>, <b>FC</b>, and <b>CN</b>.</li>
+      </ul>
+
+      <h3>BlueWave quick links</h3>
+      <ul>
+        <li><b>BlueWave:</b> main sign-in page</li>
+        <li><b>Home:</b> Quick Links page</li>
+        <li><b>People:</b> People page</li>
+        <li><b>Reports:</b> Reports page</li>
+        <li><b>Help:</b> BlueWave help page</li>
+      </ul>
+
+      <h3>Export file naming</h3>
+      <p>Exports use today’s date to help keep daily runs organized:</p>
+      <ul>
+        <li><code class="kbd">AP_Acess_Control_YYYY-MM-DD.xls</code></li>
+        <li><code class="kbd">AP_Acess_Control_YYYY-MM-DD.txt</code></li>
+      </ul>
+
+      <h3>Need help or found a bug?</h3>
+      <div class="helpCallout">
+        Contact <a href="mailto:Christopher.Schumacher@macys.com">Christopher Schumacher</a> for bug reports, update requests, or layout issues.
+      </div>
+
+</div>
+    </div>
+  </div>
+
+
+<div class="container">
+  <h2>Macy's Asset Protection Control Hex Converter</h2>
+
+  <!-- MULTI HEX -->
+  <label>Multiple Hex IDs (one per line, 8 hex chars each):</label>
+  <textarea id="multiHex" rows="5" placeholder="Example:
+88984717
+88984130
+88803978"></textarea>
+  <div class="helper-text">Example format: <strong>88984717</strong>. You can also paste full employee lines like <code class="kbd">Christopher Schumacher, 88984717</code> and the page will try to pull the 8-digit ID out automatically. Excel-style imports will try to find <strong>Candidate Name</strong> and <strong>Colleague #</strong> columns, then bring them in as <code class="kbd">Name, 88984717</code> lines.</div>
+
+  <div class="import-row">
+    <label class="file-input-label">Import TXT / Excel File
+      <input id="importFile" type="file" accept=".txt,.xlsx,.xlsm,.xls,.xml,.html,text/plain,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/html,application/xml,application/vnd.ms-excel.sheet.macroEnabled.12" />
+    </label>
+    <span class="subtle">You can also drag and drop TXT, XLSX, XLSM, XML Spreadsheet, or HTML table files into the box below.</span>
+  </div>
+  <div id="dropZone" class="dropzone" tabindex="0">Drop TXT, XLSX, XLSM, or table-style Excel exports here. The page will try smarter header matching first, then multiple row-by-row Excel fallbacks for Candidate Name + Colleague #.</div>
+
+  <div class="row" style="margin-top:8px;">
+    <button onclick="convertMulti()">Convert All</button>
+    <button class="ghost" onclick="clearAll()">Clear All Outputs</button>
+  </div>
+
+  <div class="export-options">
+    <div class="export-options-title">Choose what to include in exported output files</div>
+    <div class="export-options-grid">
+      <label class="export-option-item"><input type="checkbox" id="optIncludeName"> Name</label>
+      <label class="export-option-item"><input type="checkbox" id="optIncludeHex" checked> Employee ID / Hex</label>
+      <label class="export-option-item"><input type="checkbox" id="optIncludeFC" checked> Facility Code (FC)</label>
+      <label class="export-option-item"><input type="checkbox" id="optIncludeCN" checked> Card Number (CN)</label>
+      <label class="export-option-item"><input type="checkbox" id="optIncludeWarnings"> Warnings / Cleanup</label>
+      <label class="export-option-item"><input type="checkbox" id="optIncludeLine"> Input Line Number</label>
+      <label class="export-option-item"><input type="checkbox" id="optIncludeTime"> Converted Time</label>
+    </div>
+    <div class="subtle" style="margin-top:8px;">Name works best when the imported file or pasted lines include a name tied to the 8-digit employee ID.</div>
+  </div>
+
+  <div class="controls">
+    <div class="muted">After converting you can export or copy specific FC/CN values</div>
+    <div style="flex:1"></div>
+<button id="exportXlsBtn" class="small" style="display:none;" onclick="exportExcelFormatted()">Export Excel (Formatted)</button>
+    <button id="exportTxtBtn" class="small" style="display:none;" onclick="exportTXT()">Download TXT</button>
+  </div>
+
+  <div id="summaryStats" class="stats-grid" style="display:none;">
+    <div class="stat-card"><div class="stat-label">Input Lines</div><div class="stat-value" id="statTotal">0</div></div>
+    <div class="stat-card"><div class="stat-label">Valid</div><div class="stat-value" id="statValid">0</div></div>
+    <div class="stat-card"><div class="stat-label">Invalid</div><div class="stat-value" id="statInvalid">0</div></div>
+    <div class="stat-card"><div class="stat-label">Warnings</div><div class="stat-value" id="statWarn">0</div></div>
+    <div class="stat-card"><div class="stat-label">Converted At</div><div class="stat-value" id="statTime" style="font-size:16px;">—</div></div>
+  </div>
+
+  <div id="inputNotices" class="notice-box" style="display:none;"></div>
+
+  <table id="resultsTable" style="display:none;">
+    <thead>
+      <tr>
+        <th>Hex (Employee ID)</th>
+        <th>Facility Code (FC)</th>
+        <th>Card Number (CN)</th>
+        <th>Status / Actions</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <!-- SINGLE HEX -->
+  <hr style="margin:18px 0;">
+  <label>Single Hex ➜ FC/CN (8 hex chars)</label>
+  <input id="singleHex" type="text" maxlength="8" placeholder="Ex: 88984717" />
+  <div class="row">
+    <button onclick="convertSingle()">Convert Single</button>
+    <button class="ghost" onclick="clearSingle()">Clear</button>
+  </div>
+  <div id="singleResult" style="display:none;margin-top:10px;padding:10px;border-radius:8px;background:#eef;"></div>
+
+  <!-- FC/CN ➜ HEX -->
+  <hr style="margin:18px 0;">
+  <label>Facility Code & Card Number ➜ Hex</label>
+  <input id="fcInput" type="number" placeholder="Facility Code (number)" />
+  <input id="cnInput" type="number" placeholder="Card Number (number)" style="margin-top:8px;" />
+  <div class="row">
+    <button onclick="fcCnToHex()">Convert To Hex</button>
+    <button class="ghost" onclick="clearFcCn()">Clear</button>
+  </div>
+  <div id="backResult" style="display:none;margin-top:10px;padding:10px;border-radius:8px;background:#eef;"></div>
+
+</div>
+
+<script>
+// Global store for multi results
+let multiResults = [];
+let multiInvalid = [];
+let conversionWarnings = [];
+let lastConvertedAt = '';
+
+/* Helper: pad to 32 bits and split 16/16 (matches original Python logic) */
+function hexToFcCn(hex){
+  const dec = parseInt(hex, 16);
+  const bin = dec.toString(2).padStart(32, '0');
+  const fcBin = bin.slice(0,16);
+  const cnBin = bin.slice(16);
+  return { facility: parseInt(fcBin,2), card: parseInt(cnBin,2) };
+}
+
+/* Helper: build hex from fc/cn (16bits each) */
+function fcCnToHexStr(fc, cn){
+  const fcBin = parseInt(fc).toString(2).padStart(16,'0');
+  const cnBin = parseInt(cn).toString(2).padStart(16,'0');
+  const combined = fcBin + cnBin;
+  return parseInt(combined,2).toString(16).toUpperCase().padStart(8,'0');
+}
+
+function validHex8(s){
+  return typeof s === 'string' && /^[0-9A-Fa-f]{8}$/.test(s);
+}
+
+function getDateStamp(){
+  const d = new Date();
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2,'0');
+  const dd = String(d.getDate()).padStart(2,'0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function getTimestamp(){
+  return new Date().toLocaleString();
+}
+
+function cleanExtractedName(nameText){
+  return String(nameText || '')
+    .replace(/^active\s+/i, '')
+    .replace(/^candidate\s+/i, '')
+    .replace(/^colleague\s+/i, '')
+    .replace(/[\t|]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .replace(/^[,;:\-\s]+|[,;:\-\s]+$/g, '')
+    .trim();
+}
+
+function extractAssociatedName(original, extracted){
+  if (!original || !extracted) return '';
+  const raw = String(original);
+  const escaped = extracted.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const tokenRegex = new RegExp('\\b' + escaped + '\\b', 'i');
+  const match = raw.match(tokenRegex);
+  if (!match) return '';
+
+  const before = raw.slice(0, match.index).trim();
+  const after = raw.slice(match.index + match[0].length).trim();
+  const beforeParts = before.split(/\s*[\t,;|]\s*/).map(cleanExtractedName).filter(Boolean);
+  const afterParts = after.split(/\s*[\t,;|]\s*/).map(cleanExtractedName).filter(Boolean);
+
+  let candidate = beforeParts.length ? beforeParts[beforeParts.length - 1] : '';
+  if (!candidate && afterParts.length) candidate = afterParts[0];
+  if (!candidate) return '';
+  if (/^88\d{6}$/.test(candidate)) return '';
+  if (/^(facility|card|fc|cn|id|employee id|colleague #)$/i.test(candidate)) return '';
+  return candidate;
+}
+
+function cleanCandidateLine(line){
+  const original = (line ?? '').toString();
+  let cleaned = original.trim();
+  const suggestions = [];
+  if (!cleaned) return { original, cleaned:'', extracted:'', associatedName:'', suggestions, reason:'blank line' };
+
+  const tokenMatch = cleaned.match(/\b([0-9A-Fa-f]{8})\b/);
+  let extracted = tokenMatch ? tokenMatch[1].toUpperCase() : '';
+  if (tokenMatch && cleaned !== tokenMatch[1]) {
+    suggestions.push('Extracted 8-character ID from a full text line.');
+  }
+
+  let fallback = cleaned
+    .replace(/[\t,;"']/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  const compact = fallback.replace(/[^0-9A-Fa-f]/g, '').toUpperCase();
+  if (!extracted && compact.length === 8) {
+    extracted = compact;
+    if (compact !== cleaned.toUpperCase()) suggestions.push('Removed spaces or punctuation around the ID.');
+  }
+
+  const associatedName = extractAssociatedName(original, extracted);
+  return { original, cleaned: fallback, extracted, associatedName, suggestions, reason:'' };
+}
+
+function getInvalidReason(original){
+  const raw = (original ?? '').toString().trim();
+  if (!raw) return 'Blank line';
+  const hexLike = raw.replace(/[^0-9A-Fa-f]/g, '');
+  if (hexLike.length === 0) return 'No hex characters found';
+  if (hexLike.length < 8) return 'Too short (needs exactly 8 characters)';
+  if (hexLike.length > 8 && !/\b[0-9A-Fa-f]{8}\b/.test(raw)) return 'Too long / extra characters found';
+  if (/[^0-9A-Fa-f\s,;"'\-]/.test(raw)) return 'Contains invalid characters';
+  return 'Must be exactly 8 characters: 0-9 and A-F';
+}
+
+function getUnusualWarnings(hex, facility, card){
+  const warnings = [];
+  if (/^0{8}$/.test(hex)) warnings.push('All zeros is unusual.');
+  if (/^F{8}$/i.test(hex)) warnings.push('All Fs is unusual.');
+  if (/^88\d{6}$/.test(hex) === false && /^\d{8}$/.test(hex)) {
+    warnings.push('Does not start with 88 like many of your sample employee IDs.');
+  }
+  if (facility === 0) warnings.push('Facility Code is 0.');
+  if (card === 0) warnings.push('Card Number is 0.');
+  if (facility > 60000 || card > 60000) warnings.push('Very high FC or CN value.');
+  return warnings;
+}
+
+function updateSummaryStats(){
+  const total = multiResults.length + multiInvalid.length;
+  const warnCount = multiResults.reduce((sum, r) => sum + (r.warnings?.length || 0), 0);
+  const stats = document.getElementById('summaryStats');
+  document.getElementById('statTotal').textContent = total;
+  document.getElementById('statValid').textContent = multiResults.length;
+  document.getElementById('statInvalid').textContent = multiInvalid.length;
+  document.getElementById('statWarn').textContent = warnCount;
+  document.getElementById('statTime').textContent = lastConvertedAt || '—';
+  stats.style.display = total ? 'grid' : 'none';
+
+  const notices = document.getElementById('inputNotices');
+  const cleanupCount = multiResults.reduce((sum, r) => sum + (r.suggestions?.length || 0), 0);
+  const unusualCount = warnCount;
+  if (!total) {
+    notices.style.display = 'none';
+    notices.innerHTML = '';
+    return;
+  }
+  let html = `<strong>Run summary:</strong><ul>`;
+  html += `<li>${cleanupCount} cleanup suggestion(s) applied while reading pasted lines.</li>`;
+  html += `<li>${unusualCount} unusual-value warning(s) detected.</li>`;
+  html += `<li>Conversion timestamp saved for this run.</li>`;
+  html += `</ul>`;
+  notices.innerHTML = html;
+  notices.style.display = 'block';
+}
+
+function renderRowStatus(r){
+  let html = `<span class="badge-valid">Valid</span>`;
+  if (r.suggestions?.length) html += `<span class="badge-info">Cleaned</span>`;
+  if (r.warnings?.length) html += `<span class="badge-warning">Warning</span>`;
+  html += `<div style="margin-top:8px;">` +
+      `<button class="inline-btn" onclick="copyToClipboard('${r.facility}')">Copy FC</button>` +
+      `<button class="inline-btn" onclick="copyToClipboard('${r.card}')">Copy CN</button>` +
+      `<button class="inline-btn" onclick="copyToClipboard('${r.facility},${r.card}')">Copy FC,CN</button>` +
+      `</div>`;
+  if (r.suggestions?.length) html += `<span class="meta-line">Cleanup: ${r.suggestions.join(' ')}</span>`;
+  if (r.warnings?.length) html += `<span class="meta-line">Warning: ${r.warnings.join(' ')}</span>`;
+  html += `<span class="meta-line">Converted: ${r.convertedAt}</span>`;
+  return html;
+}
+
+function convertMulti(){
+  const raw = document.getElementById('multiHex').value;
+  const lines = raw.split(/\r?\n/);
+  const tbody = document.querySelector('#resultsTable tbody');
+  tbody.innerHTML = '';
+  multiResults = [];
+  multiInvalid = [];
+  conversionWarnings = [];
+  let hasValid = false;
+  lastConvertedAt = getTimestamp();
+
+  lines.forEach((l, idx) => {
+    const lineNo = idx + 1;
+    const prepared = cleanCandidateLine(l);
+    const hex = (prepared.extracted || '').trim().toUpperCase();
+    if (!prepared.original.trim()) return;
+
+    const tr = document.createElement('tr');
+
+    if (!validHex8(hex)) {
+      const reason = getInvalidReason(prepared.original);
+      multiInvalid.push({ line: lineNo, raw: prepared.original, reason, convertedAt: lastConvertedAt });
+      tr.classList.add('invalid');
+      tr.innerHTML = `<td colspan="4"><span class="badge-invalid">Invalid</span> Line ${lineNo}: "${prepared.original.replace(/</g,'&lt;').replace(/>/g,'&gt;')}"<span class="meta-line">Reason: ${reason}</span></td>`;
+      tbody.appendChild(tr);
+      return;
+    }
+
+    const {facility, card} = hexToFcCn(hex);
+    const warnings = getUnusualWarnings(hex, facility, card);
+    const row = {
+      line: lineNo,
+      raw: prepared.original,
+      name: prepared.associatedName || '',
+      hex,
+      facility,
+      card,
+      warnings,
+      suggestions: prepared.suggestions,
+      convertedAt: lastConvertedAt
+    };
+    multiResults.push(row);
+    conversionWarnings.push(...warnings);
+
+    tr.innerHTML = `
+      <td>${hex}<span class="meta-line">Input line ${lineNo}</span></td>
+      <td>${facility}</td>
+      <td>${card}</td>
+      <td>${renderRowStatus(row)}</td>
+    `;
+    tbody.appendChild(tr);
+    hasValid = true;
+  });
+
+  document.getElementById('resultsTable').style.display = (tbody.children.length ? 'table' : 'none');
+  document.getElementById('exportXlsBtn').style.display = hasValid ? 'inline-block' : 'none';
+  document.getElementById('exportTxtBtn').style.display = hasValid ? 'inline-block' : 'none';
+  updateSummaryStats();
+}
+
+function clearAll(){
+  document.getElementById('multiHex').value = '';
+  document.querySelector('#resultsTable tbody').innerHTML = '';
+  document.getElementById('resultsTable').style.display = 'none';
+  multiResults = [];
+  multiInvalid = [];
+  conversionWarnings = [];
+  lastConvertedAt = '';
+  document.getElementById('exportTxtBtn').style.display = 'none';
+  document.getElementById('exportXlsBtn').style.display = 'none';
+  updateSummaryStats();
+  clearSingle();
+  clearFcCn();
+}
+
+function copyToClipboard(text){
+  if (!navigator.clipboard) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    ta.remove();
+    return;
+  }
+  navigator.clipboard.writeText(text);
+}
+
+function xmlEscape(v){
+  return String(v ?? '')
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/'/g,'&apos;');
+}
+
+function getExportOptions(){
+  const options = {
+    includeName: !!document.getElementById('optIncludeName')?.checked,
+    includeHex: !!document.getElementById('optIncludeHex')?.checked,
+    includeFC: !!document.getElementById('optIncludeFC')?.checked,
+    includeCN: !!document.getElementById('optIncludeCN')?.checked,
+    includeWarnings: !!document.getElementById('optIncludeWarnings')?.checked,
+    includeLine: !!document.getElementById('optIncludeLine')?.checked,
+    includeTime: !!document.getElementById('optIncludeTime')?.checked,
+  };
+  if (!options.includeName && !options.includeHex && !options.includeFC && !options.includeCN && !options.includeWarnings && !options.includeLine && !options.includeTime){
+    options.includeHex = true;
+    options.includeFC = true;
+    options.includeCN = true;
+  }
+  return options;
+}
+
+function exportExcelFormatted(){
+  if ((!multiResults || multiResults.length === 0) && (!multiInvalid || multiInvalid.length === 0)) return;
+
+  const options = getExportOptions();
+  const stamp = getDateStamp();
+  const filename = `AP_Acess_Control_${stamp}.xls`;
+  const generatedAt = new Date().toLocaleString();
+
+  const validCount = (multiResults || []).length;
+  const invalidCount = (multiInvalid || []).length;
+  const totalCount = validCount + invalidCount;
+  const warningCount = multiResults.reduce((sum, r) => sum + (r.warnings?.length || 0), 0);
+
+  const selectedColumns = [];
+  if (options.includeLine) selectedColumns.push({ key: 'line', label: 'Line', width: 50, type: 'Number', family: 'center' });
+  if (options.includeName) selectedColumns.push({ key: 'name', label: 'Name', width: 175, type: 'String', family: 'text' });
+  if (options.includeHex) selectedColumns.push({ key: 'hex', label: 'Hex (Employee ID)', width: 135, type: 'String', family: 'mono' });
+  if (options.includeFC) selectedColumns.push({ key: 'facility', label: 'Facility Code (FC)', width: 110, type: 'Number', family: 'center' });
+  if (options.includeCN) selectedColumns.push({ key: 'card', label: 'Card Number (CN)', width: 120, type: 'Number', family: 'center' });
+  if (options.includeWarnings) selectedColumns.push({ key: 'notes', label: 'Warnings / Cleanup', width: 250, type: 'String', family: 'wrap' });
+  if (options.includeTime) selectedColumns.push({ key: 'convertedAt', label: 'Converted At', width: 145, type: 'String', family: 'center' });
+
+  const getDataStyle = (family, index) => {
+    const suffix = index % 2 === 0 ? 'Odd' : 'Even';
+    if (family === 'text') return `sCellText${suffix}`;
+    if (family === 'mono') return `sCellMono${suffix}`;
+    if (family === 'wrap') return `sCellWrap${suffix}`;
+    return `sCellCenter${suffix}`;
+  };
+
+  let xml = `<?xml version="1.0"?>\n` +
+`<?mso-application progid="Excel.Sheet"?>\n` +
+`<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"\n` +
+` xmlns:o="urn:schemas-microsoft-com:office:office"\n` +
+` xmlns:x="urn:schemas-microsoft-com:office:excel"\n` +
+` xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"\n` +
+` xmlns:html="http://www.w3.org/TR/REC-html40">\n` +
+`<Styles>\n` +
+`  <Style ss:ID="sBaseBorder"><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#B7C3D0"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#B7C3D0"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#B7C3D0"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#B7C3D0"/></Borders></Style>\n` +
+`  <Style ss:ID="sTitle"><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><Font ss:FontName="Calibri" ss:Size="18" ss:Bold="1" ss:Color="#FFFFFF"/><Interior ss:Color="#1F4E78" ss:Pattern="Solid"/></Style>\n` +
+`  <Style ss:ID="sMetaLabel"><Alignment ss:Horizontal="Left" ss:Vertical="Top" ss:WrapText="1"/><Font ss:FontName="Calibri" ss:Size="11" ss:Bold="1" ss:Color="#1F1F1F"/><Interior ss:Color="#DCE6F1" ss:Pattern="Solid"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#B7C3D0"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#B7C3D0"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#B7C3D0"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#B7C3D0"/></Borders></Style>\n` +
+`  <Style ss:ID="sMetaValue"><Alignment ss:Horizontal="Left" ss:Vertical="Top" ss:WrapText="1"/><Font ss:FontName="Calibri" ss:Size="11" ss:Color="#1F1F1F"/><Interior ss:Color="#F7FBFF" ss:Pattern="Solid"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#B7C3D0"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#B7C3D0"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#B7C3D0"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#B7C3D0"/></Borders></Style>\n` +
+`  <Style ss:ID="sSection"><Alignment ss:Horizontal="Left" ss:Vertical="Center"/><Font ss:FontName="Calibri" ss:Size="12" ss:Bold="1" ss:Color="#FFFFFF"/><Interior ss:Color="#5B9BD5" ss:Pattern="Solid"/></Style>\n` +
+`  <Style ss:ID="sTableHeader"><Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="1"/><Font ss:FontName="Calibri" ss:Size="11" ss:Bold="1" ss:Color="#FFFFFF"/><Interior ss:Color="#44546A" ss:Pattern="Solid"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#B7C3D0"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#B7C3D0"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#B7C3D0"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#B7C3D0"/></Borders></Style>\n` +
+`  <Style ss:ID="sCellTextOdd"><Alignment ss:Horizontal="Left" ss:Vertical="Center"/><Font ss:FontName="Calibri" ss:Size="11"/><Interior ss:Color="#FFFFFF" ss:Pattern="Solid"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#D5DDE5"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#D5DDE5"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#D5DDE5"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#D5DDE5"/></Borders></Style>\n` +
+`  <Style ss:ID="sCellTextEven"><Alignment ss:Horizontal="Left" ss:Vertical="Center"/><Font ss:FontName="Calibri" ss:Size="11"/><Interior ss:Color="#F7FBFF" ss:Pattern="Solid"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#D5DDE5"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#D5DDE5"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#D5DDE5"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#D5DDE5"/></Borders></Style>\n` +
+`  <Style ss:ID="sCellMonoOdd"><Alignment ss:Horizontal="Left" ss:Vertical="Center"/><Font ss:FontName="Consolas" ss:Size="11"/><Interior ss:Color="#FFFFFF" ss:Pattern="Solid"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#D5DDE5"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#D5DDE5"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#D5DDE5"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#D5DDE5"/></Borders></Style>\n` +
+`  <Style ss:ID="sCellMonoEven"><Alignment ss:Horizontal="Left" ss:Vertical="Center"/><Font ss:FontName="Consolas" ss:Size="11"/><Interior ss:Color="#F7FBFF" ss:Pattern="Solid"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#D5DDE5"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#D5DDE5"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#D5DDE5"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#D5DDE5"/></Borders></Style>\n` +
+`  <Style ss:ID="sCellCenterOdd"><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><Font ss:FontName="Calibri" ss:Size="11"/><Interior ss:Color="#FFFFFF" ss:Pattern="Solid"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#D5DDE5"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#D5DDE5"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#D5DDE5"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#D5DDE5"/></Borders></Style>\n` +
+`  <Style ss:ID="sCellCenterEven"><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><Font ss:FontName="Calibri" ss:Size="11"/><Interior ss:Color="#F7FBFF" ss:Pattern="Solid"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#D5DDE5"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#D5DDE5"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#D5DDE5"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#D5DDE5"/></Borders></Style>\n` +
+`  <Style ss:ID="sCellWrapOdd"><Alignment ss:Horizontal="Left" ss:Vertical="Center" ss:WrapText="1"/><Font ss:FontName="Calibri" ss:Size="11"/><Interior ss:Color="#FFFFFF" ss:Pattern="Solid"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#D5DDE5"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#D5DDE5"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#D5DDE5"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#D5DDE5"/></Borders></Style>\n` +
+`  <Style ss:ID="sCellWrapEven"><Alignment ss:Horizontal="Left" ss:Vertical="Center" ss:WrapText="1"/><Font ss:FontName="Calibri" ss:Size="11"/><Interior ss:Color="#F7FBFF" ss:Pattern="Solid"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#D5DDE5"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#D5DDE5"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#D5DDE5"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#D5DDE5"/></Borders></Style>\n` +
+`  <Style ss:ID="sInvalidHeader"><Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="1"/><Font ss:FontName="Calibri" ss:Size="11" ss:Bold="1" ss:Color="#FFFFFF"/><Interior ss:Color="#C55A11" ss:Pattern="Solid"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#B7C3D0"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#B7C3D0"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#B7C3D0"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#B7C3D0"/></Borders></Style>\n` +
+`  <Style ss:ID="sInvalidOdd"><Alignment ss:Horizontal="Left" ss:Vertical="Center" ss:WrapText="1"/><Font ss:FontName="Calibri" ss:Size="11"/><Interior ss:Color="#FFF4EB" ss:Pattern="Solid"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E3C8B3"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E3C8B3"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E3C8B3"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E3C8B3"/></Borders></Style>\n` +
+`  <Style ss:ID="sInvalidEven"><Alignment ss:Horizontal="Left" ss:Vertical="Center" ss:WrapText="1"/><Font ss:FontName="Calibri" ss:Size="11"/><Interior ss:Color="#FDEBDD" ss:Pattern="Solid"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E3C8B3"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E3C8B3"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E3C8B3"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E3C8B3"/></Borders></Style>\n` +
+`</Styles>\n` +
+`<Worksheet ss:Name="AP Access Control">\n` +
+`  <Table ss:DefaultRowHeight="19">\n`;
+
+  selectedColumns.forEach((col, idx) => {
+    const width = idx === 0 ? Math.max(col.width, 180) : (idx === 1 ? Math.max(col.width, 210) : col.width);
+    xml += `    <Column ss:AutoFitWidth="0" ss:Width="${width}"/>\n`;
+  });
+
+  const mergeAcross = Math.max(0, selectedColumns.length - 1);
+  xml += `    <Row ss:Height="28"><Cell ss:StyleID="sTitle" ss:MergeAcross="${mergeAcross}"><Data ss:Type="String">Macy's Asset Protection Control Conversion Report</Data></Cell></Row>\n`;
+
+  const metaRows = [
+    ["Generated", generatedAt],
+    ["Last Conversion", lastConvertedAt || generatedAt],
+    ["Filename", filename],
+    ["Total Input Lines", totalCount],
+    ["Valid Lines", validCount],
+    ["Invalid Lines", invalidCount],
+    ["Warnings", warningCount],
+    ["Export Columns", selectedColumns.map(col => col.label).join(', ')],
+    ["Note", "Facility Code (FC) is taken from the high 16 bits. Card Number (CN) is taken from the low 16 bits of the 32-bit hex value."]
+  ];
+  metaRows.forEach(([k,v])=>{
+    const rowHeight = k === 'Note' ? 44 : (k === 'Export Columns' ? 34 : 20);
+    xml += `    <Row ss:Height="${rowHeight}"><Cell ss:StyleID="sMetaLabel"><Data ss:Type="String">${xmlEscape(k)}</Data></Cell><Cell ss:StyleID="sMetaValue" ss:MergeAcross="${Math.max(0, selectedColumns.length - 2)}"><Data ss:Type="String">${xmlEscape(v)}</Data></Cell></Row>\n`;
+  });
+
+  xml += `    <Row ss:Height="10"><Cell><Data ss:Type="String"></Data></Cell></Row>\n`;
+  xml += `    <Row ss:Height="22"><Cell ss:StyleID="sSection" ss:MergeAcross="${mergeAcross}"><Data ss:Type="String">Valid Conversions</Data></Cell></Row>\n`;
+  xml += `    <Row ss:Height="22">` + selectedColumns.map(col => `<Cell ss:StyleID="sTableHeader"><Data ss:Type="String">${xmlEscape(col.label)}</Data></Cell>`).join('') + `</Row>\n`;
+
+  (multiResults || []).forEach((r, idx)=>{
+    const notes = [...(r.suggestions||[]), ...(r.warnings||[])].join(' | ');
+    xml += `    <Row ss:AutoFitHeight="1">` + selectedColumns.map(col => {
+      const value = col.key === 'notes' ? notes : (r[col.key] ?? '');
+      const style = getDataStyle(col.family, idx);
+      return `<Cell ss:StyleID="${style}"><Data ss:Type="${col.type}">${xmlEscape(value)}</Data></Cell>`;
+    }).join('') + `</Row>\n`;
+  });
+
+  if (invalidCount > 0){
+    xml += `    <Row ss:Height="10"><Cell><Data ss:Type="String"></Data></Cell></Row>\n`;
+    xml += `    <Row ss:Height="22"><Cell ss:StyleID="sSection" ss:MergeAcross="3"><Data ss:Type="String">Invalid Inputs</Data></Cell></Row>\n`;
+    xml += `    <Column ss:AutoFitWidth="0" ss:Width="50"/>\n`;
+    xml += `    <Column ss:AutoFitWidth="0" ss:Width="220"/>\n`;
+    xml += `    <Column ss:AutoFitWidth="0" ss:Width="220"/>\n`;
+    xml += `    <Column ss:AutoFitWidth="0" ss:Width="145"/>\n`;
+    xml += `    <Row ss:Height="22"><Cell ss:StyleID="sInvalidHeader"><Data ss:Type="String">Line</Data></Cell><Cell ss:StyleID="sInvalidHeader"><Data ss:Type="String">Raw Input</Data></Cell><Cell ss:StyleID="sInvalidHeader"><Data ss:Type="String">Reason</Data></Cell><Cell ss:StyleID="sInvalidHeader"><Data ss:Type="String">Converted At</Data></Cell></Row>\n`;
+    (multiInvalid || []).forEach((e, idx)=>{
+      const style = idx % 2 === 0 ? 'sInvalidOdd' : 'sInvalidEven';
+      xml += `    <Row ss:AutoFitHeight="1"><Cell ss:StyleID="${style}"><Data ss:Type="Number">${Number(e.line)}</Data></Cell><Cell ss:StyleID="${style}"><Data ss:Type="String">${xmlEscape(e.raw)}</Data></Cell><Cell ss:StyleID="${style}"><Data ss:Type="String">${xmlEscape(e.reason)}</Data></Cell><Cell ss:StyleID="${style}"><Data ss:Type="String">${xmlEscape(e.convertedAt || '')}</Data></Cell></Row>\n`;
+    });
+  }
+
+  xml += `  </Table><WorksheetOptions xmlns="urn:schemas-microsoft-com:office:excel"><PageSetup><Layout x:Orientation="Landscape"/><Header x:Margin="0.3"/><Footer x:Margin="0.3"/><PageMargins x:Left="0.3" x:Right="0.3" x:Top="0.4" x:Bottom="0.4"/></PageSetup><FitToPage/><FreezePanes/><FrozenNoSplit/><SplitHorizontal>12</SplitHorizontal><TopRowBottomPane>12</TopRowBottomPane><ActivePane>2</ActivePane><ProtectObjects>False</ProtectObjects><ProtectScenarios>False</ProtectScenarios><Print><FitHeight>0</FitHeight><FitWidth>1</FitWidth><ValidPrinterInfo/></Print></WorksheetOptions></Worksheet></Workbook>`;
+
+  const blob = new Blob([xml], {type:'application/vnd.ms-excel;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function exportTXT(){
+  if (!multiResults || multiResults.length === 0) return;
+
+  const options = getExportOptions();
+  const stamp = getDateStamp();
+  const filename = `AP_Acess_Control_${stamp}.txt`;
+  const generatedAt = new Date().toLocaleString();
+  const validCount = multiResults.length;
+  const invalidCount = (multiInvalid || []).length;
+
+  const selectedColumns = [];
+  if (options.includeLine) selectedColumns.push({ key: 'line', label: 'LINE' });
+  if (options.includeName) selectedColumns.push({ key: 'name', label: 'NAME' });
+  if (options.includeHex) selectedColumns.push({ key: 'hex', label: 'HEX (EMPLOYEE ID)' });
+  if (options.includeFC) selectedColumns.push({ key: 'facility', label: 'FC' });
+  if (options.includeCN) selectedColumns.push({ key: 'card', label: 'CN' });
+  if (options.includeWarnings) selectedColumns.push({ key: 'notes', label: 'WARNINGS/CLEANUP' });
+  if (options.includeTime) selectedColumns.push({ key: 'convertedAt', label: 'CONVERTED AT' });
+
+  const rows = multiResults.map(r => {
+    const row = {};
+    selectedColumns.forEach(col => {
+      row[col.key] = col.key === 'notes'
+        ? [...(r.suggestions||[]), ...(r.warnings||[])].join(' | ')
+        : String(r[col.key] ?? '');
+    });
+    return row;
+  });
+
+  const widths = {};
+  selectedColumns.forEach(col => {
+    widths[col.key] = Math.max(col.label.length, ...rows.map(r => String(r[col.key] || '').length), 6);
+  });
+  const pad = (s, n) => String(s).padEnd(n, ' ');
+
+  let txt = '';
+  txt += 'Macy's Asset Protection Control Export\\n';
+  txt += `Generated: ${generatedAt}\\n`;
+  txt += `Last Conversion: ${lastConvertedAt || generatedAt}\\n`;
+  txt += `Valid Records: ${validCount}   Invalid Lines: ${invalidCount}\\n`;
+  txt += `Export Columns: ${selectedColumns.map(col => col.label).join(', ')}\\n`;
+  txt += '------------------------------------------------------------\\n\\n';
+  txt += selectedColumns.map(col => pad(col.label, widths[col.key])).join('  ') + '\\n';
+  txt += selectedColumns.map(col => '-'.repeat(widths[col.key])).join('  ') + '\\n';
+  rows.forEach(r => {
+    txt += selectedColumns.map(col => pad(r[col.key], widths[col.key])).join('  ') + '\\n';
+  });
+  if (invalidCount > 0) {
+    txt += '\\n\\nINVALID LINES (not converted)\\n-----------------------------\\n';
+    (multiInvalid || []).forEach(e => { txt += `Line ${e.line}: ${e.raw} | ${e.reason} | ${e.convertedAt || ''}\\n`; });
+  }
+  txt += '\\n';
+  const blob = new Blob([txt], {type:'text/plain;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function convertSingle(){
+  const prepared = cleanCandidateLine(document.getElementById('singleHex').value || '');
+  const v = (prepared.extracted || '').trim().toUpperCase();
+  const out = document.getElementById('singleResult');
+  out.style.display = 'none';
+  out.textContent = '';
+
+  if (!validHex8(v)) {
+    alert(`Single Hex is invalid: ${getInvalidReason(prepared.original)}.`);
+    return;
+  }
+  const {facility, card} = hexToFcCn(v);
+  const warnings = getUnusualWarnings(v, facility, card);
+  const time = getTimestamp();
+  out.style.display = 'block';
+  out.innerHTML = `<strong>Hex:</strong> ${v} &nbsp; <strong>FC:</strong> ${facility} &nbsp; <strong>CN:</strong> ${card}
+    <div style="margin-top:8px;">
+      <button class="inline-btn" onclick="copyToClipboard('${facility}')">Copy FC</button>
+      <button class="inline-btn" onclick="copyToClipboard('${card}')">Copy CN</button>
+      <button class="inline-btn" onclick="copyToClipboard('${facility},${card}')">Copy FC,CN</button>
+    </div>
+    <div class="meta-line" style="margin-top:8px;">Converted: ${time}</div>
+    ${prepared.suggestions?.length ? `<div class="meta-line">Cleanup: ${prepared.suggestions.join(' ')}</div>` : ''}
+    ${warnings.length ? `<div class="meta-line">Warning: ${warnings.join(' ')}</div>` : ''}`;
+}
+
+function clearSingle(){
+  document.getElementById('singleHex').value = '';
+  const out = document.getElementById('singleResult');
+  out.style.display = 'none';
+  out.textContent = '';
+}
+
+function fcCnToHex(){
+  const fc = document.getElementById('fcInput').value;
+  const cn = document.getElementById('cnInput').value;
+  const out = document.getElementById('backResult');
+  out.style.display = 'none';
+  out.textContent = '';
+
+  if (fc === '' || cn === '') {
+    alert('Please enter both Facility Code and Card Number.');
+    return;
+  }
+  if (isNaN(parseInt(fc)) || isNaN(parseInt(cn))) {
+    alert('Facility Code and Card Number must be numeric.');
+    return;
+  }
+  const f = parseInt(fc), c = parseInt(cn);
+  if (f < 0 || f > 65535 || c < 0 || c > 65535) {
+    alert('FC and CN must be between 0 and 65535 (16-bit).');
+    return;
+  }
+  const hex = fcCnToHexStr(f,c);
+  const warnings = getUnusualWarnings(hex, f, c);
+  out.style.display = 'block';
+  out.innerHTML = `<strong>Hex:</strong> ${hex} &nbsp;
+    <button class="inline-btn" onclick="copyToClipboard('${hex}')">Copy Hex</button>
+    <div class="meta-line" style="margin-top:8px;">Converted: ${getTimestamp()}</div>
+    ${warnings.length ? `<div class="meta-line">Warning: ${warnings.join(' ')}</div>` : ''}`;
+}
+
+function clearFcCn(){
+  document.getElementById('fcInput').value = '';
+  document.getElementById('cnInput').value = '';
+  const out = document.getElementById('backResult');
+  out.style.display = 'none';
+  out.textContent = '';
+}
+
+
+function importTextContent(content){
+  const current = document.getElementById('multiHex').value.trim();
+  const incoming = String(content || '').replace(/\r\n/g, '\n').trim();
+  if (!incoming) return;
+  document.getElementById('multiHex').value = current ? `${current}\n${incoming}` : incoming;
+}
+
+function setImportNotice(message, isError){
+  const notices = document.getElementById('inputNotices');
+  if (!notices) return;
+  notices.style.display = 'block';
+  notices.innerHTML = `<strong>${isError ? 'Import issue:' : 'Import result:'}</strong><div style="margin-top:6px;">${message}</div>`;
+}
+
+
+function normalizeHeader(value){
+  return String(value ?? '')
+    .toLowerCase()
+    .replace(/&nbsp;/g, ' ')
+    .replace(/[\r\n\t]+/g, ' ')
+    .replace(/[^a-z0-9#]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function getCellText(cell){
+  return String(cell ?? '').replace(/\s+/g, ' ').trim();
+}
+
+function splitCsvLine(line, delimiter){
+  const out = [];
+  let cur = '';
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++){
+    const ch = line[i];
+    if (ch === '"'){
+      if (inQuotes && line[i+1] === '"'){
+        cur += '"';
+        i++;
+      } else {
+        inQuotes = !inQuotes;
+      }
+    } else if (ch === delimiter && !inQuotes){
+      out.push(cur);
+      cur = '';
+    } else {
+      cur += ch;
+    }
+  }
+  out.push(cur);
+  return out.map(v => v.trim());
+}
+
+function parseDelimitedText(text){
+  const raw = String(text || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  const lines = raw.split('\n').filter(line => line.trim() !== '');
+  const sample = lines.slice(0, 10).join('\n');
+  const tabCount = (sample.match(/\t/g) || []).length;
+  const delimiter = tabCount > 0 ? '\t' : ',';
+  return lines.map(line => splitCsvLine(line, delimiter));
+}
+
+function parseHtmlTables(text){
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(String(text || ''), 'text/html');
+  const tables = Array.from(doc.querySelectorAll('table'));
+  const results = [];
+  tables.forEach(table => {
+    const rows = Array.from(table.querySelectorAll('tr')).map(tr =>
+      Array.from(tr.querySelectorAll('th,td')).map(cell => getCellText(cell.textContent))
+    ).filter(row => row.some(cell => String(cell || '').trim() !== ''));
+    if (rows.length) results.push(rows);
+  });
+  return results;
+}
+
+function parseSpreadsheetXml(text){
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(String(text || ''), 'application/xml');
+  const rowNodes = Array.from(doc.getElementsByTagName('Row'));
+  if (!rowNodes.length) return [];
+  const rows = rowNodes.map(row => {
+    let cells = [];
+    let expectedIndex = 1;
+    Array.from(row.getElementsByTagName('Cell')).forEach(cell => {
+      const idxAttr = cell.getAttribute('ss:Index') || cell.getAttribute('Index');
+      if (idxAttr){
+        const idx = parseInt(idxAttr, 10);
+        while (expectedIndex < idx){
+          cells.push('');
+          expectedIndex++;
+        }
+      }
+      const data = cell.getElementsByTagName('Data')[0];
+      cells.push(getCellText(data ? data.textContent : cell.textContent));
+      expectedIndex++;
+    });
+    return cells;
+  }).filter(row => row.some(cell => cell));
+  return rows.length ? [rows] : [];
+}
+
+function columnLettersToIndex(ref){
+  const letters = String(ref || '').replace(/[^A-Z]/gi, '').toUpperCase();
+  let num = 0;
+  for (let i = 0; i < letters.length; i++){
+    num = num * 26 + (letters.charCodeAt(i) - 64);
+  }
+  return Math.max(0, num - 1);
+}
+
+async function inflateZipEntry(bytes){
+  if (typeof DecompressionStream === 'undefined'){
+    throw new Error('This browser does not support the built-in XLSX unzip feature used by this page. Please save the sheet as TXT, XLSX, XLSM, or XML Spreadsheet and use a newer browser build if needed.');
+  }
+  const ds = new DecompressionStream('deflate-raw');
+  const stream = new Blob([bytes]).stream().pipeThrough(ds);
+  return await new Response(stream).arrayBuffer();
+}
+
+async function readZipEntries(arrayBuffer){
+  const bytes = new Uint8Array(arrayBuffer);
+  const dv = new DataView(arrayBuffer);
+  let eocd = -1;
+  for (let i = bytes.length - 22; i >= Math.max(0, bytes.length - 65557); i--){
+    if (dv.getUint32(i, true) === 0x06054b50){
+      eocd = i;
+      break;
+    }
+  }
+  if (eocd === -1) throw new Error('Could not read the Excel workbook structure. Please resave the sheet as .xlsx, .xlsm, or XML Spreadsheet and try again.');
+  const centralDirOffset = dv.getUint32(eocd + 16, true);
+  const totalEntries = dv.getUint16(eocd + 10, true);
+  let ptr = centralDirOffset;
+  const entries = {};
+  for (let n = 0; n < totalEntries; n++){
+    if (dv.getUint32(ptr, true) !== 0x02014b50) break;
+    const compression = dv.getUint16(ptr + 10, true);
+    const compressedSize = dv.getUint32(ptr + 20, true);
+    const fileNameLength = dv.getUint16(ptr + 28, true);
+    const extraLength = dv.getUint16(ptr + 30, true);
+    const commentLength = dv.getUint16(ptr + 32, true);
+    const localHeaderOffset = dv.getUint32(ptr + 42, true);
+    const nameBytes = bytes.slice(ptr + 46, ptr + 46 + fileNameLength);
+    const name = new TextDecoder().decode(nameBytes);
+    const localNameLength = dv.getUint16(localHeaderOffset + 26, true);
+    const localExtraLength = dv.getUint16(localHeaderOffset + 28, true);
+    const dataStart = localHeaderOffset + 30 + localNameLength + localExtraLength;
+    entries[name] = {
+      compression,
+      bytes: bytes.slice(dataStart, dataStart + compressedSize)
+    };
+    ptr += 46 + fileNameLength + extraLength + commentLength;
+  }
+  return entries;
+}
+
+async function getZipTextEntry(entries, name){
+  const entry = entries[name];
+  if (!entry) return '';
+  let buffer;
+  if (entry.compression === 0){
+    buffer = entry.bytes.buffer.slice(entry.bytes.byteOffset, entry.bytes.byteOffset + entry.bytes.byteLength);
+  } else if (entry.compression === 8){
+    buffer = await inflateZipEntry(entry.bytes);
+  } else {
+    throw new Error(`Unsupported Excel compression method: ${entry.compression}`);
+  }
+  return new TextDecoder('utf-8').decode(buffer);
+}
+
+function extractSharedStrings(xmlText){
+  if (!xmlText) return [];
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(xmlText, 'application/xml');
+  return Array.from(doc.getElementsByTagName('si')).map(si =>
+    Array.from(si.getElementsByTagName('t')).map(t => t.textContent || '').join('')
+  );
+}
+
+function parseWorksheetXml(xmlText, sharedStrings){
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(xmlText, 'application/xml');
+  const rowNodes = Array.from(doc.getElementsByTagName('row'));
+  const rows = rowNodes.map(row => {
+    const cells = [];
+    Array.from(row.getElementsByTagName('c')).forEach(cell => {
+      const ref = cell.getAttribute('r') || '';
+      const idx = columnLettersToIndex(ref);
+      while (cells.length < idx) cells.push('');
+      const type = cell.getAttribute('t') || '';
+      let value = '';
+      if (type === 'inlineStr'){
+        value = Array.from(cell.getElementsByTagName('t')).map(t => t.textContent || '').join('');
+      } else {
+        const vNode = cell.getElementsByTagName('v')[0];
+        const raw = vNode ? vNode.textContent || '' : '';
+        value = type === 's' ? (sharedStrings[parseInt(raw, 10)] || '') : raw;
+      }
+      cells[idx] = getCellText(value);
+    });
+    return cells;
+  }).filter(row => row.some(cell => cell));
+  return rows;
+}
+
+async function parseXlsxTables(arrayBuffer){
+  const entries = await readZipEntries(arrayBuffer);
+  const sharedStrings = extractSharedStrings(await getZipTextEntry(entries, 'xl/sharedStrings.xml'));
+  const sheetNames = Object.keys(entries).filter(name => /^xl\/worksheets\/sheet\d+\.xml$/i.test(name)).sort();
+  const tables = [];
+  for (const sheetName of sheetNames){
+    const xmlText = await getZipTextEntry(entries, sheetName);
+    if (!xmlText) continue;
+    const rows = parseWorksheetXml(xmlText, sharedStrings);
+    if (rows.length) tables.push(rows);
+  }
+  return tables;
+}
+
+const NAME_HEADER_RULES = [
+  { label: 'candidate name', score: 100 },
+  { label: 'colleague name', score: 92 },
+  { label: 'employee name', score: 90 },
+  { label: 'associate name', score: 88 },
+  { label: 'full name', score: 80 },
+  { label: 'name', score: 60 }
+];
+
+const ID_HEADER_RULES = [
+  { label: 'colleague #', score: 100 },
+  { label: 'colleague number', score: 98 },
+  { label: 'colleague no', score: 96 },
+  { label: 'colleague id', score: 94 },
+  { label: 'employee id', score: 88 },
+  { label: 'employee number', score: 84 },
+  { label: 'associate id', score: 80 },
+  { label: 'badge id', score: 72 }
+];
+
+const BAD_NAME_HEADER_PATTERNS = [
+  /\bpl name\b/,
+  /\bmanager\b/,
+  /\blead\b/,
+  /\bsupervisor\b/,
+  /\brecruiter\b/,
+  /\btrainer\b/,
+  /\binterviewer\b/
+];
+
+const BAD_ID_HEADER_PATTERNS = [
+  /\bcandidate id\b/,
+  /\breq id\b/,
+  /\bjob id\b/,
+  /\bposition id\b/
+];
+
+function headerScore(normalized, rules, badPatterns){
+  if (!normalized) return 0;
+  let score = 0;
+  for (const rule of rules){
+    if (normalized === rule.label) score = Math.max(score, rule.score + 20);
+    else if (normalized.includes(rule.label)) score = Math.max(score, rule.score);
+  }
+  for (const pattern of badPatterns){
+    if (pattern.test(normalized)) score -= 120;
+  }
+  return score;
+}
+
+function getHeaderCandidates(rows, scanLimit = 8){
+  const candidates = [];
+  const maxRows = Math.min(rows.length, scanLimit);
+  for (let rowIndex = 0; rowIndex < maxRows; rowIndex++){
+    const row = rows[rowIndex] || [];
+    row.forEach((cell, colIndex) => {
+      const normalized = normalizeHeader(cell);
+      if (!normalized) return;
+      const nameScore = headerScore(normalized, NAME_HEADER_RULES, BAD_NAME_HEADER_PATTERNS);
+      const idScore = headerScore(normalized, ID_HEADER_RULES, BAD_ID_HEADER_PATTERNS);
+      if (nameScore > 0 || idScore > 0){
+        candidates.push({ rowIndex, colIndex, normalized, nameScore, idScore });
+      }
+    });
+  }
+  return candidates;
+}
+
+function findHeaderPair(rows){
+  const candidates = getHeaderCandidates(rows);
+  const names = candidates.filter(c => c.nameScore > 0);
+  const ids = candidates.filter(c => c.idScore > 0);
+  let best = null;
+
+  for (const name of names){
+    for (const id of ids){
+      let pairScore = name.nameScore + id.idScore;
+      const rowDistance = Math.abs(name.rowIndex - id.rowIndex);
+      const colDistance = Math.abs(name.colIndex - id.colIndex);
+      pairScore -= rowDistance * 12;
+      pairScore -= Math.max(0, colDistance - 8) * 2;
+      if (name.normalized === 'candidate name') pairScore += 60;
+      if (id.normalized === 'colleague #') pairScore += 60;
+      if (name.normalized === 'candidate name' && id.normalized === 'colleague #') pairScore += 200;
+      if (BAD_NAME_HEADER_PATTERNS.some(rx => rx.test(name.normalized))) pairScore -= 300;
+      if (BAD_ID_HEADER_PATTERNS.some(rx => rx.test(id.normalized))) pairScore -= 300;
+      if (!best || pairScore > best.score){
+        best = {
+          score: pairScore,
+          nameIndex: name.colIndex,
+          idIndex: id.colIndex,
+          headerRowIndex: Math.max(name.rowIndex, id.rowIndex),
+          nameHeader: name.normalized,
+          idHeader: id.normalized,
+          exact: name.normalized === 'candidate name' && id.normalized === 'colleague #'
+        };
+      }
+    }
+  }
+  return best;
+}
+
+function extractEightDigitId(text){
+  const raw = getCellText(text);
+  const match = raw.match(/\b(88\d{6})\b/);
+  if (match) return match[1];
+  const generic = raw.match(/\b(\d{8})\b/);
+  return generic ? generic[1] : '';
+}
+
+function isNoiseName(text){
+  const value = getCellText(text);
+  if (!value) return true;
+  const normalized = normalizeHeader(value);
+  if (!normalized) return true;
+  if (BAD_NAME_HEADER_PATTERNS.some(rx => rx.test(normalized))) return true;
+  if (/\b(candidate id|colleague #|employee id|employee number|requisition|job title|position|department|location|status|email|phone)\b/.test(normalized)) return true;
+  if (/^\d+$/.test(value)) return true;
+  if (/@/.test(value)) return true;
+  return false;
+}
+
+function isLikelyPersonName(value){
+  const s = getCellText(value);
+  if (!s || isNoiseName(s)) return false;
+  if (s.length < 3 || s.length > 80) return false;
+  if (/^\d/.test(s)) return false;
+  if (!/[A-Za-z]/.test(s)) return false;
+  if (/\b(warehouse|associate|operator|shift|full time|part time|china grove|salisbury|north carolina)\b/i.test(s)) return false;
+  return /^[A-Za-z][A-Za-z\s\.\-\'’]+$/.test(s);
+}
+
+function cleanImportedPair(name, id){
+  const cleanName = getCellText(name).replace(/\s+/g, ' ').trim();
+  const cleanId = extractEightDigitId(id);
+  if (!isLikelyPersonName(cleanName) || !cleanId) return null;
+  return { name: cleanName, id: cleanId };
+}
+
+function dedupeImportedPairs(pairs){
+  const seen = new Set();
+  const out = [];
+  for (const pair of pairs){
+    if (!pair) continue;
+    const key = pair.id.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(pair);
+  }
+  return out;
+}
+
+function extractUsingHeaderPair(rows, headerPair){
+  const pairs = [];
+  for (let i = headerPair.headerRowIndex + 1; i < rows.length; i++){
+    const row = rows[i] || [];
+    const pair = cleanImportedPair(row[headerPair.nameIndex] || '', row[headerPair.idIndex] || '');
+    if (pair) pairs.push(pair);
+  }
+  return dedupeImportedPairs(pairs);
+}
+
+function fallbackExtractPairs(rows){
+  const pairs = [];
+  for (const row of rows){
+    const ids = row.map((cell, idx) => ({ idx, id: extractEightDigitId(cell) })).filter(x => x.id);
+    if (!ids.length) continue;
+    const candidateNames = row.map((cell, idx) => ({ idx, name: getCellText(cell) })).filter(x => isLikelyPersonName(x.name));
+    if (!candidateNames.length) continue;
+    const bestId = ids[0];
+    candidateNames.sort((a, b) => Math.abs(a.idx - bestId.idx) - Math.abs(b.idx - bestId.idx));
+    const pair = cleanImportedPair(candidateNames[0].name, bestId.id);
+    if (pair) pairs.push(pair);
+  }
+  return dedupeImportedPairs(pairs);
+}
+
+function extractNameIdLinesFromTables(tables, sourceLabel){
+  const pairs = [];
+  let strategy = 'fallback';
+  let matchLabel = '';
+
+  for (const rows of tables){
+    const headerPair = findHeaderPair(rows);
+    if (headerPair){
+      const extracted = extractUsingHeaderPair(rows, headerPair);
+      if (extracted.length){
+        pairs.push(...extracted);
+        if (headerPair.exact) {
+          strategy = 'exact headers';
+          matchLabel = 'Candidate Name + Colleague #';
+        } else if (strategy !== 'exact headers') {
+          strategy = 'alternate headers';
+          matchLabel = `${headerPair.nameHeader} + ${headerPair.idHeader}`;
+        }
+        continue;
+      }
+    }
+    if (strategy === 'fallback') pairs.push(...fallbackExtractPairs(rows));
+  }
+
+  const uniquePairs = dedupeImportedPairs(pairs);
+  const lines = uniquePairs.map(pair => `${pair.name}, ${pair.id}`);
+  const modeText = matchLabel ? `${strategy} (${matchLabel})` : strategy;
+
+  return {
+    lines,
+    foundRows: uniquePairs.length,
+    strategy,
+    message: uniquePairs.length
+      ? `Imported ${uniquePairs.length} row(s) from ${sourceLabel} using ${modeText}.`
+      : `No matching name and employee ID pairs could be pulled from ${sourceLabel}.`
+  };
+}
+
+async function importStructuredFile(file){
+  const lower = (file.name || '').toLowerCase();
+  if (lower.endsWith('.xlsx') || lower.endsWith('.xlsm')){
+    const buffer = await file.arrayBuffer();
+    const tables = await parseXlsxTables(buffer);
+    return extractNameIdLinesFromTables(tables, file.name);
+  }
+
+  const text = await file.text();
+
+  if (lower.endsWith('.xml') || /<Workbook[^>]+office:spreadsheet/i.test(text)){
+    return extractNameIdLinesFromTables(parseSpreadsheetXml(text), file.name);
+  }
+
+  if (lower.endsWith('.html') || /<table[\s>]/i.test(text)){
+    return extractNameIdLinesFromTables(parseHtmlTables(text), file.name);
+  }
+
+  if (lower.endsWith('.txt')){
+    const tables = [parseDelimitedText(text)];
+    const structured = extractNameIdLinesFromTables(tables, file.name);
+    if (structured.foundRows) return structured;
+    return {
+      lines: String(text || '').replace(/\r\n/g, '\n').split('\n').filter(Boolean),
+      foundRows: 0,
+      strategy: 'raw text',
+      message: `Imported raw text from ${file.name}. No trusted name + employee ID headers were detected, so the original lines were added as-is.`
+    };
+  }
+
+  if (lower.endsWith('.xls')){
+    throw new Error('Old binary .xls files are not fully supported in this offline page yet. Please save the sheet as .xlsx, .xlsm, or XML Spreadsheet first.');
+  }
+
+  throw new Error('Unsupported file type. Use TXT, XLSX, XLSM, XML Spreadsheet, or HTML table files.');
+}
+
+async function handleImportFile(file){
+  if (!file) return;
+  try {
+    const result = await importStructuredFile(file);
+    if (result.lines && result.lines.length){
+      importTextContent(result.lines.join('\n'));
+    }
+    setImportNotice(result.message, !result.foundRows && !(file.name || '').toLowerCase().endsWith('.txt'));
+  } catch (err){
+    setImportNotice(err?.message || 'Import failed.', true);
+    alert(err?.message || 'Import failed.');
+  }
+}
+
+</script>
+
+<script>
+(function(){
+  const btn = document.getElementById('helpBtn');
+  const overlay = document.getElementById('helpOverlay');
+  const closeBtn = document.getElementById('helpClose');
+
+  function openHelp(){
+    overlay.style.display = 'block';
+    overlay.setAttribute('aria-hidden','false');
+    document.body.style.overflow = 'hidden';
+    closeBtn.focus();
+  }
+  function closeHelp(){
+    overlay.style.display = 'none';
+    overlay.setAttribute('aria-hidden','true');
+    document.body.style.overflow = '';
+    btn.focus();
+  }
+
+  btn && btn.addEventListener('click', openHelp);
+  closeBtn && closeBtn.addEventListener('click', closeHelp);
+  overlay && overlay.addEventListener('click', (e)=>{ if(e.target === overlay) closeHelp(); });
+  document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape' && overlay && overlay.style.display === 'block') closeHelp(); });
+})();
+</script>
+
+
+<script>
+(function(){
+  const importInput = document.getElementById('importFile');
+  const dropZone = document.getElementById('dropZone');
+  if (importInput){
+    importInput.addEventListener('change', (e)=>{
+      const file = e.target.files && e.target.files[0];
+      Promise.resolve(handleImportFile(file));
+      e.target.value = '';
+    });
+  }
+  if (dropZone){
+    ['dragenter','dragover'].forEach(evt => dropZone.addEventListener(evt, (e)=>{ e.preventDefault(); e.stopPropagation(); dropZone.classList.add('dragover'); }));
+    ['dragleave','dragend','drop'].forEach(evt => dropZone.addEventListener(evt, (e)=>{ e.preventDefault(); e.stopPropagation(); dropZone.classList.remove('dragover'); }));
+    dropZone.addEventListener('drop', (e)=>{
+      const file = e.dataTransfer?.files && e.dataTransfer.files[0];
+      Promise.resolve(handleImportFile(file));
+    });
+    dropZone.addEventListener('click', ()=> importInput && importInput.click());
+    dropZone.addEventListener('keydown', (e)=>{ if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); importInput && importInput.click(); } });
+  }
+})();
+</script>
+
+</body>
+</html>

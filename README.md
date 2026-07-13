@@ -35,6 +35,14 @@ Windows may show a SmartScreen warning because the EXE is not code-signed yet. F
 - Exports professional Excel, CSV, TXT, and PDF reports.
 - Includes Help, About, Settings, History, recent exports, clearable recent export history, default export settings, copyable error reports, and desktop shortcut support.
 
+## Source History
+
+The original Access Control script document and earlier HTML versions are preserved here:
+
+[View original source history and HTML archive](docs/source-history/README.md)
+
+Conversion rule: Facility Code (FC) is taken from the high 16 bits. Card Number (CN) is taken from the low 16 bits of the 32-bit HEX value.
+
 ## Screenshots
 
 ![Main screen](docs/screenshots/main.png)

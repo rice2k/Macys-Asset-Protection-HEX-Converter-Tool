@@ -1,0 +1,1065 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>AP - Access Control Hex Converter</title>
+<style>
+  :root{
+    --primary:#0078ff;
+    --muted:#f3f3f3;
+    --card:#ffffff;
+  }
+  body{font-family:Arial,Helvetica,sans-serif;background:var(--muted);padding:18px;}
+  .container{max-width:900px;margin:0 auto;background:var(--card);padding:18px;border-radius:10px;box-shadow:0 6px 18px rgba(0,0,0,0.08);}
+  h2{text-align:center;margin:4px 0 12px;}
+  label{display:block;margin-top:10px;font-weight:600;}
+  input[type="text"], input[type="number"], textarea{width:100%;padding:10px;margin-top:6px;border:1px solid #d0d0d0;border-radius:6px;box-sizing:border-box;font-size:15px;}
+  .row{display:flex;gap:10px;margin-top:10px;}
+  .row button{flex:1;padding:10px;border-radius:6px;border:none;background:var(--primary);color:#fff;cursor:pointer;}
+  .row button.ghost{background:#666;}
+  .actions{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;}
+  button.small{padding:6px 8px;font-size:13px;border-radius:6px;}
+  table{width:100%;border-collapse:collapse;margin-top:14px;}
+  th,td{border:1px solid #e0e0e0;padding:8px;text-align:center;font-size:14px;}
+  th{background:#f6f8ff;}
+  tr.invalid td{background:#ffecec;border-color:#ffbcbc;color:#700;}
+  .controls{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;margin-top:10px;}
+  .muted{color:#666;font-size:13px;}
+  @media(max-width:700px){
+    .row{flex-direction:column;}
+    .controls{justify-content:stretch;}
+    th,td{font-size:13px;padding:6px;}
+  }
+  .inline-btn{display:inline-block;margin:0 4px;padding:6px 8px;border-radius:6px;border:none;background:#444;color:#fff;cursor:pointer;font-size:13px;}
+</style>
+
+  <style>
+    .topnav {
+      position: sticky;
+      top: 0;
+      z-index: 999;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      background: rgba(15, 18, 25, 0.92);
+      border-bottom: 1px solid rgba(255,255,255,0.12);
+      backdrop-filter: blur(8px);
+    }
+    .topnav .brand {
+      font-weight: 800;
+      letter-spacing: 0.3px;
+    }
+    .topnav .navlinks {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .topnav a, .topnav button {
+      appearance: none;
+      border: 1px solid rgba(255,255,255,0.18);
+      background: rgba(255,255,255,0.06);
+      color: inherit;
+      text-decoration: none;
+      padding: 8px 12px;
+      border-radius: 10px;
+      font: inherit;
+      cursor: pointer;
+      transition: transform 0.05s ease, background 0.15s ease, border-color 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      line-height: 1;
+    }
+    .topnav a:hover, .topnav button:hover {
+      background: rgba(255,255,255,0.10);
+      border-color: rgba(255,255,255,0.28);
+    }
+    .topnav a:active, .topnav button:active {
+      transform: translateY(1px);
+    }
+    /* Help modal */
+    .modalOverlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.55);
+      z-index: 2000;
+      padding: 24px;
+    }
+    .modal {
+      max-width: 860px;
+      margin: 0 auto;
+      background: rgba(20, 24, 34, 0.98);
+      border: 1px solid rgba(255,255,255,0.16);
+      border-radius: 14px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.35);
+      overflow: hidden;
+    }
+    .modalHeader {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.12);
+    }
+    .modalHeader h2 {
+      margin: 0;
+      font-size: 18px;
+      letter-spacing: 0.2px;
+    }
+    .modalClose {
+      border: 1px solid rgba(255,255,255,0.18);
+      background: rgba(255,255,255,0.06);
+      color: inherit;
+      border-radius: 10px;
+      padding: 8px 10px;
+      cursor: pointer;
+      font: inherit;
+    }
+    .modalBody {
+      padding: 16px;
+      max-height: min(72vh, 720px);
+      overflow: auto;
+    }
+    .modalBody h3 {
+      margin-top: 18px;
+      margin-bottom: 8px;
+      font-size: 15px;
+    }
+    .modalBody p, .modalBody li {
+      line-height: 1.5;
+    }
+    .helpCallout {
+      border: 1px solid rgba(255,255,255,0.14);
+      background: rgba(255,255,255,0.05);
+      padding: 12px 14px;
+      border-radius: 12px;
+      margin: 12px 0;
+    }
+    code.kbd {
+      padding: 2px 6px;
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.18);
+      background: rgba(255,255,255,0.06);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 0.95em;
+    }
+  </style>
+
+
+<style id="topnavOverrides">
+  /* Force top nav to be visible regardless of existing layout styles */
+  .topnav{
+    position: fixed !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    border-radius: 0 !important;
+  }
+  body{
+    /* prevent the fixed nav from covering the top content */
+    padding-top: 64px !important;
+  }
+</style>
+
+
+<style id="contrastFix">
+  /* Fix nav/button contrast */
+  .topnav { color: #f5f7ff !important; }
+  .topnav a, .topnav button { color: #f5f7ff !important; }
+  .topnav a:hover, .topnav button:hover { background: rgba(255,255,255,0.14) !important; }
+
+  /* Improve main action button readability + focus */
+  .row button{
+    background:#0b66ff !important;
+    color:#ffffff !important;
+    font-weight:700;
+    letter-spacing:0.2px;
+  }
+  .row button:hover{ filter: brightness(1.05); }
+  .row button:focus{ outline: 3px solid rgba(11,102,255,0.35); outline-offset: 2px; }
+
+  .row button.ghost{
+    background:#3f4652 !important;
+    color:#ffffff !important;
+    font-weight:700;
+  }
+  .inline-btn{
+    background:#2f3642 !important;
+    color:#ffffff !important;
+    border: 1px solid rgba(0,0,0,0.15);
+  }
+  .inline-btn:hover{ filter: brightness(1.06); }
+</style>
+
+
+<style id="navCenterLinks">
+  .topnav{
+    justify-content: center !important;
+  }
+  .topnav .brand{
+    position: absolute;
+    left: 14px;
+  }
+  .topnav .navlinks{
+    justify-content: center;
+  }
+  @media (max-width: 520px){
+    .topnav .brand{ position: static; margin-right: 10px; }
+    .topnav{ justify-content: space-between !important; }
+  }
+</style>
+
+
+<style id="helpContrastFix">
+  /* Help modal readability */
+  .modalHeader, .modalHeader h2 { color: #f5f7ff !important; }
+  .modalBody, .modalBody p, .modalBody li, .modalBody ol, .modalBody ul { color: #eef2ff !important; }
+  .modalBody h3 { color: #ffffff !important; }
+  .helpCallout { color: #f5f7ff !important; }
+  .modalClose { color: #f5f7ff !important; }
+  .modalOverlay { background: rgba(0,0,0,0.65) !important; }
+  .modal { background: rgba(20, 24, 34, 0.99) !important; }
+  code.kbd { color: #ffffff !important; }
+</style>
+
+
+<style id="visualRefresh">
+  :root{
+    --bg: #0b1020;
+    --panel: rgba(255,255,255,0.06);
+    --panel2: rgba(255,255,255,0.08);
+    --border: rgba(255,255,255,0.14);
+    --border2: rgba(255,255,255,0.20);
+    --text: #eef2ff;
+    --muted: rgba(238,242,255,0.70);
+    --accent: #0b66ff;
+    --accent2:#2f8bff;
+    --danger:#ff5d5d;
+    --ok:#2bd576;
+  }
+
+  /* Page background + base typography */
+  html, body{
+    background: radial-gradient(900px 600px at 20% -10%, rgba(11,102,255,0.25), transparent 60%),
+                radial-gradient(900px 600px at 90% 0%, rgba(43,213,118,0.14), transparent 55%),
+                var(--bg) !important;
+    color: var(--text) !important;
+    font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";
+  }
+
+  /* Centered content card */
+  .container{
+    max-width: 980px !important;
+    margin: 26px auto !important;
+    padding: 0 !important;
+    background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.05)) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 18px !important;
+    box-shadow: 0 18px 60px rgba(0,0,0,0.45) !important;
+    overflow: hidden !important;
+  }
+
+  /* Header title area (if page has h1) */
+  h1{
+    margin: 0 !important;
+    padding: 22px 22px 8px 22px !important;
+    font-size: 22px !important;
+    letter-spacing: 0.3px !important;
+  }
+  .subtitle, .hint, .note, small{
+    color: var(--muted) !important;
+  }
+
+  /* Section titles */
+  h2, h3{
+    color: var(--text) !important;
+    letter-spacing: 0.2px !important;
+  }
+  .section{
+    padding: 18px 22px !important;
+    border-top: 1px solid rgba(255,255,255,0.10) !important;
+  }
+
+  /* Inputs / textarea */
+  input[type="text"], input[type="number"], textarea{
+    background: rgba(10,14,25,0.65) !important;
+    color: var(--text) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 12px !important;
+    padding: 11px 12px !important;
+    outline: none !important;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.06) !important;
+  }
+  input::placeholder, textarea::placeholder{ color: rgba(238,242,255,0.50) !important; }
+  input:focus, textarea:focus{
+    border-color: rgba(11,102,255,0.55) !important;
+    box-shadow: 0 0 0 4px rgba(11,102,255,0.20) !important;
+  }
+
+  /* Button system */
+  .row button, button{
+    border-radius: 12px !important;
+    border: 1px solid rgba(255,255,255,0.14) !important;
+    padding: 10px 14px !important;
+    font-weight: 750 !important;
+    letter-spacing: 0.2px !important;
+    color: #fff !important;
+    background: linear-gradient(180deg, var(--accent2), var(--accent)) !important;
+    box-shadow: 0 10px 26px rgba(11,102,255,0.18) !important;
+  }
+  button:hover{ filter: brightness(1.05); }
+  button:active{ transform: translateY(1px); }
+  button.ghost{
+    background: rgba(255,255,255,0.08) !important;
+    border-color: rgba(255,255,255,0.16) !important;
+    box-shadow: none !important;
+    color: var(--text) !important;
+  }
+  .inline-btn{
+    background: rgba(255,255,255,0.10) !important;
+    border-color: rgba(255,255,255,0.16) !important;
+    box-shadow: none !important;
+    color: var(--text) !important;
+    padding: 8px 10px !important;
+    border-radius: 10px !important;
+    font-weight: 700 !important;
+  }
+
+  /* Table styling */
+  table{
+    width: 100% !important;
+    border-collapse: separate !important;
+    border-spacing: 0 !important;
+    overflow: hidden !important;
+    border-radius: 14px !important;
+    border: 1px solid var(--border) !important;
+    background: rgba(10,14,25,0.45) !important;
+  }
+  th, td{
+    padding: 10px 10px !important;
+    border-bottom: 1px solid rgba(255,255,255,0.10) !important;
+    text-align: left !important;
+  }
+  th{
+    background: rgba(255,255,255,0.08) !important;
+    font-size: 12px !important;
+    letter-spacing: 0.6px !important;
+    text-transform: uppercase !important;
+    color: rgba(238,242,255,0.85) !important;
+  }
+  tr:last-child td{ border-bottom: 0 !important; }
+  tbody tr:nth-child(odd) td{ background: rgba(255,255,255,0.02) !important; }
+
+  /* Valid/invalid cell coloring if present */
+  .ok{ color: var(--ok) !important; font-weight: 750 !important; }
+  .bad{ color: var(--danger) !important; font-weight: 750 !important; }
+
+  /* Nav polish */
+  .topnav{
+    background: rgba(10, 14, 25, 0.92) !important;
+    border-bottom: 1px solid rgba(255,255,255,0.12) !important;
+  }
+  .topnav .brand{
+    font-size: 13px !important;
+    opacity: 0.9 !important;
+  }
+
+  /* Help modal polish */
+  .modal{
+    border-radius: 16px !important;
+    border: 1px solid rgba(255,255,255,0.16) !important;
+    box-shadow: 0 22px 70px rgba(0,0,0,0.55) !important;
+  }
+  .modalHeader{
+    background: rgba(255,255,255,0.04) !important;
+  }
+  .helpCallout{
+    background: rgba(11,102,255,0.10) !important;
+    border-color: rgba(11,102,255,0.28) !important;
+  }
+
+  /* Mobile spacing */
+  @media (max-width: 720px){
+    .container{ margin: 14px 10px !important; }
+    h1{ padding: 18px 16px 6px 16px !important; font-size: 20px !important; }
+    .section{ padding: 14px 16px !important; }
+  }
+</style>
+
+
+<style id="outputContrastBoost">
+  /* Result / output panels: make readable on dark theme */
+  .output, .result, .results, #singleResult, #hexResult, #fcCnResult, .outbox, .resultBox {
+    background: rgba(10,14,25,0.78) !important;
+    color: #f5f7ff !important;
+    border: 1px solid rgba(255,255,255,0.16) !important;
+    border-radius: 14px !important;
+    padding: 12px 12px !important;
+  }
+
+  /* If the page uses <div class="out"> or <div class="output"> inside sections */
+  .output * , .result * , .results * , #singleResult * , #hexResult * , #fcCnResult * , .outbox * , .resultBox * {
+    color: #f5f7ff !important;
+  }
+
+  /* Make inline "Hex: ..." badges readable */
+  .badge, .pill, .chip, .tag, .mono {
+    background: rgba(255,255,255,0.10) !important;
+    border: 1px solid rgba(255,255,255,0.18) !important;
+    color: #ffffff !important;
+    border-radius: 10px !important;
+    padding: 3px 8px !important;
+  }
+
+  /* Copy buttons inside result panels */
+  .output button, .result button, .results button,
+  #singleResult button, #hexResult button, #fcCnResult button,
+  .outbox button, .resultBox button,
+  .output a.inline-btn, .result a.inline-btn, .results a.inline-btn {
+    background: rgba(255,255,255,0.10) !important;
+    border: 1px solid rgba(255,255,255,0.18) !important;
+    color: #ffffff !important;
+    box-shadow: none !important;
+  }
+  .output button:hover, .result button:hover, .results button:hover,
+  #singleResult button:hover, #hexResult button:hover, #fcCnResult button:hover,
+  .outbox button:hover, .resultBox button:hover {
+    background: rgba(255,255,255,0.16) !important;
+    border-color: rgba(255,255,255,0.26) !important;
+  }
+
+  /* Fix any "light output bar" specifically (your screenshot shows a pale bar) */
+  .outputBar, .resultBar, .output-row, .result-row {
+    background: rgba(10,14,25,0.78) !important;
+    color: #f5f7ff !important;
+    border: 1px solid rgba(255,255,255,0.16) !important;
+    border-radius: 14px !important;
+  }
+
+  /* Ensure selection highlight isn't blinding */
+  ::selection { background: rgba(11,102,255,0.35) !important; }
+</style>
+
+
+<style id="singleOutputsBoost">
+  /* Single Hex -> FC/CN output panel */
+  #singleResult{
+    background: rgba(10,14,25,0.78) !important;
+    color: #f5f7ff !important;
+    border: 1px solid rgba(255,255,255,0.16) !important;
+    border-radius: 14px !important;
+    padding: 12px 12px !important;
+  }
+  #singleResult *{ color:#f5f7ff !important; }
+
+  /* FC/CN -> Hex output panel */
+  #backResult{
+    background: rgba(10,14,25,0.78) !important;
+    color: #f5f7ff !important;
+    border: 1px solid rgba(255,255,255,0.16) !important;
+    border-radius: 14px !important;
+    padding: 12px 12px !important;
+  }
+  #backResult *{ color:#f5f7ff !important; }
+
+  /* Copy buttons inside these panels (if any) */
+  #singleResult button, #backResult button,
+  #singleResult .inline-btn, #backResult .inline-btn{
+    background: rgba(255,255,255,0.10) !important;
+    border: 1px solid rgba(255,255,255,0.18) !important;
+    color: #ffffff !important;
+    box-shadow: none !important;
+  }
+  #singleResult button:hover, #backResult button:hover{
+    background: rgba(255,255,255,0.16) !important;
+    border-color: rgba(255,255,255,0.26) !important;
+  }
+</style>
+
+</head>
+<body>
+  <div class="topnav" role="navigation" aria-label="Top Navigation">
+    <div class="brand">AP Access Control Converter</div>
+    <div class="navlinks">
+      <a href="https://urldefense.com/v3/__http:/ma000xsblw1001/__;!!EkHEP60!DMUbC2E74izjZB31HFulv4RhX_bjBMwB_oRMXpD77VjQZP7QsyH1XwS5ujTohZ_Uq0BRt3Znm6Tyg8Sm-C_5wz8mRw$" target="_blank" rel="noopener noreferrer" title="Open BlueWave Login">BlueWave</a>
+      <button type="button" id="helpBtn" title="Help / How this page works">Help</button>
+    </div>
+  </div>
+
+
+  <!-- Help Modal -->
+  <div class="modalOverlay" id="helpOverlay" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+      <div class="modalHeader">
+        <h2 id="helpTitle">Help — What this page does</h2>
+        <button class="modalClose" type="button" id="helpClose" aria-label="Close help">Close</button>
+      </div>
+      <div class="modalBody">
+      <div class="helpCallout">
+        <b>AP Access Control Converter</b> helps you convert access control IDs between:
+        <b>HEX (8 characters)</b> ↔ <b>Facility Code (FC)</b> + <b>Card Number (CN)</b>.
+      </div>
+
+      <h3>What it does</h3>
+      <ul>
+        <li><b>Hex ➜ FC/CN:</b> Reads an 8‑character hex value and shows the Facility Code and Card Number.</li>
+        <li><b>FC/CN ➜ Hex:</b> Builds the 8‑character hex value from Facility Code and Card Number.</li>
+        <li><b>Batch support:</b> Paste multiple hex values (one per line) and convert them all at once.</li>
+        <li><b>Export:</b> Downloads a <b>formatted Excel file</b> with borders and a header for printing or sharing.</li>
+      </ul>
+
+      <h3>How it works (simple)</h3>
+      <div class="helpCallout">
+        The hex value is split into two halves:
+        <br><b>First half (top 16 bits) = Facility Code</b>
+        <br><b>Second half (bottom 16 bits) = Card Number</b>
+      </div>
+
+      <h3>How to use it</h3>
+      <ol>
+        <li><b>Batch Convert:</b> Paste your hex list (one per line) and click <b>Convert All</b>.</li>
+        <li><b>Single Convert:</b> Enter one hex value and click <b>Convert Single</b>.</li>
+        <li><b>FC/CN to Hex:</b> Enter numbers for Facility Code and Card Number, then click <b>Convert To Hex</b>.</li>
+        <li><b>Export Excel (Formatted):</b> Click to download a print‑ready spreadsheet.</li>
+      </ol>
+
+      <h3>Input rules</h3>
+      <ul>
+        <li><b>HEX must be exactly 8 characters</b> (0–9, A–F). Example: <code class="kbd">00A10F2B</code></li>
+        <li><b>FC and CN must be 0–65535</b>.</li>
+        <li>Invalid lines are flagged so you can correct them.</li>
+      </ul>
+
+      <h3>File name</h3>
+      <p>Exports include today’s date so they don’t get mixed up with older files:</p>
+      <ul>
+        <li><code class="kbd">AP_Acess_Control_YYYY-MM-DD.xls</code></li>
+      </ul>
+
+      <h3>Need help?</h3>
+      <div class="helpCallout">
+        If you see an issue, bug, or something doesn’t look right, contact:
+        <br><b>Christopher Schumacher</b>
+      </div>
+</div>
+    </div>
+  </div>
+
+
+<div class="container">
+  <h2>AP — Access Control Hex Converter</h2>
+
+  <!-- MULTI HEX -->
+  <label>Multiple Hex IDs (one per line, 8 hex chars each):</label>
+  <textarea id="multiHex" rows="5" placeholder="Example:
+1A2B3C4D
+55667788
+90ABCDEF"></textarea>
+
+  <div class="row" style="margin-top:8px;">
+    <button onclick="convertMulti()">Convert All</button>
+    <button class="ghost" onclick="clearAll()">Clear All Outputs</button>
+  </div>
+
+  <div class="controls">
+    <div class="muted">After converting you can export or copy specific FC/CN values</div>
+    <div style="flex:1"></div>
+<button id="exportXlsBtn" class="small" style="display:none;" onclick="exportExcelFormatted()">Export Excel (Formatted)</button>
+    <button id="exportTxtBtn" class="small" style="display:none;" onclick="exportTXT()">Download TXT</button>
+  </div>
+
+  <table id="resultsTable" style="display:none;">
+    <thead>
+      <tr>
+        <th>Hex (Employee ID)</th>
+        <th>Facility Code (FC)</th>
+        <th>Card Number (CN)</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <!-- SINGLE HEX -->
+  <hr style="margin:18px 0;">
+  <label>Single Hex ➜ FC/CN (8 hex chars)</label>
+  <input id="singleHex" type="text" maxlength="8" placeholder="Ex: 1A2B3C4D" />
+  <div class="row">
+    <button onclick="convertSingle()">Convert Single</button>
+    <button class="ghost" onclick="clearSingle()">Clear</button>
+  </div>
+  <div id="singleResult" style="display:none;margin-top:10px;padding:10px;border-radius:8px;background:#eef;"></div>
+
+  <!-- FC/CN ➜ HEX -->
+  <hr style="margin:18px 0;">
+  <label>Facility Code & Card Number ➜ Hex</label>
+  <input id="fcInput" type="number" placeholder="Facility Code (number)" />
+  <input id="cnInput" type="number" placeholder="Card Number (number)" style="margin-top:8px;" />
+  <div class="row">
+    <button onclick="fcCnToHex()">Convert To Hex</button>
+    <button class="ghost" onclick="clearFcCn()">Clear</button>
+  </div>
+  <div id="backResult" style="display:none;margin-top:10px;padding:10px;border-radius:8px;background:#eef;"></div>
+
+</div>
+
+<script>
+// Global store for multi results
+let multiResults = [];
+let multiInvalid = [];
+
+/* Helper: pad to 32 bits and split 16/16 (matches original Python logic) */
+function hexToFcCn(hex){
+  const dec = parseInt(hex, 16);
+  const bin = dec.toString(2).padStart(32, '0'); // ensure 32 bits
+  const fcBin = bin.slice(0,16);
+  const cnBin = bin.slice(16);
+  return { facility: parseInt(fcBin,2), card: parseInt(cnBin,2) };
+}
+
+/* Helper: build hex from fc/cn (16bits each) */
+function fcCnToHexStr(fc, cn){
+  const fcBin = parseInt(fc).toString(2).padStart(16,'0');
+  const cnBin = parseInt(cn).toString(2).padStart(16,'0');
+  const combined = fcBin + cnBin;
+  return parseInt(combined,2).toString(16).toUpperCase().padStart(8,'0');
+}
+
+/* Validation: exactly 8 hex chars 0-9A-F */
+function validHex8(s){
+  return typeof s === 'string' && /^[0-9A-Fa-f]{8}$/.test(s);
+}
+
+/* Convert multiple lines */
+function convertMulti(){
+  const raw = document.getElementById('multiHex').value;
+  const lines = raw.split(/\r?\n/);
+  const tbody = document.querySelector('#resultsTable tbody');
+  tbody.innerHTML = '';
+  multiResults = [];
+  multiInvalid = [];
+  let hasValid = false;
+
+  lines.forEach((l, idx) => {
+    const original = (l ?? '').toString();
+    const hex = original.trim().toUpperCase();
+    if (hex === '') return; // skip empty lines
+
+    const tr = document.createElement('tr');
+    const lineNo = idx + 1;
+
+    if (!validHex8(hex)) {
+      multiInvalid.push({ line: lineNo, raw: original });
+      tr.classList.add('invalid');
+      tr.innerHTML = `<td colspan="4">Invalid hex on line ${lineNo}: "${original}"</td>`;
+      tbody.appendChild(tr);
+      return;
+    }
+
+    // valid
+    const {facility, card} = hexToFcCn(hex);
+    multiResults.push({ line: lineNo, raw: original, hex, facility, card });
+
+    tr.innerHTML = `
+      <td>${hex}</td>
+      <td>${facility}</td>
+      <td>${card}</td>
+      <td>
+        <button class="inline-btn" onclick="copyToClipboard('${facility}')">Copy FC</button>
+        <button class="inline-btn" onclick="copyToClipboard('${card}')">Copy CN</button>
+        <button class="inline-btn" onclick="copyToClipboard('${facility},${card}')">Copy FC,CN</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+    hasValid = true;
+  });
+
+  document.getElementById('resultsTable').style.display = (tbody.children.length ? 'table' : 'none');
+  document.getElementById('exportXlsBtn').style.display = hasValid ? 'inline-block' : 'none';
+  document.getElementById('exportTxtBtn').style.display = hasValid ? 'inline-block' : 'none';
+}
+
+/* Clear all outputs including table and single results */
+function clearAll(){
+  document.getElementById('multiHex').value = '';
+  document.querySelector('#resultsTable tbody').innerHTML = '';
+  document.getElementById('resultsTable').style.display = 'none';
+  multiResults = [];
+  document.getElementById('exportTxtBtn').style.display = 'none';
+  document.getElementById('exportXlsBtn').style.display = 'none';
+  clearSingle();
+  clearFcCn();
+}
+
+/* Copy utility */
+function copyToClipboard(text){
+  if (!navigator.clipboard) {
+    // fallback
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    ta.remove();
+    return;
+  }
+  navigator.clipboard.writeText(text);
+}
+
+/* EXPORT CSV */
+function getDateStamp(){
+  const d = new Date();
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2,'0');
+  const dd = String(d.getDate()).padStart(2,'0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+
+function xmlEscape(v){
+  return String(v ?? '')
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/'/g,'&apos;');
+}
+
+function exportExcelFormatted(){
+  if ((!multiResults || multiResults.length === 0) && (!multiInvalid || multiInvalid.length === 0)) return;
+
+  const stamp = getDateStamp();
+  const filename = `AP_Acess_Control_${stamp}.xls`;
+  const generatedAt = new Date().toLocaleString();
+
+  const validCount = (multiResults || []).length;
+  const invalidCount = (multiInvalid || []).length;
+  const totalCount = validCount + invalidCount;
+
+  // SpreadsheetML (Excel 2003 XML) with basic styling: borders, fonts, centered header, print-friendly columns
+  let xml = `<?xml version="1.0"?>\n` +
+`<?mso-application progid="Excel.Sheet"?>\n` +
+`<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"\n` +
+` xmlns:o="urn:schemas-microsoft-com:office:office"\n` +
+` xmlns:x="urn:schemas-microsoft-com:office:excel"\n` +
+` xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"\n` +
+` xmlns:html="http://www.w3.org/TR/REC-html40">\n` +
+
+`<Styles>\n` +
+`  <Style ss:ID="sHeader">\n` +
+`    <Alignment ss:Horizontal="Center" ss:Vertical="Center"/>\n` +
+`    <Font ss:FontName="Calibri" ss:Size="16" ss:Bold="1"/>\n` +
+`  </Style>\n` +
+`  <Style ss:ID="sMetaLabel">\n` +
+`    <Font ss:FontName="Calibri" ss:Size="11" ss:Bold="1"/>\n` +
+`    <Alignment ss:Horizontal="Left" ss:Vertical="Center"/>\n` +
+`  </Style>\n` +
+`  <Style ss:ID="sMetaValue">\n` +
+`    <Font ss:FontName="Calibri" ss:Size="11"/>\n` +
+`    <Alignment ss:Horizontal="Left" ss:Vertical="Center"/>\n` +
+`  </Style>\n` +
+`  <Style ss:ID="sTableHeader">\n` +
+`    <Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="1"/>\n` +
+`    <Font ss:FontName="Calibri" ss:Size="11" ss:Bold="1"/>\n` +
+`    <Interior ss:Color="#E6E6E6" ss:Pattern="Solid"/>\n` +
+`    <Borders>\n` +
+`      <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/>\n` +
+`      <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/>\n` +
+`      <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/>\n` +
+`      <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/>\n` +
+`    </Borders>\n` +
+`  </Style>\n` +
+`  <Style ss:ID="sCellCenter">\n` +
+`    <Alignment ss:Horizontal="Center" ss:Vertical="Center"/>\n` +
+`    <Font ss:FontName="Calibri" ss:Size="11"/>\n` +
+`    <Borders>\n` +
+`      <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/>\n` +
+`      <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/>\n` +
+`      <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/>\n` +
+`      <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/>\n` +
+`    </Borders>\n` +
+`  </Style>\n` +
+`  <Style ss:ID="sCellLeft">\n` +
+`    <Alignment ss:Horizontal="Left" ss:Vertical="Center"/>\n` +
+`    <Font ss:FontName="Consolas" ss:Size="11"/>\n` +
+`    <Borders>\n` +
+`      <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/>\n` +
+`      <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/>\n` +
+`      <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/>\n` +
+`      <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/>\n` +
+`    </Borders>\n` +
+`  </Style>\n` +
+`  <Style ss:ID="sSection">\n` +
+`    <Font ss:FontName="Calibri" ss:Size="12" ss:Bold="1"/>\n` +
+`    <Alignment ss:Horizontal="Left" ss:Vertical="Center"/>\n` +
+`  </Style>\n` +
+`</Styles>\n` +
+
+`<Worksheet ss:Name="AP Access Control">\n` +
+`  <Table ss:DefaultRowHeight="18">\n` +
+`    <Column ss:AutoFitWidth="0" ss:Width="42"/>\n` +   // Line
+`    <Column ss:AutoFitWidth="0" ss:Width="140"/>\n` +  // Hex
+`    <Column ss:AutoFitWidth="0" ss:Width="110"/>\n` +  // FC
+`    <Column ss:AutoFitWidth="0" ss:Width="110"/>\n` +  // CN
+`    <Column ss:AutoFitWidth="0" ss:Width="90"/>\n` +   // FC,CN
+`    <Column ss:AutoFitWidth="0" ss:Width="260"/>\n`;   // Notes
+
+  // Header row (merged across 6 columns)
+  xml += `    <Row ss:Height="26">\n` +
+         `      <Cell ss:StyleID="sHeader" ss:MergeAcross="5"><Data ss:Type="String">AP Access Control Conversion Report</Data></Cell>\n` +
+         `    </Row>\n`;
+
+  // Meta rows
+  const metaRows = [
+    ["Generated", generatedAt],
+    ["Filename", filename],
+    ["Total Input Lines", totalCount],
+    ["Valid Lines", validCount],
+    ["Invalid Lines", invalidCount],
+    ["Note", "Facility Code = high 16 bits; Card Number = low 16 bits of the 32-bit hex value"]
+  ];
+  metaRows.forEach(([k,v])=>{
+    xml += `    <Row>\n` +
+           `      <Cell ss:StyleID="sMetaLabel"><Data ss:Type="String">${xmlEscape(k)}</Data></Cell>\n` +
+           `      <Cell ss:StyleID="sMetaValue" ss:MergeAcross="4"><Data ss:Type="String">${xmlEscape(v)}</Data></Cell>\n` +
+           `    </Row>\n`;
+  });
+
+  // Blank row
+  xml += `    <Row><Cell><Data ss:Type="String"></Data></Cell></Row>\n`;
+
+  // Valid section
+  xml += `    <Row><Cell ss:StyleID="sSection" ss:MergeAcross="5"><Data ss:Type="String">Valid Conversions</Data></Cell></Row>\n`;
+  xml += `    <Row>\n` +
+         `      <Cell ss:StyleID="sTableHeader"><Data ss:Type="String">Line</Data></Cell>\n` +
+         `      <Cell ss:StyleID="sTableHeader"><Data ss:Type="String">Hex (Employee ID)</Data></Cell>\n` +
+         `      <Cell ss:StyleID="sTableHeader"><Data ss:Type="String">Facility Code (FC)</Data></Cell>\n` +
+         `      <Cell ss:StyleID="sTableHeader"><Data ss:Type="String">Card Number (CN)</Data></Cell>\n` +
+         `      <Cell ss:StyleID="sTableHeader"><Data ss:Type="String">FC,CN</Data></Cell>\n` +
+         `      <Cell ss:StyleID="sTableHeader"><Data ss:Type="String">Notes</Data></Cell>\n` +
+         `    </Row>\n`;
+
+  (multiResults || []).forEach(r=>{
+    const fcCn = `${r.facility},${r.card}`;
+    xml += `    <Row>\n` +
+           `      <Cell ss:StyleID="sCellCenter"><Data ss:Type="Number">${Number(r.line)}</Data></Cell>\n` +
+           `      <Cell ss:StyleID="sCellLeft"><Data ss:Type="String">${xmlEscape(r.hex)}</Data></Cell>\n` +
+           `      <Cell ss:StyleID="sCellCenter"><Data ss:Type="Number">${Number(r.facility)}</Data></Cell>\n` +
+           `      <Cell ss:StyleID="sCellCenter"><Data ss:Type="Number">${Number(r.card)}</Data></Cell>\n` +
+           `      <Cell ss:StyleID="sCellCenter"><Data ss:Type="String">${xmlEscape(fcCn)}</Data></Cell>\n` +
+           `      <Cell ss:StyleID="sCellCenter"><Data ss:Type="String"></Data></Cell>\n` +
+           `    </Row>\n`;
+  });
+
+  // Invalid section
+  if (invalidCount > 0){
+    xml += `    <Row><Cell><Data ss:Type="String"></Data></Cell></Row>\n`;
+    xml += `    <Row><Cell ss:StyleID="sSection" ss:MergeAcross="5"><Data ss:Type="String">Invalid Inputs</Data></Cell></Row>\n`;
+    xml += `    <Row>\n` +
+           `      <Cell ss:StyleID="sTableHeader"><Data ss:Type="String">Line</Data></Cell>\n` +
+           `      <Cell ss:StyleID="sTableHeader" ss:MergeAcross="2"><Data ss:Type="String">Raw Input</Data></Cell>\n` +
+           `      <Cell ss:StyleID="sTableHeader" ss:MergeAcross="2"><Data ss:Type="String">Error</Data></Cell>\n` +
+           `    </Row>\n`;
+    (multiInvalid || []).forEach(e=>{
+      xml += `    <Row>\n` +
+             `      <Cell ss:StyleID="sCellCenter"><Data ss:Type="Number">${Number(e.line)}</Data></Cell>\n` +
+             `      <Cell ss:StyleID="sCellLeft" ss:MergeAcross="2"><Data ss:Type="String">${xmlEscape(e.raw)}</Data></Cell>\n` +
+             `      <Cell ss:StyleID="sCellCenter" ss:MergeAcross="2"><Data ss:Type="String">Invalid hex (must be exactly 8 characters: 0-9, A-F)</Data></Cell>\n` +
+             `    </Row>\n`;
+    });
+  }
+
+  xml += `  </Table>\n` +
+         `  <WorksheetOptions xmlns="urn:schemas-microsoft-com:office:excel">\n` +
+         `    <PageSetup>\n` +
+         `      <Layout x:Orientation="Landscape"/>\n` +
+         `      <Header x:Margin="0.3"/>\n` +
+         `      <Footer x:Margin="0.3"/>\n` +
+         `      <PageMargins x:Left="0.3" x:Right="0.3" x:Top="0.4" x:Bottom="0.4"/>\n` +
+         `    </PageSetup>\n` +
+         `    <FitToPage/>\n` +
+         `    <Print>\n` +
+         `      <FitHeight>0</FitHeight>\n` +
+         `      <FitWidth>1</FitWidth>\n` +
+         `    </Print>\n` +
+         `  </WorksheetOptions>\n` +
+         `</Worksheet>\n` +
+`</Workbook>`;
+
+  const blob = new Blob([xml], {type:'application/vnd.ms-excel;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+
+
+
+
+
+
+/* EXPORT TXT */
+function exportTXT(){
+  if (!multiResults || multiResults.length === 0) return;
+
+  const stamp = getDateStamp();
+  const filename = `AP_Acess_Control_${stamp}.txt`;
+  const generatedAt = new Date().toLocaleString();
+
+  const validCount = multiResults.length;
+  const invalidCount = (multiInvalid || []).length;
+
+  // Build a neat fixed-width report
+  const rows = multiResults.map(r => ({
+    line: String(r.line),
+    hex: String(r.hex),
+    fc: String(r.facility),
+    cn: String(r.card),
+    fcCn: `${r.facility},${r.card}`
+  }));
+
+  const widths = {
+    line: Math.max(4, ...rows.map(x => x.line.length)),
+    hex:  Math.max(16, ...rows.map(x => x.hex.length)),
+    fc:   Math.max(2, ...rows.map(x => x.fc.length)),
+    cn:   Math.max(2, ...rows.map(x => x.cn.length)),
+    fcCn: Math.max(5, ...rows.map(x => x.fcCn.length)),
+  };
+
+  const pad = (s, n) => String(s).padEnd(n, ' ');
+  let txt = '';
+  txt += 'AP - Access Control Export\n';
+  txt += `Generated: ${generatedAt}\n`;
+  txt += `Valid Records: ${validCount}   Invalid Lines: ${invalidCount}\n`;
+  txt += '------------------------------------------------------------\n\n';
+
+  // Table header
+  txt += `${pad('LINE', widths.line)}  ${pad('HEX (EMPLOYEE ID)', widths.hex)}  ${pad('FC', widths.fc)}  ${pad('CN', widths.cn)}  ${pad('FC,CN', widths.fcCn)}\n`;
+  txt += `${'-'.repeat(widths.line)}  ${'-'.repeat(widths.hex)}  ${'-'.repeat(widths.fc)}  ${'-'.repeat(widths.cn)}  ${'-'.repeat(widths.fcCn)}\n`;
+
+  rows.forEach(r => {
+    txt += `${pad(r.line, widths.line)}  ${pad(r.hex, widths.hex)}  ${pad(r.fc, widths.fc)}  ${pad(r.cn, widths.cn)}  ${pad(r.fcCn, widths.fcCn)}\n`;
+  });
+
+  if (invalidCount > 0) {
+    txt += '\n\nINVALID LINES (not converted)\n';
+    txt += '-----------------------------\n';
+    (multiInvalid || []).forEach(e => {
+      txt += `Line ${e.line}: ${e.raw}\n`;
+    });
+  }
+
+  txt += '\n';
+
+  const blob = new Blob([txt], {type:'text/plain;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+/* SINGLE HEX conversion (keeps parity with multi) */
+function convertSingle(){
+  const v = (document.getElementById('singleHex').value||'').trim().toUpperCase();
+  const out = document.getElementById('singleResult');
+  out.style.display = 'none';
+  out.textContent = '';
+
+  if (!validHex8(v)) {
+    alert('Single Hex must be 8 hex characters (0-9, A-F).');
+    return;
+  }
+  const {facility, card} = hexToFcCn(v);
+  out.style.display = 'block';
+  out.innerHTML = `<strong>Hex:</strong> ${v} &nbsp; <strong>FC:</strong> ${facility} &nbsp; <strong>CN:</strong> ${card}
+    <div style="margin-top:8px;">
+      <button class="inline-btn" onclick="copyToClipboard('${facility}')">Copy FC</button>
+      <button class="inline-btn" onclick="copyToClipboard('${card}')">Copy CN</button>
+      <button class="inline-btn" onclick="copyToClipboard('${facility},${card}')">Copy FC,CN</button>
+    </div>`;
+}
+
+/* clear single */
+function clearSingle(){
+  document.getElementById('singleHex').value = '';
+  const out = document.getElementById('singleResult');
+  out.style.display = 'none';
+  out.textContent = '';
+}
+
+/* FC/CN to HEX */
+function fcCnToHex(){
+  const fc = document.getElementById('fcInput').value;
+  const cn = document.getElementById('cnInput').value;
+  const out = document.getElementById('backResult');
+  out.style.display = 'none';
+  out.textContent = '';
+
+  if (fc === '' || cn === '') {
+    alert('Please enter both Facility Code and Card Number.');
+    return;
+  }
+  if (isNaN(parseInt(fc)) || isNaN(parseInt(cn))) {
+    alert('Facility Code and Card Number must be numeric.');
+    return;
+  }
+  // ensure within 16-bit
+  const f = parseInt(fc), c = parseInt(cn);
+  if (f < 0 || f > 65535 || c < 0 || c > 65535) {
+    alert('FC and CN must be between 0 and 65535 (16-bit).');
+    return;
+  }
+  const hex = fcCnToHexStr(f,c);
+  out.style.display = 'block';
+  out.innerHTML = `<strong>Hex:</strong> ${hex} &nbsp;
+    <button class="inline-btn" onclick="copyToClipboard('${hex}')">Copy Hex</button>`;
+}
+
+/* clear fc/cn */
+function clearFcCn(){
+  document.getElementById('fcInput').value = '';
+  document.getElementById('cnInput').value = '';
+  const out = document.getElementById('backResult');
+  out.style.display = 'none';
+  out.textContent = '';
+}
+
+</script>
+
+<script>
+(function(){
+  const btn = document.getElementById('helpBtn');
+  const overlay = document.getElementById('helpOverlay');
+  const closeBtn = document.getElementById('helpClose');
+
+  function openHelp(){
+    overlay.style.display = 'block';
+    overlay.setAttribute('aria-hidden','false');
+    document.body.style.overflow = 'hidden';
+    closeBtn.focus();
+  }
+  function closeHelp(){
+    overlay.style.display = 'none';
+    overlay.setAttribute('aria-hidden','true');
+    document.body.style.overflow = '';
+    btn.focus();
+  }
+
+  btn && btn.addEventListener('click', openHelp);
+  closeBtn && closeBtn.addEventListener('click', closeHelp);
+  overlay && overlay.addEventListener('click', (e)=>{ if(e.target === overlay) closeHelp(); });
+  document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape' && overlay && overlay.style.display === 'block') closeHelp(); });
+})();
+</script>
+
+</body>
+</html>

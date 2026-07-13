@@ -1,0 +1,1845 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>AP - Access Control Hex Converter</title>
+<style>
+  :root{
+    --primary:#0078ff;
+    --muted:#f3f3f3;
+    --card:#ffffff;
+  }
+  body{font-family:Arial,Helvetica,sans-serif;background:var(--muted);padding:18px;}
+  .container{max-width:900px;margin:0 auto;background:var(--card);padding:18px;border-radius:10px;box-shadow:0 6px 18px rgba(0,0,0,0.08);}
+  h2{text-align:center;margin:4px 0 12px;}
+  label{display:block;margin-top:10px;font-weight:600;}
+  input[type="text"], input[type="number"], textarea{width:100%;padding:10px;margin-top:6px;border:1px solid #d0d0d0;border-radius:6px;box-sizing:border-box;font-size:15px;}
+  .row{display:flex;gap:10px;margin-top:10px;}
+  .row button{flex:1;padding:10px;border-radius:6px;border:none;background:var(--primary);color:#fff;cursor:pointer;}
+  .row button.ghost{background:#666;}
+  .actions{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;}
+  button.small{padding:6px 8px;font-size:13px;border-radius:6px;}
+  table{width:100%;border-collapse:collapse;margin-top:14px;}
+  th,td{border:1px solid #e0e0e0;padding:8px;text-align:center;font-size:14px;}
+  th{background:#f6f8ff;}
+  tr.invalid td{background:#fff4e8;border-color:#ffd199;color:#8a3f00;}
+  .controls{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;margin-top:10px;}
+  .muted{color:#666;font-size:13px;}
+  @media(max-width:700px){
+    .row{flex-direction:column;}
+    .controls{justify-content:stretch;}
+    th,td{font-size:13px;padding:6px;}
+  }
+  .inline-btn{display:inline-block;margin:0 4px;padding:6px 8px;border-radius:6px;border:none;background:#444;color:#fff;cursor:pointer;font-size:13px;}
+</style>
+
+  <style>
+    .topnav {
+      position: sticky;
+      top: 0;
+      z-index: 999;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      background: rgba(15, 18, 25, 0.92);
+      border-bottom: 1px solid rgba(255,255,255,0.12);
+      backdrop-filter: blur(8px);
+    }
+    .topnav .brand {
+      font-weight: 800;
+      letter-spacing: 0.3px;
+    }
+    .topnav .navlinks {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .topnav a, .topnav button {
+      appearance: none;
+      border: 1px solid rgba(255,255,255,0.18);
+      background: rgba(255,255,255,0.06);
+      color: inherit;
+      text-decoration: none;
+      padding: 8px 12px;
+      border-radius: 10px;
+      font: inherit;
+      cursor: pointer;
+      transition: transform 0.05s ease, background 0.15s ease, border-color 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      line-height: 1;
+    }
+    .topnav a:hover, .topnav button:hover {
+      background: rgba(255,255,255,0.10);
+      border-color: rgba(255,255,255,0.28);
+    }
+    .topnav a:active, .topnav button:active {
+      transform: translateY(1px);
+    }
+    /* Help modal */
+    .modalOverlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.55);
+      z-index: 2000;
+      padding: 24px;
+    }
+    .modal {
+      max-width: 860px;
+      margin: 0 auto;
+      background: rgba(20, 24, 34, 0.98);
+      border: 1px solid rgba(255,255,255,0.16);
+      border-radius: 14px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.35);
+      overflow: hidden;
+    }
+    .modalHeader {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.12);
+    }
+    .modalHeader h2 {
+      margin: 0;
+      font-size: 18px;
+      letter-spacing: 0.2px;
+    }
+    .modalClose {
+      border: 1px solid rgba(255,255,255,0.18);
+      background: rgba(255,255,255,0.06);
+      color: inherit;
+      border-radius: 10px;
+      padding: 8px 10px;
+      cursor: pointer;
+      font: inherit;
+    }
+    .modalBody {
+      padding: 16px;
+      max-height: min(72vh, 720px);
+      overflow: auto;
+    }
+    .modalBody h3 {
+      margin-top: 18px;
+      margin-bottom: 8px;
+      font-size: 15px;
+    }
+    .modalBody p, .modalBody li {
+      line-height: 1.5;
+    }
+    .helpCallout {
+      border: 1px solid rgba(255,255,255,0.14);
+      background: rgba(255,255,255,0.05);
+      padding: 12px 14px;
+      border-radius: 12px;
+      margin: 12px 0;
+    }
+    code.kbd {
+      padding: 2px 6px;
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.18);
+      background: rgba(255,255,255,0.06);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 0.95em;
+    }
+  </style>
+
+
+<style id="topnavOverrides">
+  /* Force top nav to be visible regardless of existing layout styles */
+  .topnav{
+    position: fixed !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    border-radius: 0 !important;
+  }
+  body{
+    /* prevent the fixed nav from covering the top content */
+    padding-top: 64px !important;
+  }
+</style>
+
+
+<style id="contrastFix">
+  /* Fix nav/button contrast */
+  .topnav { color: #f5f7ff !important; }
+  .topnav a, .topnav button { color: #f5f7ff !important; }
+  .topnav a:hover, .topnav button:hover { background: rgba(255,255,255,0.14) !important; }
+
+  /* Improve main action button readability + focus */
+  .row button{
+    background:#0b66ff !important;
+    color:#ffffff !important;
+    font-weight:700;
+    letter-spacing:0.2px;
+  }
+  .row button:hover{ filter: brightness(1.05); }
+  .row button:focus{ outline: 3px solid rgba(11,102,255,0.35); outline-offset: 2px; }
+
+  .row button.ghost{
+    background:#3f4652 !important;
+    color:#ffffff !important;
+    font-weight:700;
+  }
+  .inline-btn{
+    background:#2f3642 !important;
+    color:#ffffff !important;
+    border: 1px solid rgba(0,0,0,0.15);
+  }
+  .inline-btn:hover{ filter: brightness(1.06); }
+</style>
+
+
+<style id="navCenterLinks">
+  .topnav{
+    justify-content: center !important;
+  }
+  .topnav .brand{
+    position: absolute;
+    left: 14px;
+  }
+  .topnav .navlinks{
+    justify-content: center;
+  }
+  @media (max-width: 520px){
+    .topnav .brand{ position: static; margin-right: 10px; }
+    .topnav{ justify-content: space-between !important; }
+  }
+</style>
+
+
+<style id="helpContrastFix">
+  /* Help modal readability */
+  .modalHeader, .modalHeader h2 { color: #f5f7ff !important; }
+  .modalBody, .modalBody p, .modalBody li, .modalBody ol, .modalBody ul { color: #eef2ff !important; }
+  .modalBody h3 { color: #ffffff !important; }
+  .helpCallout { color: #f5f7ff !important; }
+  .modalClose { color: #f5f7ff !important; }
+  .modalOverlay { background: rgba(0,0,0,0.65) !important; }
+  .modal { background: rgba(20, 24, 34, 0.99) !important; }
+  code.kbd { color: #ffffff !important; }
+</style>
+
+
+<style id="visualRefresh">
+  :root{
+    --bg: #0b1020;
+    --panel: rgba(255,255,255,0.06);
+    --panel2: rgba(255,255,255,0.08);
+    --border: rgba(255,255,255,0.14);
+    --border2: rgba(255,255,255,0.20);
+    --text: #eef2ff;
+    --muted: rgba(238,242,255,0.70);
+    --accent: #0b66ff;
+    --accent2:#2f8bff;
+    --danger:#ff5d5d;
+    --ok:#2bd576;
+  }
+
+  /* Page background + base typography */
+  html, body{
+    background: radial-gradient(900px 600px at 20% -10%, rgba(11,102,255,0.25), transparent 60%),
+                radial-gradient(900px 600px at 90% 0%, rgba(43,213,118,0.14), transparent 55%),
+                var(--bg) !important;
+    color: var(--text) !important;
+    font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";
+  }
+
+  /* Centered content card */
+  .container{
+    max-width: 980px !important;
+    margin: 26px auto !important;
+    padding: 0 !important;
+    background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.05)) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 18px !important;
+    box-shadow: 0 18px 60px rgba(0,0,0,0.45) !important;
+    overflow: hidden !important;
+  }
+
+  /* Header title area (if page has h1) */
+  h1{
+    margin: 0 !important;
+    padding: 22px 22px 8px 22px !important;
+    font-size: 22px !important;
+    letter-spacing: 0.3px !important;
+  }
+  .subtitle, .hint, .note, small{
+    color: var(--muted) !important;
+  }
+
+  /* Section titles */
+  h2, h3{
+    color: var(--text) !important;
+    letter-spacing: 0.2px !important;
+  }
+  .section{
+    padding: 18px 22px !important;
+    border-top: 1px solid rgba(255,255,255,0.10) !important;
+  }
+
+  /* Inputs / textarea */
+  input[type="text"], input[type="number"], textarea{
+    background: rgba(10,14,25,0.65) !important;
+    color: var(--text) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 12px !important;
+    padding: 11px 12px !important;
+    outline: none !important;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.06) !important;
+  }
+  input::placeholder, textarea::placeholder{ color: rgba(238,242,255,0.50) !important; }
+  input:focus, textarea:focus{
+    border-color: rgba(11,102,255,0.55) !important;
+    box-shadow: 0 0 0 4px rgba(11,102,255,0.20) !important;
+  }
+
+  /* Button system */
+  .row button, button{
+    border-radius: 12px !important;
+    border: 1px solid rgba(255,255,255,0.14) !important;
+    padding: 10px 14px !important;
+    font-weight: 750 !important;
+    letter-spacing: 0.2px !important;
+    color: #fff !important;
+    background: linear-gradient(180deg, var(--accent2), var(--accent)) !important;
+    box-shadow: 0 10px 26px rgba(11,102,255,0.18) !important;
+  }
+  button:hover{ filter: brightness(1.05); }
+  button:active{ transform: translateY(1px); }
+  button.ghost{
+    background: rgba(255,255,255,0.08) !important;
+    border-color: rgba(255,255,255,0.16) !important;
+    box-shadow: none !important;
+    color: var(--text) !important;
+  }
+  .inline-btn{
+    background: rgba(255,255,255,0.10) !important;
+    border-color: rgba(255,255,255,0.16) !important;
+    box-shadow: none !important;
+    color: var(--text) !important;
+    padding: 8px 10px !important;
+    border-radius: 10px !important;
+    font-weight: 700 !important;
+  }
+
+  /* Table styling */
+  table{
+    width: 100% !important;
+    border-collapse: separate !important;
+    border-spacing: 0 !important;
+    overflow: hidden !important;
+    border-radius: 14px !important;
+    border: 1px solid var(--border) !important;
+    background: rgba(10,14,25,0.45) !important;
+  }
+  th, td{
+    padding: 10px 10px !important;
+    border-bottom: 1px solid rgba(255,255,255,0.10) !important;
+    text-align: left !important;
+  }
+  th{
+    background: rgba(255,255,255,0.08) !important;
+    font-size: 12px !important;
+    letter-spacing: 0.6px !important;
+    text-transform: uppercase !important;
+    color: rgba(238,242,255,0.85) !important;
+  }
+  tr:last-child td{ border-bottom: 0 !important; }
+  tbody tr:nth-child(odd) td{ background: rgba(255,255,255,0.02) !important; }
+
+  /* Valid/invalid cell coloring if present */
+  .ok{ color: var(--ok) !important; font-weight: 750 !important; }
+  .bad{ color: var(--danger) !important; font-weight: 750 !important; }
+
+  /* Nav polish */
+  .topnav{
+    background: rgba(10, 14, 25, 0.92) !important;
+    border-bottom: 1px solid rgba(255,255,255,0.12) !important;
+  }
+  .topnav .brand{
+    font-size: 13px !important;
+    opacity: 0.9 !important;
+  }
+
+  /* Help modal polish */
+  .modal{
+    border-radius: 16px !important;
+    border: 1px solid rgba(255,255,255,0.16) !important;
+    box-shadow: 0 22px 70px rgba(0,0,0,0.55) !important;
+  }
+  .modalHeader{
+    background: rgba(255,255,255,0.04) !important;
+  }
+  .helpCallout{
+    background: rgba(11,102,255,0.10) !important;
+    border-color: rgba(11,102,255,0.28) !important;
+  }
+
+  /* Mobile spacing */
+  @media (max-width: 720px){
+    .container{ margin: 14px 10px !important; }
+    h1{ padding: 18px 16px 6px 16px !important; font-size: 20px !important; }
+    .section{ padding: 14px 16px !important; }
+  }
+</style>
+
+
+<style id="outputContrastBoost">
+  /* Result / output panels: make readable on dark theme */
+  .output, .result, .results, #singleResult, #hexResult, #fcCnResult, .outbox, .resultBox {
+    background: rgba(10,14,25,0.78) !important;
+    color: #f5f7ff !important;
+    border: 1px solid rgba(255,255,255,0.16) !important;
+    border-radius: 14px !important;
+    padding: 12px 12px !important;
+  }
+
+  /* If the page uses <div class="out"> or <div class="output"> inside sections */
+  .output * , .result * , .results * , #singleResult * , #hexResult * , #fcCnResult * , .outbox * , .resultBox * {
+    color: #f5f7ff !important;
+  }
+
+  /* Make inline "Hex: ..." badges readable */
+  .badge, .pill, .chip, .tag, .mono {
+    background: rgba(255,255,255,0.10) !important;
+    border: 1px solid rgba(255,255,255,0.18) !important;
+    color: #ffffff !important;
+    border-radius: 10px !important;
+    padding: 3px 8px !important;
+  }
+
+  /* Copy buttons inside result panels */
+  .output button, .result button, .results button,
+  #singleResult button, #hexResult button, #fcCnResult button,
+  .outbox button, .resultBox button,
+  .output a.inline-btn, .result a.inline-btn, .results a.inline-btn {
+    background: rgba(255,255,255,0.10) !important;
+    border: 1px solid rgba(255,255,255,0.18) !important;
+    color: #ffffff !important;
+    box-shadow: none !important;
+  }
+  .output button:hover, .result button:hover, .results button:hover,
+  #singleResult button:hover, #hexResult button:hover, #fcCnResult button:hover,
+  .outbox button:hover, .resultBox button:hover {
+    background: rgba(255,255,255,0.16) !important;
+    border-color: rgba(255,255,255,0.26) !important;
+  }
+
+  /* Fix any "light output bar" specifically (your screenshot shows a pale bar) */
+  .outputBar, .resultBar, .output-row, .result-row {
+    background: rgba(10,14,25,0.78) !important;
+    color: #f5f7ff !important;
+    border: 1px solid rgba(255,255,255,0.16) !important;
+    border-radius: 14px !important;
+  }
+
+  /* Ensure selection highlight isn't blinding */
+  ::selection { background: rgba(11,102,255,0.35) !important; }
+</style>
+
+
+<style id="singleOutputsBoost">
+  /* Single Hex -> FC/CN output panel */
+  #singleResult{
+    background: rgba(10,14,25,0.78) !important;
+    color: #f5f7ff !important;
+    border: 1px solid rgba(255,255,255,0.16) !important;
+    border-radius: 14px !important;
+    padding: 12px 12px !important;
+  }
+  #singleResult *{ color:#f5f7ff !important; }
+
+  /* FC/CN -> Hex output panel */
+  #backResult{
+    background: rgba(10,14,25,0.78) !important;
+    color: #f5f7ff !important;
+    border: 1px solid rgba(255,255,255,0.16) !important;
+    border-radius: 14px !important;
+    padding: 12px 12px !important;
+  }
+  #backResult *{ color:#f5f7ff !important; }
+
+  /* Copy buttons inside these panels (if any) */
+  #singleResult button, #backResult button,
+  #singleResult .inline-btn, #backResult .inline-btn{
+    background: rgba(255,255,255,0.10) !important;
+    border: 1px solid rgba(255,255,255,0.18) !important;
+    color: #ffffff !important;
+    box-shadow: none !important;
+  }
+  #singleResult button:hover, #backResult button:hover{
+    background: rgba(255,255,255,0.16) !important;
+    border-color: rgba(255,255,255,0.26) !important;
+  }
+</style>
+
+
+<style id="enhancementStyles">
+  .helper-text{margin-top:6px;color:var(--muted);font-size:13px;line-height:1.4;}
+  .dropzone{
+    margin-top:12px;padding:16px;border:1px dashed rgba(255,255,255,0.24);border-radius:14px;
+    background:rgba(255,255,255,0.04);text-align:center;color:var(--text);transition:all .15s ease;
+  }
+  .dropzone.dragover{border-color:rgba(11,102,255,0.8);background:rgba(11,102,255,0.12);box-shadow:0 0 0 4px rgba(11,102,255,0.15) inset;}
+  .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-top:14px;}
+  .stat-card{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);border-radius:14px;padding:12px;}
+  .stat-label{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;}
+  .stat-value{font-size:22px;font-weight:800;margin-top:4px;}
+  .badge-valid,.badge-invalid,.badge-warning,.badge-info{
+    display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border-radius:999px;font-size:12px;font-weight:700;
+    border:1px solid rgba(255,255,255,0.12);margin:2px 6px 2px 0;
+  }
+  .badge-valid{background:rgba(43,213,118,0.15);color:#8ff0b4;}
+  .badge-invalid{background:rgba(255,93,93,0.15);color:#ffb3b3;}
+  .badge-warning{background:rgba(255,190,92,0.15);color:#ffd58a;}
+  .badge-info{background:rgba(11,102,255,0.16);color:#aaccff;}
+  .notice-box{margin-top:10px;padding:12px;border-radius:12px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);}
+  .notice-box ul{margin:8px 0 0 18px;padding:0;}
+  .import-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:10px;}
+  .file-input-label{display:inline-flex;align-items:center;gap:8px;padding:10px 12px;border-radius:12px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.14);cursor:pointer;font-weight:700;}
+  .file-input-label input{display:none;}
+  .subtle{color:var(--muted);font-size:12px;}
+  td .meta-line{display:block;color:var(--muted);font-size:12px;margin-top:4px;}
+</style>
+
+
+<style id="invalidBadgeLighten">
+  .status-badge.invalid,
+  .badge.invalid,
+  .pill.invalid,
+  .chip.invalid,
+  .tag.invalid{
+    background:#ffe8c7 !important;
+    border:1px solid #ffbf66 !important;
+    color:#8a3f00 !important;
+  }
+  .invalid-line,
+  .invalid-reason,
+  .invalid-card,
+  .row-invalid,
+  .status-invalid{
+    background:#fff4e8 !important;
+    border-color:#ffd199 !important;
+    color:#8a3f00 !important;
+  }
+</style>
+
+</head>
+<body>
+  <div class="topnav" role="navigation" aria-label="Top Navigation">
+    <div class="brand">AP Access Control Converter</div>
+    <div class="navlinks">
+      <a href="https://urldefense.com/v3/__http:/ma000xsblw1001/__;!!EkHEP60!DMUbC2E74izjZB31HFulv4RhX_bjBMwB_oRMXpD77VjQZP7QsyH1XwS5ujTohZ_Uq0BRt3Znm6Tyg8Sm-C_5wz8mRw$" target="_blank" rel="noopener noreferrer" title="Open BlueWave Login">BlueWave</a>
+      <button type="button" id="helpBtn" title="Help / How this page works">Help</button>
+    </div>
+  </div>
+
+
+  <!-- Help Modal -->
+  <div class="modalOverlay" id="helpOverlay" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+      <div class="modalHeader">
+        <h2 id="helpTitle">Help — What this page does</h2>
+        <button class="modalClose" type="button" id="helpClose" aria-label="Close help">Close</button>
+      </div>
+      <div class="modalBody">
+      <div class="helpCallout">
+        <b>AP Access Control Converter</b> helps you convert access control IDs between:
+        <b>HEX (8 characters)</b> ↔ <b>Facility Code (FC)</b> + <b>Card Number (CN)</b>.
+      </div>
+
+      <h3>What it does</h3>
+      <ul>
+        <li><b>Hex ➜ FC/CN:</b> Reads an 8‑character hex value and shows the Facility Code and Card Number.</li>
+        <li><b>FC/CN ➜ Hex:</b> Builds the 8‑character hex value from Facility Code and Card Number.</li>
+        <li><b>Batch support:</b> Paste multiple hex values (one per line) and convert them all at once.</li>
+        <li><b>Export:</b> Downloads a <b>formatted Excel file</b> with borders and a header for printing or sharing.</li>
+      </ul>
+
+      <h3>How it works (simple)</h3>
+      <div class="helpCallout">
+        The hex value is split into two halves:
+        <br><b>First half (top 16 bits) = Facility Code</b>
+        <br><b>Second half (bottom 16 bits) = Card Number</b>
+      </div>
+
+      <h3>How to use it</h3>
+      <ol>
+        <li><b>Batch Convert:</b> Paste your hex list (one per line) and click <b>Convert All</b>.</li>
+        <li><b>Single Convert:</b> Enter one hex value and click <b>Convert Single</b>.</li>
+        <li><b>FC/CN to Hex:</b> Enter numbers for Facility Code and Card Number, then click <b>Convert To Hex</b>.</li>
+        <li><b>Export Excel (Formatted):</b> Click to download a print‑ready spreadsheet.</li>
+      </ol>
+
+      <h3>Input rules</h3>
+      <ul>
+        <li><b>HEX must be exactly 8 characters</b> (0–9, A–F). Example: <code class="kbd">88984717</code></li>
+        <li><b>FC and CN must be 0–65535</b>.</li>
+        <li>Invalid lines are flagged so you can correct them.</li>
+      </ul>
+
+      <h3>File name</h3>
+      <p>Exports include today’s date so they don’t get mixed up with older files:</p>
+      <ul>
+        <li><code class="kbd">AP_Acess_Control_YYYY-MM-DD.xls</code></li>
+      </ul>
+
+      <h3>Need help?</h3>
+      <div class="helpCallout">
+        If you see an issue, bug, or something doesn’t look right, contact:
+        <br><b>Christopher Schumacher</b>
+      </div>
+</div>
+    </div>
+  </div>
+
+
+<div class="container">
+  <h2>AP — Access Control Hex Converter</h2>
+
+  <!-- MULTI HEX -->
+  <label>Multiple Hex IDs (one per line, 8 hex chars each):</label>
+  <textarea id="multiHex" rows="5" placeholder="Example:
+88984717
+88984130
+88803978"></textarea>
+  <div class="helper-text">Example format: <strong>88984717</strong>. You can also paste full employee lines like <code class="kbd">Active Christopher Benson, 88984765</code> and the page will try to pull the 8-digit ID out automatically. Excel-style imports will try to find <strong>Candidate Name</strong> and <strong>Colleague #</strong> columns, then bring them in as <code class="kbd">Name, 88984717</code> lines.</div>
+
+  <div class="import-row">
+    <label class="file-input-label">Import TXT / Excel
+      <input id="importFile" type="file" accept=".txt,.xlsx,.xlsm,.xls,.xml,.html,text/plain,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/html,application/xml,application/vnd.ms-excel.sheet.macroEnabled.12" />
+    </label>
+    <span class="subtle">You can also drag and drop TXT, XLSX, XLSM, XML Spreadsheet, or HTML table files into the box below.</span>
+  </div>
+  <div id="dropZone" class="dropzone" tabindex="0">Drop TXT, XLSX, XLSM, or table-style Excel exports here. The page will try smarter header matching first, then multiple row-by-row Excel fallbacks for Candidate Name + Colleague #.</div>
+
+  <div class="row" style="margin-top:8px;">
+    <button onclick="convertMulti()">Convert All</button>
+    <button class="ghost" onclick="clearAll()">Clear All Outputs</button>
+  </div>
+
+  <div class="controls">
+    <div class="muted">After converting you can export or copy specific FC/CN values</div>
+    <div style="flex:1"></div>
+<button id="exportXlsBtn" class="small" style="display:none;" onclick="exportExcelFormatted()">Export Excel (Formatted)</button>
+    <button id="exportTxtBtn" class="small" style="display:none;" onclick="exportTXT()">Download TXT</button>
+  </div>
+
+  <div id="summaryStats" class="stats-grid" style="display:none;">
+    <div class="stat-card"><div class="stat-label">Input Lines</div><div class="stat-value" id="statTotal">0</div></div>
+    <div class="stat-card"><div class="stat-label">Valid</div><div class="stat-value" id="statValid">0</div></div>
+    <div class="stat-card"><div class="stat-label">Invalid</div><div class="stat-value" id="statInvalid">0</div></div>
+    <div class="stat-card"><div class="stat-label">Warnings</div><div class="stat-value" id="statWarn">0</div></div>
+    <div class="stat-card"><div class="stat-label">Converted At</div><div class="stat-value" id="statTime" style="font-size:16px;">—</div></div>
+  </div>
+
+  <div id="inputNotices" class="notice-box" style="display:none;"></div>
+
+  <table id="resultsTable" style="display:none;">
+    <thead>
+      <tr>
+        <th>Hex (Employee ID)</th>
+        <th>Facility Code (FC)</th>
+        <th>Card Number (CN)</th>
+        <th>Status / Actions</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <!-- SINGLE HEX -->
+  <hr style="margin:18px 0;">
+  <label>Single Hex ➜ FC/CN (8 hex chars)</label>
+  <input id="singleHex" type="text" maxlength="8" placeholder="Ex: 1A2B3C4D" />
+  <div class="row">
+    <button onclick="convertSingle()">Convert Single</button>
+    <button class="ghost" onclick="clearSingle()">Clear</button>
+  </div>
+  <div id="singleResult" style="display:none;margin-top:10px;padding:10px;border-radius:8px;background:#eef;"></div>
+
+  <!-- FC/CN ➜ HEX -->
+  <hr style="margin:18px 0;">
+  <label>Facility Code & Card Number ➜ Hex</label>
+  <input id="fcInput" type="number" placeholder="Facility Code (number)" />
+  <input id="cnInput" type="number" placeholder="Card Number (number)" style="margin-top:8px;" />
+  <div class="row">
+    <button onclick="fcCnToHex()">Convert To Hex</button>
+    <button class="ghost" onclick="clearFcCn()">Clear</button>
+  </div>
+  <div id="backResult" style="display:none;margin-top:10px;padding:10px;border-radius:8px;background:#eef;"></div>
+
+</div>
+
+<script>
+// Global store for multi results
+let multiResults = [];
+let multiInvalid = [];
+let conversionWarnings = [];
+let lastConvertedAt = '';
+
+/* Helper: pad to 32 bits and split 16/16 (matches original Python logic) */
+function hexToFcCn(hex){
+  const dec = parseInt(hex, 16);
+  const bin = dec.toString(2).padStart(32, '0');
+  const fcBin = bin.slice(0,16);
+  const cnBin = bin.slice(16);
+  return { facility: parseInt(fcBin,2), card: parseInt(cnBin,2) };
+}
+
+/* Helper: build hex from fc/cn (16bits each) */
+function fcCnToHexStr(fc, cn){
+  const fcBin = parseInt(fc).toString(2).padStart(16,'0');
+  const cnBin = parseInt(cn).toString(2).padStart(16,'0');
+  const combined = fcBin + cnBin;
+  return parseInt(combined,2).toString(16).toUpperCase().padStart(8,'0');
+}
+
+function validHex8(s){
+  return typeof s === 'string' && /^[0-9A-Fa-f]{8}$/.test(s);
+}
+
+function getDateStamp(){
+  const d = new Date();
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2,'0');
+  const dd = String(d.getDate()).padStart(2,'0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function getTimestamp(){
+  return new Date().toLocaleString();
+}
+
+function cleanCandidateLine(line){
+  const original = (line ?? '').toString();
+  let cleaned = original.trim();
+  const suggestions = [];
+  if (!cleaned) return { original, cleaned:'', extracted:'', suggestions, reason:'blank line' };
+
+  // Try pulling an 8-digit / 8-char hex token from full employee rows first.
+  const tokenMatch = cleaned.match(/\b([0-9A-Fa-f]{8})\b/);
+  let extracted = tokenMatch ? tokenMatch[1].toUpperCase() : '';
+  if (tokenMatch && cleaned !== tokenMatch[1]) {
+    suggestions.push('Extracted 8-character ID from a full text line.');
+  }
+
+  // Remove obvious wrappers for fallback cleanup.
+  let fallback = cleaned
+    .replace(/[\t,;"']/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  const compact = fallback.replace(/[^0-9A-Fa-f]/g, '').toUpperCase();
+  if (!extracted && compact.length === 8) {
+    extracted = compact;
+    if (compact !== cleaned.toUpperCase()) suggestions.push('Removed spaces or punctuation around the ID.');
+  }
+
+  return { original, cleaned: fallback, extracted, suggestions, reason:'' };
+}
+
+function getInvalidReason(original){
+  const raw = (original ?? '').toString().trim();
+  if (!raw) return 'Blank line';
+  const hexLike = raw.replace(/[^0-9A-Fa-f]/g, '');
+  if (hexLike.length === 0) return 'No hex characters found';
+  if (hexLike.length < 8) return 'Too short (needs exactly 8 characters)';
+  if (hexLike.length > 8 && !/\b[0-9A-Fa-f]{8}\b/.test(raw)) return 'Too long / extra characters found';
+  if (/[^0-9A-Fa-f\s,;"'\-]/.test(raw)) return 'Contains invalid characters';
+  return 'Must be exactly 8 characters: 0-9 and A-F';
+}
+
+function getUnusualWarnings(hex, facility, card){
+  const warnings = [];
+  if (/^0{8}$/.test(hex)) warnings.push('All zeros is unusual.');
+  if (/^F{8}$/i.test(hex)) warnings.push('All Fs is unusual.');
+  if (/^88\d{6}$/.test(hex) === false && /^\d{8}$/.test(hex)) {
+    warnings.push('Does not start with 88 like many of your sample employee IDs.');
+  }
+  if (facility === 0) warnings.push('Facility Code is 0.');
+  if (card === 0) warnings.push('Card Number is 0.');
+  if (facility > 60000 || card > 60000) warnings.push('Very high FC or CN value.');
+  return warnings;
+}
+
+function updateSummaryStats(){
+  const total = multiResults.length + multiInvalid.length;
+  const warnCount = multiResults.reduce((sum, r) => sum + (r.warnings?.length || 0), 0);
+  const stats = document.getElementById('summaryStats');
+  document.getElementById('statTotal').textContent = total;
+  document.getElementById('statValid').textContent = multiResults.length;
+  document.getElementById('statInvalid').textContent = multiInvalid.length;
+  document.getElementById('statWarn').textContent = warnCount;
+  document.getElementById('statTime').textContent = lastConvertedAt || '—';
+  stats.style.display = total ? 'grid' : 'none';
+
+  const notices = document.getElementById('inputNotices');
+  const cleanupCount = multiResults.reduce((sum, r) => sum + (r.suggestions?.length || 0), 0);
+  const unusualCount = warnCount;
+  if (!total) {
+    notices.style.display = 'none';
+    notices.innerHTML = '';
+    return;
+  }
+  let html = `<strong>Run summary:</strong><ul>`;
+  html += `<li>${cleanupCount} cleanup suggestion(s) applied while reading pasted lines.</li>`;
+  html += `<li>${unusualCount} unusual-value warning(s) detected.</li>`;
+  html += `<li>Conversion timestamp saved for this run.</li>`;
+  html += `</ul>`;
+  notices.innerHTML = html;
+  notices.style.display = 'block';
+}
+
+function renderRowStatus(r){
+  let html = `<span class="badge-valid">Valid</span>`;
+  if (r.suggestions?.length) html += `<span class="badge-info">Cleaned</span>`;
+  if (r.warnings?.length) html += `<span class="badge-warning">Warning</span>`;
+  html += `<div style="margin-top:8px;">` +
+      `<button class="inline-btn" onclick="copyToClipboard('${r.facility}')">Copy FC</button>` +
+      `<button class="inline-btn" onclick="copyToClipboard('${r.card}')">Copy CN</button>` +
+      `<button class="inline-btn" onclick="copyToClipboard('${r.facility},${r.card}')">Copy FC,CN</button>` +
+      `</div>`;
+  if (r.suggestions?.length) html += `<span class="meta-line">Cleanup: ${r.suggestions.join(' ')}</span>`;
+  if (r.warnings?.length) html += `<span class="meta-line">Warning: ${r.warnings.join(' ')}</span>`;
+  html += `<span class="meta-line">Converted: ${r.convertedAt}</span>`;
+  return html;
+}
+
+function convertMulti(){
+  const raw = document.getElementById('multiHex').value;
+  const lines = raw.split(/\r?\n/);
+  const tbody = document.querySelector('#resultsTable tbody');
+  tbody.innerHTML = '';
+  multiResults = [];
+  multiInvalid = [];
+  conversionWarnings = [];
+  let hasValid = false;
+  lastConvertedAt = getTimestamp();
+
+  lines.forEach((l, idx) => {
+    const lineNo = idx + 1;
+    const prepared = cleanCandidateLine(l);
+    const hex = (prepared.extracted || '').trim().toUpperCase();
+    if (!prepared.original.trim()) return;
+
+    const tr = document.createElement('tr');
+
+    if (!validHex8(hex)) {
+      const reason = getInvalidReason(prepared.original);
+      multiInvalid.push({ line: lineNo, raw: prepared.original, reason, convertedAt: lastConvertedAt });
+      tr.classList.add('invalid');
+      tr.innerHTML = `<td colspan="4"><span class="badge-invalid">Invalid</span> Line ${lineNo}: "${prepared.original.replace(/</g,'&lt;').replace(/>/g,'&gt;')}"<span class="meta-line">Reason: ${reason}</span></td>`;
+      tbody.appendChild(tr);
+      return;
+    }
+
+    const {facility, card} = hexToFcCn(hex);
+    const warnings = getUnusualWarnings(hex, facility, card);
+    const row = {
+      line: lineNo,
+      raw: prepared.original,
+      hex,
+      facility,
+      card,
+      warnings,
+      suggestions: prepared.suggestions,
+      convertedAt: lastConvertedAt
+    };
+    multiResults.push(row);
+    conversionWarnings.push(...warnings);
+
+    tr.innerHTML = `
+      <td>${hex}<span class="meta-line">Input line ${lineNo}</span></td>
+      <td>${facility}</td>
+      <td>${card}</td>
+      <td>${renderRowStatus(row)}</td>
+    `;
+    tbody.appendChild(tr);
+    hasValid = true;
+  });
+
+  document.getElementById('resultsTable').style.display = (tbody.children.length ? 'table' : 'none');
+  document.getElementById('exportXlsBtn').style.display = hasValid ? 'inline-block' : 'none';
+  document.getElementById('exportTxtBtn').style.display = hasValid ? 'inline-block' : 'none';
+  updateSummaryStats();
+}
+
+function clearAll(){
+  document.getElementById('multiHex').value = '';
+  document.querySelector('#resultsTable tbody').innerHTML = '';
+  document.getElementById('resultsTable').style.display = 'none';
+  multiResults = [];
+  multiInvalid = [];
+  conversionWarnings = [];
+  lastConvertedAt = '';
+  document.getElementById('exportTxtBtn').style.display = 'none';
+  document.getElementById('exportXlsBtn').style.display = 'none';
+  updateSummaryStats();
+  clearSingle();
+  clearFcCn();
+}
+
+function copyToClipboard(text){
+  if (!navigator.clipboard) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    ta.remove();
+    return;
+  }
+  navigator.clipboard.writeText(text);
+}
+
+function xmlEscape(v){
+  return String(v ?? '')
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/'/g,'&apos;');
+}
+
+function exportExcelFormatted(){
+  if ((!multiResults || multiResults.length === 0) && (!multiInvalid || multiInvalid.length === 0)) return;
+
+  const stamp = getDateStamp();
+  const filename = `AP_Acess_Control_${stamp}.xls`;
+  const generatedAt = new Date().toLocaleString();
+
+  const validCount = (multiResults || []).length;
+  const invalidCount = (multiInvalid || []).length;
+  const totalCount = validCount + invalidCount;
+
+  let xml = `<?xml version="1.0"?>\n` +
+`<?mso-application progid="Excel.Sheet"?>\n` +
+`<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"\n` +
+` xmlns:o="urn:schemas-microsoft-com:office:office"\n` +
+` xmlns:x="urn:schemas-microsoft-com:office:excel"\n` +
+` xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"\n` +
+` xmlns:html="http://www.w3.org/TR/REC-html40">\n` +
+
+`<Styles>\n` +
+`  <Style ss:ID="sHeader">\n` +
+`    <Alignment ss:Horizontal="Center" ss:Vertical="Center"/>\n` +
+`    <Font ss:FontName="Calibri" ss:Size="16" ss:Bold="1"/>\n` +
+`  </Style>\n` +
+`  <Style ss:ID="sMetaLabel">\n` +
+`    <Font ss:FontName="Calibri" ss:Size="11" ss:Bold="1"/>\n` +
+`    <Alignment ss:Horizontal="Left" ss:Vertical="Center"/>\n` +
+`  </Style>\n` +
+`  <Style ss:ID="sMetaValue">\n` +
+`    <Font ss:FontName="Calibri" ss:Size="11"/>\n` +
+`    <Alignment ss:Horizontal="Left" ss:Vertical="Center"/>\n` +
+`  </Style>\n` +
+`  <Style ss:ID="sTableHeader">\n` +
+`    <Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="1"/>\n` +
+`    <Font ss:FontName="Calibri" ss:Size="11" ss:Bold="1"/>\n` +
+`    <Interior ss:Color="#E6E6E6" ss:Pattern="Solid"/>\n` +
+`    <Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/></Borders>\n` +
+`  </Style>\n` +
+`  <Style ss:ID="sCellCenter">\n` +
+`    <Alignment ss:Horizontal="Center" ss:Vertical="Center"/>\n` +
+`    <Font ss:FontName="Calibri" ss:Size="11"/>\n` +
+`    <Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/></Borders>\n` +
+`  </Style>\n` +
+`  <Style ss:ID="sCellLeft">\n` +
+`    <Alignment ss:Horizontal="Left" ss:Vertical="Center"/>\n` +
+`    <Font ss:FontName="Consolas" ss:Size="11"/>\n` +
+`    <Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/></Borders>\n` +
+`  </Style>\n` +
+`  <Style ss:ID="sSection"><Font ss:FontName="Calibri" ss:Size="12" ss:Bold="1"/><Alignment ss:Horizontal="Left" ss:Vertical="Center"/></Style>\n` +
+`</Styles>\n` +
+
+`<Worksheet ss:Name="AP Access Control">\n` +
+`  <Table ss:DefaultRowHeight="18">\n` +
+`    <Column ss:AutoFitWidth="0" ss:Width="42"/>\n` +
+`    <Column ss:AutoFitWidth="0" ss:Width="140"/>\n` +
+`    <Column ss:AutoFitWidth="0" ss:Width="110"/>\n` +
+`    <Column ss:AutoFitWidth="0" ss:Width="110"/>\n` +
+`    <Column ss:AutoFitWidth="0" ss:Width="220"/>\n` +
+`    <Column ss:AutoFitWidth="0" ss:Width="210"/>\n`;
+
+  xml += `    <Row ss:Height="26"><Cell ss:StyleID="sHeader" ss:MergeAcross="5"><Data ss:Type="String">AP Access Control Conversion Report</Data></Cell></Row>\n`;
+  const metaRows = [
+    ["Generated", generatedAt],
+    ["Last Conversion", lastConvertedAt || generatedAt],
+    ["Filename", filename],
+    ["Total Input Lines", totalCount],
+    ["Valid Lines", validCount],
+    ["Invalid Lines", invalidCount],
+    ["Warnings", multiResults.reduce((sum, r) => sum + (r.warnings?.length || 0), 0)],
+    ["Note", "Facility Code = high 16 bits; Card Number = low 16 bits of the 32-bit hex value"]
+  ];
+  metaRows.forEach(([k,v])=>{
+    xml += `    <Row><Cell ss:StyleID="sMetaLabel"><Data ss:Type="String">${xmlEscape(k)}</Data></Cell><Cell ss:StyleID="sMetaValue" ss:MergeAcross="4"><Data ss:Type="String">${xmlEscape(v)}</Data></Cell></Row>\n`;
+  });
+  xml += `    <Row><Cell><Data ss:Type="String"></Data></Cell></Row>\n`;
+  xml += `    <Row><Cell ss:StyleID="sSection" ss:MergeAcross="5"><Data ss:Type="String">Valid Conversions</Data></Cell></Row>\n`;
+  xml += `    <Row><Cell ss:StyleID="sTableHeader"><Data ss:Type="String">Line</Data></Cell><Cell ss:StyleID="sTableHeader"><Data ss:Type="String">Hex (Employee ID)</Data></Cell><Cell ss:StyleID="sTableHeader"><Data ss:Type="String">Facility Code (FC)</Data></Cell><Cell ss:StyleID="sTableHeader"><Data ss:Type="String">Card Number (CN)</Data></Cell><Cell ss:StyleID="sTableHeader"><Data ss:Type="String">Warnings / Cleanup</Data></Cell><Cell ss:StyleID="sTableHeader"><Data ss:Type="String">Converted At</Data></Cell></Row>\n`;
+
+  (multiResults || []).forEach(r=>{
+    const note = [...(r.suggestions||[]), ...(r.warnings||[])].join(' | ');
+    xml += `    <Row><Cell ss:StyleID="sCellCenter"><Data ss:Type="Number">${Number(r.line)}</Data></Cell><Cell ss:StyleID="sCellLeft"><Data ss:Type="String">${xmlEscape(r.hex)}</Data></Cell><Cell ss:StyleID="sCellCenter"><Data ss:Type="Number">${Number(r.facility)}</Data></Cell><Cell ss:StyleID="sCellCenter"><Data ss:Type="Number">${Number(r.card)}</Data></Cell><Cell ss:StyleID="sCellLeft"><Data ss:Type="String">${xmlEscape(note)}</Data></Cell><Cell ss:StyleID="sCellCenter"><Data ss:Type="String">${xmlEscape(r.convertedAt || '')}</Data></Cell></Row>\n`;
+  });
+
+  if (invalidCount > 0){
+    xml += `    <Row><Cell><Data ss:Type="String"></Data></Cell></Row>\n`;
+    xml += `    <Row><Cell ss:StyleID="sSection" ss:MergeAcross="5"><Data ss:Type="String">Invalid Inputs</Data></Cell></Row>\n`;
+    xml += `    <Row><Cell ss:StyleID="sTableHeader"><Data ss:Type="String">Line</Data></Cell><Cell ss:StyleID="sTableHeader" ss:MergeAcross="2"><Data ss:Type="String">Raw Input</Data></Cell><Cell ss:StyleID="sTableHeader"><Data ss:Type="String">Reason</Data></Cell><Cell ss:StyleID="sTableHeader" ss:MergeAcross="1"><Data ss:Type="String">Converted At</Data></Cell></Row>\n`;
+    (multiInvalid || []).forEach(e=>{
+      xml += `    <Row><Cell ss:StyleID="sCellCenter"><Data ss:Type="Number">${Number(e.line)}</Data></Cell><Cell ss:StyleID="sCellLeft" ss:MergeAcross="2"><Data ss:Type="String">${xmlEscape(e.raw)}</Data></Cell><Cell ss:StyleID="sCellLeft"><Data ss:Type="String">${xmlEscape(e.reason)}</Data></Cell><Cell ss:StyleID="sCellCenter" ss:MergeAcross="1"><Data ss:Type="String">${xmlEscape(e.convertedAt || '')}</Data></Cell></Row>\n`;
+    });
+  }
+
+  xml += `  </Table><WorksheetOptions xmlns="urn:schemas-microsoft-com:office:excel"><PageSetup><Layout x:Orientation="Landscape"/><Header x:Margin="0.3"/><Footer x:Margin="0.3"/><PageMargins x:Left="0.3" x:Right="0.3" x:Top="0.4" x:Bottom="0.4"/></PageSetup><FitToPage/><Print><FitHeight>0</FitHeight><FitWidth>1</FitWidth></Print></WorksheetOptions></Worksheet></Workbook>`;
+
+  const blob = new Blob([xml], {type:'application/vnd.ms-excel;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function exportTXT(){
+  if (!multiResults || multiResults.length === 0) return;
+
+  const stamp = getDateStamp();
+  const filename = `AP_Acess_Control_${stamp}.txt`;
+  const generatedAt = new Date().toLocaleString();
+  const validCount = multiResults.length;
+  const invalidCount = (multiInvalid || []).length;
+  const rows = multiResults.map(r => ({
+    line: String(r.line), hex: String(r.hex), fc: String(r.facility), cn: String(r.card),
+    warn: [...(r.suggestions||[]), ...(r.warnings||[])].join(' | '), time: String(r.convertedAt || '')
+  }));
+  const widths = {
+    line: Math.max(4, ...rows.map(x => x.line.length)), hex: Math.max(16, ...rows.map(x => x.hex.length)),
+    fc: Math.max(2, ...rows.map(x => x.fc.length)), cn: Math.max(2, ...rows.map(x => x.cn.length)),
+    warn: Math.max(12, ...rows.map(x => x.warn.length)), time: Math.max(12, ...rows.map(x => x.time.length))
+  };
+  const pad = (s, n) => String(s).padEnd(n, ' ');
+  let txt = '';
+  txt += 'AP - Access Control Export\n';
+  txt += `Generated: ${generatedAt}\n`;
+  txt += `Last Conversion: ${lastConvertedAt || generatedAt}\n`;
+  txt += `Valid Records: ${validCount}   Invalid Lines: ${invalidCount}\n`;
+  txt += '------------------------------------------------------------\n\n';
+  txt += `${pad('LINE', widths.line)}  ${pad('HEX (EMPLOYEE ID)', widths.hex)}  ${pad('FC', widths.fc)}  ${pad('CN', widths.cn)}  ${pad('WARNINGS/CLEANUP', widths.warn)}  ${pad('CONVERTED AT', widths.time)}\n`;
+  txt += `${'-'.repeat(widths.line)}  ${'-'.repeat(widths.hex)}  ${'-'.repeat(widths.fc)}  ${'-'.repeat(widths.cn)}  ${'-'.repeat(widths.warn)}  ${'-'.repeat(widths.time)}\n`;
+  rows.forEach(r => { txt += `${pad(r.line, widths.line)}  ${pad(r.hex, widths.hex)}  ${pad(r.fc, widths.fc)}  ${pad(r.cn, widths.cn)}  ${pad(r.warn, widths.warn)}  ${pad(r.time, widths.time)}\n`; });
+  if (invalidCount > 0) {
+    txt += '\n\nINVALID LINES (not converted)\n-----------------------------\n';
+    (multiInvalid || []).forEach(e => { txt += `Line ${e.line}: ${e.raw} | ${e.reason} | ${e.convertedAt || ''}\n`; });
+  }
+  txt += '\n';
+  const blob = new Blob([txt], {type:'text/plain;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function convertSingle(){
+  const prepared = cleanCandidateLine(document.getElementById('singleHex').value || '');
+  const v = (prepared.extracted || '').trim().toUpperCase();
+  const out = document.getElementById('singleResult');
+  out.style.display = 'none';
+  out.textContent = '';
+
+  if (!validHex8(v)) {
+    alert(`Single Hex is invalid: ${getInvalidReason(prepared.original)}.`);
+    return;
+  }
+  const {facility, card} = hexToFcCn(v);
+  const warnings = getUnusualWarnings(v, facility, card);
+  const time = getTimestamp();
+  out.style.display = 'block';
+  out.innerHTML = `<strong>Hex:</strong> ${v} &nbsp; <strong>FC:</strong> ${facility} &nbsp; <strong>CN:</strong> ${card}
+    <div style="margin-top:8px;">
+      <button class="inline-btn" onclick="copyToClipboard('${facility}')">Copy FC</button>
+      <button class="inline-btn" onclick="copyToClipboard('${card}')">Copy CN</button>
+      <button class="inline-btn" onclick="copyToClipboard('${facility},${card}')">Copy FC,CN</button>
+    </div>
+    <div class="meta-line" style="margin-top:8px;">Converted: ${time}</div>
+    ${prepared.suggestions?.length ? `<div class="meta-line">Cleanup: ${prepared.suggestions.join(' ')}</div>` : ''}
+    ${warnings.length ? `<div class="meta-line">Warning: ${warnings.join(' ')}</div>` : ''}`;
+}
+
+function clearSingle(){
+  document.getElementById('singleHex').value = '';
+  const out = document.getElementById('singleResult');
+  out.style.display = 'none';
+  out.textContent = '';
+}
+
+function fcCnToHex(){
+  const fc = document.getElementById('fcInput').value;
+  const cn = document.getElementById('cnInput').value;
+  const out = document.getElementById('backResult');
+  out.style.display = 'none';
+  out.textContent = '';
+
+  if (fc === '' || cn === '') {
+    alert('Please enter both Facility Code and Card Number.');
+    return;
+  }
+  if (isNaN(parseInt(fc)) || isNaN(parseInt(cn))) {
+    alert('Facility Code and Card Number must be numeric.');
+    return;
+  }
+  const f = parseInt(fc), c = parseInt(cn);
+  if (f < 0 || f > 65535 || c < 0 || c > 65535) {
+    alert('FC and CN must be between 0 and 65535 (16-bit).');
+    return;
+  }
+  const hex = fcCnToHexStr(f,c);
+  const warnings = getUnusualWarnings(hex, f, c);
+  out.style.display = 'block';
+  out.innerHTML = `<strong>Hex:</strong> ${hex} &nbsp;
+    <button class="inline-btn" onclick="copyToClipboard('${hex}')">Copy Hex</button>
+    <div class="meta-line" style="margin-top:8px;">Converted: ${getTimestamp()}</div>
+    ${warnings.length ? `<div class="meta-line">Warning: ${warnings.join(' ')}</div>` : ''}`;
+}
+
+function clearFcCn(){
+  document.getElementById('fcInput').value = '';
+  document.getElementById('cnInput').value = '';
+  const out = document.getElementById('backResult');
+  out.style.display = 'none';
+  out.textContent = '';
+}
+
+
+function importTextContent(content){
+  const current = document.getElementById('multiHex').value.trim();
+  const incoming = String(content || '').replace(/\r\n/g, '\n').trim();
+  if (!incoming) return;
+  document.getElementById('multiHex').value = current ? `${current}\n${incoming}` : incoming;
+}
+
+function setImportNotice(message, isError){
+  const notices = document.getElementById('inputNotices');
+  if (!notices) return;
+  notices.style.display = 'block';
+  notices.innerHTML = `<strong>${isError ? 'Import issue:' : 'Import result:'}</strong><div style="margin-top:6px;">${message}</div>`;
+}
+
+function normalizeHeader(value){
+  return String(value ?? '')
+    .toLowerCase()
+    .replace(/&nbsp;/g, ' ')
+    .replace(/[\r\n\t]+/g, ' ')
+    .replace(/[^a-z0-9#]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function getCellText(cell){
+  return String(cell ?? '').replace(/\s+/g, ' ').trim();
+}
+
+function parsePlainTextLines(text){
+  return String(text || '')
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n')
+    .split('\n')
+    .map(line => line.trim())
+    .filter(Boolean);
+}
+
+function parseHtmlTables(text){
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(String(text || ''), 'text/html');
+  const tables = Array.from(doc.querySelectorAll('table'));
+  const results = [];
+  tables.forEach(table => {
+    const rows = Array.from(table.querySelectorAll('tr')).map(tr =>
+      Array.from(tr.querySelectorAll('th,td')).map(cell => getCellText(cell.textContent))
+    ).filter(row => row.some(cell => String(cell || '').trim() !== ''));
+    if (rows.length) results.push(rows);
+  });
+  return results;
+}
+
+function parseSpreadsheetXml(text){
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(String(text || ''), 'application/xml');
+  const rowNodes = Array.from(doc.getElementsByTagName('Row'));
+  if (!rowNodes.length) return [];
+  const rows = rowNodes.map(row => {
+    let cells = [];
+    let expectedIndex = 1;
+    Array.from(row.getElementsByTagName('Cell')).forEach(cell => {
+      const idxAttr = cell.getAttribute('ss:Index') || cell.getAttribute('Index');
+      if (idxAttr){
+        const idx = parseInt(idxAttr, 10);
+        while (expectedIndex < idx){
+          cells.push('');
+          expectedIndex++;
+        }
+      }
+      const data = cell.getElementsByTagName('Data')[0];
+      cells.push(getCellText(data ? data.textContent : cell.textContent));
+      expectedIndex++;
+    });
+    return cells;
+  }).filter(row => row.some(cell => cell));
+  return rows.length ? [rows] : [];
+}
+
+function columnLettersToIndex(ref){
+  const letters = String(ref || '').replace(/[^A-Z]/gi, '').toUpperCase();
+  let num = 0;
+  for (let i = 0; i < letters.length; i++){
+    num = num * 26 + (letters.charCodeAt(i) - 64);
+  }
+  return Math.max(0, num - 1);
+}
+
+async function inflateZipEntry(bytes){
+  if (typeof DecompressionStream === 'undefined'){
+    throw new Error('This browser does not support the built-in XLSX unzip feature used by this page. Please use a newer browser build or resave the workbook as XML Spreadsheet (.xml).');
+  }
+  const ds = new DecompressionStream('deflate-raw');
+  const stream = new Blob([bytes]).stream().pipeThrough(ds);
+  return await new Response(stream).arrayBuffer();
+}
+
+async function readZipEntries(arrayBuffer){
+  const bytes = new Uint8Array(arrayBuffer);
+  const dv = new DataView(arrayBuffer);
+  let eocd = -1;
+  for (let i = bytes.length - 22; i >= Math.max(0, bytes.length - 65557); i--){
+    if (dv.getUint32(i, true) === 0x06054b50){
+      eocd = i;
+      break;
+    }
+  }
+  if (eocd === -1) throw new Error('Could not read the XLSX file structure. Try resaving the spreadsheet as .xlsx, .xlsm, or XML Spreadsheet (.xml) and import it again.');
+  const centralDirOffset = dv.getUint32(eocd + 16, true);
+  const totalEntries = dv.getUint16(eocd + 10, true);
+  let ptr = centralDirOffset;
+  const entries = {};
+  for (let n = 0; n < totalEntries; n++){
+    if (dv.getUint32(ptr, true) !== 0x02014b50) break;
+    const compression = dv.getUint16(ptr + 10, true);
+    const compressedSize = dv.getUint32(ptr + 20, true);
+    const fileNameLength = dv.getUint16(ptr + 28, true);
+    const extraLength = dv.getUint16(ptr + 30, true);
+    const commentLength = dv.getUint16(ptr + 32, true);
+    const localHeaderOffset = dv.getUint32(ptr + 42, true);
+    const nameBytes = bytes.slice(ptr + 46, ptr + 46 + fileNameLength);
+    const name = new TextDecoder().decode(nameBytes);
+    const localNameLength = dv.getUint16(localHeaderOffset + 26, true);
+    const localExtraLength = dv.getUint16(localHeaderOffset + 28, true);
+    const dataStart = localHeaderOffset + 30 + localNameLength + localExtraLength;
+    entries[name] = {
+      compression,
+      bytes: bytes.slice(dataStart, dataStart + compressedSize)
+    };
+    ptr += 46 + fileNameLength + extraLength + commentLength;
+  }
+  return entries;
+}
+
+async function getZipTextEntry(entries, name){
+  const entry = entries[name];
+  if (!entry) return '';
+  let buffer;
+  if (entry.compression === 0){
+    buffer = entry.bytes.buffer.slice(entry.bytes.byteOffset, entry.bytes.byteOffset + entry.bytes.byteLength);
+  } else if (entry.compression === 8){
+    buffer = await inflateZipEntry(entry.bytes);
+  } else {
+    throw new Error(`Unsupported XLSX compression method: ${entry.compression}`);
+  }
+  return new TextDecoder('utf-8').decode(buffer);
+}
+
+function extractSharedStrings(xmlText){
+  if (!xmlText) return [];
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(xmlText, 'application/xml');
+  return Array.from(doc.getElementsByTagName('si')).map(si =>
+    Array.from(si.getElementsByTagName('t')).map(t => t.textContent || '').join('')
+  );
+}
+
+function parseWorksheetXml(xmlText, sharedStrings){
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(xmlText, 'application/xml');
+  const rowNodes = Array.from(doc.getElementsByTagName('row'));
+  const rows = rowNodes.map(row => {
+    const cells = [];
+    Array.from(row.getElementsByTagName('c')).forEach(cell => {
+      const ref = cell.getAttribute('r') || '';
+      const idx = columnLettersToIndex(ref);
+      while (cells.length < idx) cells.push('');
+      const type = cell.getAttribute('t') || '';
+      let value = '';
+      if (type === 'inlineStr'){
+        value = Array.from(cell.getElementsByTagName('t')).map(t => t.textContent || '').join('');
+      } else {
+        const vNode = cell.getElementsByTagName('v')[0];
+        const raw = vNode ? vNode.textContent || '' : '';
+        if (type === 's'){
+          value = sharedStrings[parseInt(raw, 10)] || '';
+        } else {
+          value = raw;
+        }
+      }
+      cells[idx] = getCellText(value);
+    });
+    return cells;
+  }).filter(row => row.some(cell => cell));
+  return rows;
+}
+
+async function parseXlsxTables(arrayBuffer){
+  const entries = await readZipEntries(arrayBuffer);
+  const sharedStrings = extractSharedStrings(await getZipTextEntry(entries, 'xl/sharedStrings.xml'));
+  const sheetNames = Object.keys(entries).filter(name => /^xl\/worksheets\/sheet\d+\.xml$/i.test(name)).sort();
+  const tables = [];
+  for (const sheetName of sheetNames){
+    const xmlText = await getZipTextEntry(entries, sheetName);
+    if (!xmlText) continue;
+    const rows = parseWorksheetXml(xmlText, sharedStrings);
+    if (rows.length) tables.push(rows);
+  }
+  return tables;
+}
+
+function scoreNameHeader(normalized){
+  if (!normalized) return 0;
+  if (normalized.includes('candidate name')) return 40;
+  if (normalized.includes('applicant name')) return 34;
+  if (normalized.includes('employee name')) return 24;
+  if (normalized.includes('associate name')) return 22;
+  if (normalized.includes('colleague name')) return 22;
+  if (/pl\s*name/.test(normalized)) return -25;
+  if (normalized.includes('manager name')) return -20;
+  if (normalized.includes('supervisor name')) return -20;
+  if (normalized.includes('lead name')) return -18;
+  if (normalized === 'name' || normalized === 'full name' || normalized === 'fullname') return 8;
+  if (normalized.includes('candidate')) return 10;
+  if (normalized.includes('employee')) return 4;
+  return 0;
+}
+
+function scoreIdHeader(normalized){
+  if (!normalized) return 0;
+  if (normalized.includes('colleague #')) return 14;
+  if (normalized.includes('colleague number')) return 14;
+  if (normalized.includes('colleague no')) return 14;
+  if (normalized.includes('colleague id')) return 14;
+  if (normalized.replace(/\s+/g,'') === 'colleague#') return 14;
+  if (normalized.includes('badge id')) return 12;
+  if (normalized.includes('employee id')) return 12;
+  if (normalized.includes('employee number')) return 11;
+  if (normalized.includes('associate id')) return 11;
+  if (normalized.includes('candidate employee id')) return 10;
+  return 0;
+}
+
+function getHeaderVariants(rows, rowIndex){
+  const rowA = (rows[rowIndex] || []).map(normalizeHeader);
+  const rowB = (rows[rowIndex + 1] || []).map(normalizeHeader);
+  const width = Math.max(rowA.length, rowB.length);
+  const variants = [];
+
+  const single = [];
+  for (let i = 0; i < width; i++) single[i] = rowA[i] || '';
+  variants.push({ band: 1, cells: single });
+
+  if (rowIndex + 1 < rows.length){
+    const combined = [];
+    for (let i = 0; i < width; i++){
+      combined[i] = [rowA[i] || '', rowB[i] || ''].filter(Boolean).join(' ').trim();
+    }
+    variants.push({ band: 2, cells: combined });
+  }
+
+  return variants;
+}
+
+function findBestHeaderRow(rows){
+  const maxRows = Math.min(rows.length, 30);
+  let best = null;
+
+  for (let r = 0; r < maxRows; r++){
+    const variants = getHeaderVariants(rows, r);
+    variants.forEach(variant => {
+      let bestName = { score: 0, index: -1 };
+      let bestId = { score: 0, index: -1 };
+      variant.cells.forEach((cell, idx) => {
+        const nameScore = scoreNameHeader(cell);
+        if (nameScore > bestName.score) bestName = { score: nameScore, index: idx };
+        const idScore = scoreIdHeader(cell);
+        if (idScore > bestId.score) bestId = { score: idScore, index: idx };
+      });
+
+      if (bestName.index !== -1 && bestId.index !== -1){
+        let total = bestName.score + bestId.score + (variant.band === 2 ? 2 : 0);
+        if (bestName.score >= 40) total += 20;
+        const chosenNameHeader = variant.cells[bestName.index] || '';
+        if (/pl\s*name/.test(chosenNameHeader)) total -= 50;
+        if (!best || total > best.total){
+          best = {
+            rowIndex: r,
+            rowSpan: variant.band,
+            nameIndex: bestName.index,
+            idIndex: bestId.index,
+            total
+          };
+        }
+      }
+    });
+  }
+
+  return best;
+}
+
+function isLikelyPhone(value){
+  const digits = String(value || '').replace(/\D/g,'');
+  return digits.length >= 10 && digits.length <= 11;
+}
+
+function isLikelyEmail(value){
+  return /@/.test(String(value || ''));
+}
+
+function isLikelyName(value){
+  const s = getCellText(value);
+  if (!s) return false;
+  if (isLikelyEmail(s)) return false;
+  if (isLikelyPhone(s)) return false;
+  if (/^\d+$/.test(s)) return false;
+  if (s.length < 3) return false;
+  return /[A-Za-z]/.test(s);
+}
+
+
+function rowLooksLikeNoise(row){
+  const joined = (row || []).map(getCellText).filter(Boolean).join(' ').toLowerCase();
+  if (!joined) return true;
+  return /page \d+|confidential|generated on|report run date|filter applied|worksheet|reporting period|run control/i.test(joined);
+}
+
+function findAllIdCandidates(row){
+  const candidates = [];
+  row.forEach((cell, idx) => {
+    const text = getCellText(cell);
+    const matches = text.match(/\b(\d{8})\b/g) || [];
+    matches.forEach(m => {
+      let score = 0;
+      if (/^88\d{6}$/.test(m)) score += 14;
+      else score += 3;
+      if (idx >= 3) score += 1;
+      if (idx >= 6) score += 1;
+      if (/colleague|employee|badge|id/i.test(text)) score += 2;
+      candidates.push({ idx, id: m, score, raw: text });
+    });
+  });
+  return candidates;
+}
+
+function pickBestIdFromRow(row){
+  const candidates = findAllIdCandidates(row || []);
+  if (!candidates.length) return null;
+  candidates.sort((a,b) => b.score - a.score || b.idx - a.idx);
+  return candidates[0];
+}
+
+function looksLikeShiftOrDept(value){
+  const s = normalizeHeader(value);
+  if (!s) return false;
+  return /^(night|day|weekend|weekday|active|returns|shipping|pack|prep|gtp|icqa|full time|part time|seasonal|temporary)$/.test(s);
+}
+
+function isLikelyPersonName(value){
+  const s = cleanImportedName(value);
+  if (!isLikelyName(s)) return false;
+  if (looksLikeJobText(s)) return false;
+  if (looksLikeShiftOrDept(s)) return false;
+  if (/warehouse associate|associate,|china grove|full time|part time/i.test(s)) return false;
+  if (/^[A-Za-z]$/.test(s)) return false;
+  const words = s.split(/\s+/).filter(Boolean);
+  if (words.length < 2) return false;
+  if (words.length > 5) return false;
+  if (!/^[A-Za-z][A-Za-z\s\.\-\'’]+$/.test(s)) return false;
+  return true;
+}
+
+function pickBestNameNearId(row, idIndex){
+  let best = null;
+  row.forEach((cell, idx) => {
+    const text = cleanImportedName(cell);
+    if (!isLikelyPersonName(text)) return;
+    let score = 0;
+    const distance = Math.abs(idx - idIndex);
+    score += Math.max(0, 12 - distance);
+    if (idx < idIndex) score += 4;
+    if (idx === idIndex - 1) score += 3;
+    if (idx === idIndex - 2) score += 2;
+    if (/^[A-Za-z][A-Za-z\s\.\-\'’]+$/.test(text)) score += 2;
+    if (text.split(/\s+/).length >= 2) score += 2;
+    if (!best || score > best.score){
+      best = { idx, text, score };
+    }
+  });
+  return best ? best.text.replace(/\s*,\s*$/, '') : '';
+}
+
+function cleanImportedName(value){
+  let s = getCellText(value);
+  if (!s) return '';
+  s = s.replace(/^\d+\s+/, '').trim();
+  s = s.replace(/^[,;:\-]+\s*/, '').trim();
+  return s;
+}
+
+function normalizeNameForCompare(value){
+  return cleanImportedName(value)
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function looksLikeJobText(value){
+  const s = normalizeHeader(value);
+  if (!s) return false;
+  return [
+    'warehouse associate', 'cycle count associate', 'full time', 'part time', 'weekend',
+    'night', 'returns', 'shipping', 'pack', 'prep', 'active', 'icqa', 'gtp', 'china grove'
+  ].some(token => s.includes(token));
+}
+
+function getUniqueRatio(values){
+  if (!values.length) return 0;
+  const set = new Set(values.map(v => normalizeNameForCompare(v)).filter(Boolean));
+  return set.size / values.length;
+}
+
+function getRowIdFromColumn(row, idIndex){
+  const text = getCellText((row || [])[idIndex] || '');
+  const matches = text.match(/\b(\d{8})\b/g) || [];
+  if (!matches.length) return '';
+  const preferred = matches.filter(v => /^88\d{6}$/.test(v));
+  return preferred.length ? preferred[preferred.length - 1] : (matches[matches.length - 1] || '');
+}
+
+function analyzeTableColumns(rows, header){
+  const startRow = header ? (header.rowIndex + Math.max(1, header.rowSpan || 1)) : 0;
+  const headerNameText = header && header.nameIndex >= 0 ? normalizeHeader(((rows[header.rowIndex] || [])[header.nameIndex]) || '') : '';
+  const width = Math.max(0, ...rows.map(r => (r || []).length));
+  const idStats = [];
+  const nameStats = [];
+
+  for (let c = 0; c < width; c++){
+    let idHits = 0;
+    let id88Hits = 0;
+    let textHits = 0;
+    let overlapRows = 0;
+    const nameValues = [];
+
+    for (let r = startRow; r < rows.length; r++){
+      const row = rows[r] || [];
+      if (rowLooksLikeNoise(row)) continue;
+      const cell = getCellText(row[c] || '');
+      if (!cell) continue;
+
+      const idMatches = cell.match(/\b(\d{8})\b/g) || [];
+      if (idMatches.length){
+        idHits += idMatches.length;
+        id88Hits += idMatches.filter(v => /^88\d{6}$/.test(v)).length;
+      }
+
+      if (isLikelyPersonName(cell)){
+        textHits += 1;
+        nameValues.push(cleanImportedName(cell));
+      }
+
+      if (cell) overlapRows += 1;
+    }
+
+    const uniqueRatio = getUniqueRatio(nameValues);
+    const repeatedPenalty = nameValues.length >= 3 && uniqueRatio < 0.6 ? 8 : 0;
+    idStats.push({ index: c, score: (id88Hits * 16) + (idHits * 4), idHits, id88Hits, overlapRows });
+    const headerCell = normalizeHeader((((header && rows[header.rowIndex]) || [])[c]) || '');
+    let nameScore = (textHits * 8) + (uniqueRatio * 12) - repeatedPenalty;
+    if (headerCell.includes('candidate name')) nameScore += 40;
+    if (/pl\s*name/.test(headerCell)) nameScore -= 60;
+    if (headerCell.includes('manager name') || headerCell.includes('supervisor name') || headerCell.includes('lead name')) nameScore -= 40;
+    nameStats.push({ index: c, score: nameScore, textHits, uniqueRatio, repeatedPenalty, overlapRows, headerCell });
+  }
+
+  idStats.sort((a,b) => b.score - a.score || b.id88Hits - a.id88Hits || b.index - a.index);
+  const bestId = idStats[0] && idStats[0].score > 0 ? idStats[0] : null;
+
+  let bestName = null;
+  if (bestId){
+    nameStats.forEach(candidate => {
+      if (candidate.index === bestId.index) return;
+      let score = candidate.score;
+      const distance = Math.abs(candidate.index - bestId.index);
+      score += Math.max(0, 10 - distance);
+      if (candidate.index < bestId.index) score += 5;
+      if (header && candidate.index === header.nameIndex) score += 6;
+      if (candidate.headerCell && candidate.headerCell.includes('candidate name')) score += 30;
+      if (candidate.headerCell && /pl\s*name/.test(candidate.headerCell)) score -= 80;
+      const pairQuality = scoreNameIdPair(rows, candidate.index, bestId.index, startRow);
+      score += pairQuality;
+      if (!bestName || score > bestName.score){
+        bestName = { ...candidate, score, pairQuality };
+      }
+    });
+  }
+
+  return {
+    idIndex: header && header.idIndex >= 0 ? header.idIndex : (bestId ? bestId.index : -1),
+    nameIndex: (() => {
+      if (header && header.nameIndex >= 0){
+        const hdrStats = nameStats.find(v => v.index === header.nameIndex) || {score:0};
+        const hdrPair = bestId ? scoreNameIdPair(rows, header.nameIndex, bestId.index, startRow) : 0;
+        const hdrScore = hdrStats.score + hdrPair + 6;
+        if (bestName && bestName.score > hdrScore + 4) return bestName.index;
+        return header.nameIndex;
+      }
+      return bestName ? bestName.index : -1;
+    })(),
+    bestId,
+    bestName
+  };
+}
+
+function scoreNameIdPair(rows, nameIndex, idIndex, startRow){
+  if (nameIndex < 0 || idIndex < 0) return 0;
+  let paired = 0;
+  let cleanPairs = 0;
+  let badNameRows = 0;
+  for (let r = startRow; r < rows.length; r++){
+    const row = rows[r] || [];
+    if (rowLooksLikeNoise(row)) continue;
+    const name = cleanImportedName(row[nameIndex] || '');
+    const id = getRowIdFromColumn(row, idIndex);
+    if (!name && !id) continue;
+    if (id) paired += 1;
+    if (id && isLikelyPersonName(name)) cleanPairs += 1;
+    if (id && name && !isLikelyPersonName(name)) badNameRows += 1;
+  }
+  return (cleanPairs * 6) - (badNameRows * 3) + (nameIndex < idIndex ? 4 : 0);
+}
+
+function chooseBestNameIdPairs(rows, sourceLabel){
+  const header = findBestHeaderRow(rows);
+  const analysis = analyzeTableColumns(rows, header);
+  let idIndex = analysis.idIndex;
+  let nameIndex = analysis.nameIndex;
+  const startRow = header ? (header.rowIndex + Math.max(1, header.rowSpan || 1)) : 0;
+  const pairs = [];
+
+  for (let i = startRow; i < rows.length; i++){
+    const row = rows[i] || [];
+    if (rowLooksLikeNoise(row)) continue;
+
+    let id = idIndex >= 0 ? getRowIdFromColumn(row, idIndex) : '';
+    if (!id){
+      const fallbackId = pickBestIdFromRow(row);
+      id = fallbackId ? fallbackId.id : '';
+      if (!id && !row.some(cell => getCellText(cell))) continue;
+    }
+    if (!id || !/^\d{8}$/.test(id)) continue;
+
+    let name = '';
+    if (nameIndex >= 0) name = cleanImportedName(row[nameIndex] || '');
+    if (!isLikelyPersonName(name)) {
+      const actualIdIndex = idIndex >= 0 ? idIndex : ((pickBestIdFromRow(row) || {}).idx ?? -1);
+      name = pickBestNameNearId(row, actualIdIndex);
+    }
+    if (!isLikelyPersonName(name)) continue;
+    pairs.push({ id, name: cleanImportedName(name), rowIndex: i + 1 });
+  }
+
+  const grouped = new Map();
+  pairs.forEach(p => {
+    const norm = normalizeNameForCompare(p.name);
+    if (!grouped.has(p.id)) grouped.set(p.id, new Map());
+    const bucket = grouped.get(p.id);
+    const prev = bucket.get(norm) || { name: p.name, count: 0, firstRow: p.rowIndex };
+    prev.count += 1;
+    if (p.name.length > prev.name.length) prev.name = p.name;
+    bucket.set(norm, prev);
+  });
+
+  const lines = [];
+  grouped.forEach((bucket, id) => {
+    let best = null;
+    bucket.forEach(entry => {
+      let score = entry.count * 10;
+      if (isLikelyPersonName(entry.name)) score += 5;
+      if (!best || score > best.score) best = { ...entry, score };
+    });
+    if (best) lines.push(`${best.name}, ${id}`);
+  });
+
+  return {
+    lines,
+    foundRows: lines.length,
+    foundTables: lines.length ? 1 : 0,
+    debug: { sourceLabel, header, analysis, rawPairs: pairs.length }
+  };
+}
+
+function extractNameIdLinesFromTables(tables, sourceLabel){
+  let lines = [];
+  let foundTables = 0;
+  let foundRows = 0;
+
+  tables.forEach((rows) => {
+    if (!rows || !rows.length) return;
+    const result = chooseBestNameIdPairs(rows, sourceLabel);
+    if (result.lines.length) {
+      foundTables += result.foundTables;
+      foundRows += result.foundRows;
+      lines.push(...result.lines);
+    }
+  });
+
+  const seenIds = new Set();
+  lines = lines.filter(line => {
+    const match = String(line).match(/,\s*(\d{8})$/);
+    const key = match ? match[1] : String(line).toLowerCase();
+    if (seenIds.has(key)) return false;
+    seenIds.add(key);
+    return true;
+  });
+
+  return {
+    lines,
+    foundTables,
+    foundRows: lines.length,
+    message: lines.length
+      ? `Imported ${lines.length} row(s) from ${sourceLabel}. Name/ID pairs were matched row-by-row using detected Excel columns and stricter person-name rules.`
+      : `No name + 8-digit colleague number matches could be pulled from ${sourceLabel}.`
+  };
+}
+
+async function importStructuredFile(file){
+  const lower = (file.name || '').toLowerCase();
+  if (lower.endsWith('.xlsx') || lower.endsWith('.xlsm')){
+    const buffer = await file.arrayBuffer();
+    const tables = await parseXlsxTables(buffer);
+    return extractNameIdLinesFromTables(tables, file.name);
+  }
+
+  const text = await file.text();
+
+  if (lower.endsWith('.xml') || /<Workbook[^>]+office:spreadsheet/i.test(text)){
+    return extractNameIdLinesFromTables(parseSpreadsheetXml(text), file.name);
+  }
+
+  if (lower.endsWith('.html') || /<table[\s>]/i.test(text)){
+    return extractNameIdLinesFromTables(parseHtmlTables(text), file.name);
+  }
+
+  if (lower.endsWith('.txt')){
+    return {
+      lines: parsePlainTextLines(text),
+      foundTables: 0,
+      foundRows: 0,
+      message: `Imported raw text from ${file.name}. Plain text lines were added as-is.`
+    };
+  }
+
+  if (lower.endsWith('.xls')){
+    throw new Error('Old binary .xls files are not fully supported in this offline page yet. Please save the sheet as .xlsx, .xlsm, or XML Spreadsheet (.xml) first.');
+  }
+
+  throw new Error('Unsupported file type. Use TXT, XLSX, XLSM, XML Spreadsheet, or HTML table files.');
+}
+
+async function handleImportFile(file){
+  if (!file) return;
+  try {
+    const result = await importStructuredFile(file);
+    if (result.lines && result.lines.length){
+      importTextContent(result.lines.join('\n'));
+    }
+    setImportNotice(result.message, !result.foundRows && !(file.name || '').toLowerCase().endsWith('.txt'));
+  } catch (err){
+    setImportNotice(err?.message || 'Import failed.', true);
+    alert(err?.message || 'Import failed.');
+  }
+}
+
+</script>
+
+<script>
+(function(){
+  const btn = document.getElementById('helpBtn');
+  const overlay = document.getElementById('helpOverlay');
+  const closeBtn = document.getElementById('helpClose');
+
+  function openHelp(){
+    overlay.style.display = 'block';
+    overlay.setAttribute('aria-hidden','false');
+    document.body.style.overflow = 'hidden';
+    closeBtn.focus();
+  }
+  function closeHelp(){
+    overlay.style.display = 'none';
+    overlay.setAttribute('aria-hidden','true');
+    document.body.style.overflow = '';
+    btn.focus();
+  }
+
+  btn && btn.addEventListener('click', openHelp);
+  closeBtn && closeBtn.addEventListener('click', closeHelp);
+  overlay && overlay.addEventListener('click', (e)=>{ if(e.target === overlay) closeHelp(); });
+  document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape' && overlay && overlay.style.display === 'block') closeHelp(); });
+})();
+</script>
+
+
+<script>
+(function(){
+  const importInput = document.getElementById('importFile');
+  const dropZone = document.getElementById('dropZone');
+  if (importInput){
+    importInput.addEventListener('change', (e)=>{
+      const file = e.target.files && e.target.files[0];
+      Promise.resolve(handleImportFile(file));
+      e.target.value = '';
+    });
+  }
+  if (dropZone){
+    ['dragenter','dragover'].forEach(evt => dropZone.addEventListener(evt, (e)=>{ e.preventDefault(); e.stopPropagation(); dropZone.classList.add('dragover'); }));
+    ['dragleave','dragend','drop'].forEach(evt => dropZone.addEventListener(evt, (e)=>{ e.preventDefault(); e.stopPropagation(); dropZone.classList.remove('dragover'); }));
+    dropZone.addEventListener('drop', (e)=>{
+      const file = e.dataTransfer?.files && e.dataTransfer.files[0];
+      Promise.resolve(handleImportFile(file));
+    });
+    dropZone.addEventListener('click', ()=> importInput && importInput.click());
+    dropZone.addEventListener('keydown', (e)=>{ if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); importInput && importInput.click(); } });
+  }
+})();
+</script>
+
+</body>
+</html>
