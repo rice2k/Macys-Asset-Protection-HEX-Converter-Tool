@@ -6,6 +6,10 @@ Current maintained app: Windows desktop EXE built from `desktop_app.py`
 
 Current version: `1.1.1`
 
+Full option map: [Every Option Reference](every-option-reference.md)
+
+Screenshots: [Screenshot Guide](../screenshots/README.md)
+
 ## Workspaces
 
 | Workspace | Purpose |
@@ -116,6 +120,8 @@ Notes / Details can come from:
 | TXT Report | Plain text report with aligned columns. |
 | PDF Report | Landscape report with summary and status-highlighted rows. |
 
+Export download and release notes: [Downloads And Releases](downloads-and-releases.md)
+
 ## Settings Features
 
 - Default export type.
@@ -145,3 +151,11 @@ Notes / Details can come from:
 - Mouse-wheel scrolling.
 - Table hover highlighting.
 - Status strip for Ready / Needs Review / Exported states.
+
+## GitHub Visual Assets
+
+- [README banner](../images/github-banner.png)
+- [App icon](../images/app-icon.png)
+- [Screenshot collage](../images/screenshot-collage.png)
+- [Demo workflow GIF](../images/demo-workflow.gif)
+- [Right-click menu reference](../images/right-click-menu-reference.png)

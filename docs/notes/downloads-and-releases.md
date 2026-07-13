@@ -14,6 +14,33 @@ Current SHA-256:
 
 `15F7DA4D211292EC21002E760655EFEFBB3628F86A6EA9E9A10E8C04B46F3815`
 
+## Important URLs
+
+| Resource | URL |
+| --- | --- |
+| Repository | <https://github.com/rice2k/Macys-Asset-Protection-HEX-Converter-Tool> |
+| Direct EXE | <https://github.com/rice2k/Macys-Asset-Protection-HEX-Converter-Tool/raw/main/dist/Macys_AP_China_Grove_Hex_Utility.exe> |
+| Direct checksum | <https://raw.githubusercontent.com/rice2k/Macys-Asset-Protection-HEX-Converter-Tool/main/dist/Macys_AP_China_Grove_Hex_Utility.exe.sha256.txt> |
+| Tags | <https://github.com/rice2k/Macys-Asset-Protection-HEX-Converter-Tool/tags> |
+| Releases area | <https://github.com/rice2k/Macys-Asset-Protection-HEX-Converter-Tool/releases> |
+| Release checklist | [release-checklist.md](release-checklist.md) |
+
+## Verify The Download
+
+Run this from the folder where the EXE was downloaded:
+
+```powershell
+Get-FileHash .\Macys_AP_China_Grove_Hex_Utility.exe -Algorithm SHA256
+```
+
+The hash should match:
+
+```text
+15F7DA4D211292EC21002E760655EFEFBB3628F86A6EA9E9A10E8C04B46F3815
+```
+
+If the hash does not match, delete the downloaded EXE and download it again from the repository link above.
+
 ## Windows SmartScreen
 
 Windows may show a SmartScreen warning because the test EXE is not code-signed yet.
@@ -38,6 +65,16 @@ Release-note files are kept in the repository root:
 - `RELEASE_NOTES_v1.0.5.md`
 
 Use `RELEASE_NOTES_TEMPLATE.md` before creating a new tag.
+
+Manual GitHub Releases should be created from:
+
+<https://github.com/rice2k/Macys-Asset-Protection-HEX-Converter-Tool/releases>
+
+Recommended attached files:
+
+- `Macys_AP_China_Grove_Hex_Utility.exe`
+- `Macys_AP_China_Grove_Hex_Utility.exe.sha256.txt`
+- Matching `RELEASE_NOTES_vX.Y.Z.md`
 
 ## Automation Status
 

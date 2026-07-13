@@ -6,10 +6,26 @@ This notes folder is the detailed GitHub documentation area for the project.
 
 - [User Guide](user-guide.md)
 - [Feature Reference](feature-reference.md)
+- [Every Option Reference](every-option-reference.md)
+- [Input Examples](input-examples.md)
+- [Excel And Clipboard Tips](excel-clipboard-tips.md)
 - [Keyboard Shortcuts](keyboard-shortcuts.md)
 - [Version History](version-history.md)
+- [Restore Older Versions](restore-older-versions.md)
 - [Downloads And Releases](downloads-and-releases.md)
+- [Release Checklist](release-checklist.md)
+- [Roadmap And Known Issues](roadmap-and-known-issues.md)
 - [Troubleshooting](troubleshooting.md)
+
+## Main URLs
+
+| Resource | URL |
+| --- | --- |
+| Repository | <https://github.com/rice2k/Macys-Asset-Protection-HEX-Converter-Tool> |
+| Download EXE | <https://github.com/rice2k/Macys-Asset-Protection-HEX-Converter-Tool/raw/main/dist/Macys_AP_China_Grove_Hex_Utility.exe> |
+| Checksum | <https://raw.githubusercontent.com/rice2k/Macys-Asset-Protection-HEX-Converter-Tool/main/dist/Macys_AP_China_Grove_Hex_Utility.exe.sha256.txt> |
+| Tags | <https://github.com/rice2k/Macys-Asset-Protection-HEX-Converter-Tool/tags> |
+| Releases | <https://github.com/rice2k/Macys-Asset-Protection-HEX-Converter-Tool/releases> |
 
 ## Current App
 

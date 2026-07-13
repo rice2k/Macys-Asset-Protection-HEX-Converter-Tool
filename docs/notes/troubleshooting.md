@@ -1,5 +1,13 @@
 # Troubleshooting
 
+Useful links:
+
+- [Download current EXE](downloads-and-releases.md)
+- [Every Option Reference](every-option-reference.md)
+- [Input Examples](input-examples.md)
+- [Excel And Clipboard Tips](excel-clipboard-tips.md)
+- [Screenshot Guide](../screenshots/README.md)
+
 ## The EXE Download Shows A Windows Warning
 
 Reason: the EXE is not code-signed yet.

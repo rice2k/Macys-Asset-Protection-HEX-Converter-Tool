@@ -26,6 +26,8 @@
 
 ## Result Right-Click Menu
 
+![Right-click results menu](../screenshots/right-click-results.png)
+
 Batch Results:
 
 - Copy Full Row
@@ -73,3 +75,5 @@ Help menu:
 - How To Use
 - About
 - Copy Last Error Report
+
+Complete option list: [Every Option Reference](every-option-reference.md)

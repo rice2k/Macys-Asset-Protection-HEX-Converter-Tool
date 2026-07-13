@@ -1,27 +1,47 @@
 # Macy's Asset Protection China Grove Hex Converter Utility
 
+![Macy's Asset Protection China Grove Hex Converter Utility](docs/images/github-banner.png)
+
 ![Version](https://img.shields.io/badge/version-1.1.1-e51b2d)
 ![Platform](https://img.shields.io/badge/platform-Windows-0b66c3)
 ![App Type](https://img.shields.io/badge/app-desktop%20utility-166534)
-![Build](https://img.shields.io/badge/test%20EXE-available-7a4b00)
-![Source History](https://img.shields.io/badge/source%20history-archived-667085)
+[![Download Test EXE](https://img.shields.io/badge/download-test%20EXE-e51b2d)](https://github.com/rice2k/Macys-Asset-Protection-HEX-Converter-Tool/raw/main/dist/Macys_AP_China_Grove_Hex_Utility.exe)
+[![Documentation](https://img.shields.io/badge/docs-detailed-0b66c3)](docs/README.md)
+[![Source History](https://img.shields.io/badge/source%20history-archived-667085)](docs/source-history/README.md)
 
 Windows desktop utility for Macy's Asset Protection access-control conversion work at China Grove, North Carolina.
 
 The utility converts access-control HEX values into Facility Code and Card Number, reverses FC/CN pairs back into HEX, cleans imported data, and exports professional reports for review.
 
+## Start Here
+
+| Need | Best Link |
+| --- | --- |
+| Download the current test app | [Macys_AP_China_Grove_Hex_Utility.exe](https://github.com/rice2k/Macys-Asset-Protection-HEX-Converter-Tool/raw/main/dist/Macys_AP_China_Grove_Hex_Utility.exe) |
+| Learn how to use it | [User Guide](docs/notes/user-guide.md) |
+| See every menu, button, tab, and right-click option | [Every Option Reference](docs/notes/every-option-reference.md) |
+| Check examples and import cleanup | [Input Examples](docs/notes/input-examples.md) |
+| Verify the download | [Downloads And Releases](docs/notes/downloads-and-releases.md) |
+| View all screenshots | [Screenshot Guide](docs/screenshots/README.md) |
+| Restore an older version | [Restore Older Versions](docs/notes/restore-older-versions.md) |
+
 ## Quick Links
 
 | Need | Link |
 | --- | --- |
+| GitHub project page | [Repository home](https://github.com/rice2k/Macys-Asset-Protection-HEX-Converter-Tool) |
 | Download latest test EXE | [Macys_AP_China_Grove_Hex_Utility.exe](https://github.com/rice2k/Macys-Asset-Protection-HEX-Converter-Tool/raw/main/dist/Macys_AP_China_Grove_Hex_Utility.exe) |
 | Verify download checksum | [SHA-256 checksum](https://raw.githubusercontent.com/rice2k/Macys-Asset-Protection-HEX-Converter-Tool/main/dist/Macys_AP_China_Grove_Hex_Utility.exe.sha256.txt) |
 | Full documentation hub | [docs/README.md](docs/README.md) |
 | User guide | [docs/notes/user-guide.md](docs/notes/user-guide.md) |
 | Feature reference | [docs/notes/feature-reference.md](docs/notes/feature-reference.md) |
+| Every option reference | [docs/notes/every-option-reference.md](docs/notes/every-option-reference.md) |
 | Keyboard shortcuts | [docs/notes/keyboard-shortcuts.md](docs/notes/keyboard-shortcuts.md) |
 | Version history | [docs/notes/version-history.md](docs/notes/version-history.md) |
+| Roadmap and known issues | [docs/notes/roadmap-and-known-issues.md](docs/notes/roadmap-and-known-issues.md) |
 | Original HTML/source archive | [docs/source-history/README.md](docs/source-history/README.md) |
+| Git tags | [Version tags](https://github.com/rice2k/Macys-Asset-Protection-HEX-Converter-Tool/tags) |
+| GitHub Releases area | [Releases](https://github.com/rice2k/Macys-Asset-Protection-HEX-Converter-Tool/releases) |
 
 ## Current Test Build
 
@@ -32,6 +52,31 @@ Current SHA-256:
 `15F7DA4D211292EC21002E760655EFEFBB3628F86A6EA9E9A10E8C04B46F3815`
 
 Windows may show a SmartScreen warning because the EXE is not code-signed yet. For testing, choose **More info**, then **Run anyway**.
+
+## Who This Is For
+
+This app is for Asset Protection and access-control review work where a user needs to quickly convert, clean, copy, compare, or export HEX badge/card values.
+
+It is designed for the China Grove workflow, but the conversion rule is documented clearly so the project can be reviewed and tested from GitHub.
+
+## What It Solves
+
+Access-control data often comes from copied spreadsheet columns, exported tables, plain text, or mixed employee lines. This utility gives one focused place to:
+
+- Extract usable 8-character IDs from messy input.
+- Convert HEX values to Facility Code and Card Number.
+- Convert FC/CN pairs back to HEX.
+- Flag invalid, duplicate, cleaned, or unusual rows.
+- Export readable reports for review.
+
+## 60-Second Workflow
+
+1. Download and open the test EXE.
+2. Paste IDs, import files, or drag supported files into the Input Queue.
+3. Review green, yellow, and red row highlights.
+4. Use Convert.
+5. Copy rows, FC/CN pairs, or individual values from Results.
+6. Export Excel, CSV, TXT, or PDF when a report is needed.
 
 ## Project Tags
 
@@ -61,17 +106,76 @@ Example:
 - Exports Excel, CSV, TXT, and PDF reports.
 - Includes Help, About, Settings, History, Recent Exports, desktop shortcut support, and copyable error reports.
 
+## Import And Export Support
+
+| Import Type | Supported |
+| --- | --- |
+| Plain text | TXT |
+| Spreadsheet/table text | CSV, TSV |
+| Excel workbooks | XLS, XLSX, XLSM |
+| Web/table exports | HTML, HTM |
+| XML spreadsheet exports | XML Spreadsheet |
+| Clipboard data | Copied lines, copied spreadsheet rows, copied table data |
+
+| Export Type | Best Use |
+| --- | --- |
+| Excel Workbook | Most polished review report with sheets, colors, filters, and wrapped notes. |
+| CSV Report | Simple spreadsheet-compatible data transfer. |
+| TXT Report | Plain text review or quick sharing. |
+| PDF Report | Readable formatted report for review. |
+
+## Validation Colors
+
+| Color | Meaning |
+| --- | --- |
+| Green | Valid row. |
+| Yellow | Valid row with a warning, cleanup note, duplicate, or unusual value. |
+| Red | Invalid row that needs review. |
+
+Notes / Details stays blank for clean rows. It appears only when the app cleaned a value, found a duplicate, flagged unusual input, or explains why a row is invalid.
+
 ## Screenshots
 
-![Main screen](docs/screenshots/main.png)
+![Screenshot collage](docs/images/screenshot-collage.png)
 
-![Settings](docs/screenshots/settings.png)
+| Screen | Preview |
+| --- | --- |
+| Main workspace | ![Main screen](docs/screenshots/main.png) |
+| Menu options | ![Menu options](docs/screenshots/menu-options.png) |
+| Right-click results menu | ![Right-click results menu](docs/screenshots/right-click-results.png) |
+| Settings | ![Settings](docs/screenshots/settings.png) |
+| Help | ![Help](docs/screenshots/help.png) |
+| About | ![About](docs/screenshots/about.png) |
+| Export complete | ![Export complete](docs/screenshots/export-complete.png) |
 
-![Help](docs/screenshots/help.png)
+## Demo
 
-![About](docs/screenshots/about.png)
+![Demo workflow](docs/images/demo-workflow.gif)
 
-![Export complete](docs/screenshots/export-complete.png)
+## Current Limitations
+
+- The EXE is not code-signed yet, so Windows may show a SmartScreen warning.
+- Automated GitHub release builds are not currently running, so the test EXE is linked directly from the repository.
+- Drag/drop depends on optional Windows/Tkinter drag/drop support; Import > Browse Files is the fallback.
+- The app is a local utility and does not replace the official system of record.
+
+## Roadmap
+
+See [Roadmap And Known Issues](docs/notes/roadmap-and-known-issues.md) for the living improvement list.
+
+Current recommended next improvements:
+
+- Create manual GitHub Releases for stable EXE downloads.
+- Add code signing when a trusted certificate is available.
+- Add a short video or polished GIF walkthrough for each workflow.
+- Add more sample import files for testing.
+- Add optional packaged sample reports.
+
+## Known Issues
+
+No app-breaking issues are currently documented for version `1.1.1`.
+
+See [Troubleshooting](docs/notes/troubleshooting.md) for common testing notes.
 
 ## Source History
 
@@ -90,6 +194,8 @@ The archived HTML versions are reference material only. The maintained app is th
 | `1.0.9` | [`v1.0.9`](https://github.com/rice2k/Macys-Asset-Protection-HEX-Converter-Tool/tree/v1.0.9) | Almost-done baseline before v1.1.x workflow/documentation polish. |
 
 More detail: [docs/notes/version-history.md](docs/notes/version-history.md)
+
+Restore guide: [docs/notes/restore-older-versions.md](docs/notes/restore-older-versions.md)
 
 ## Run From Source
 
@@ -128,5 +234,7 @@ Releases use the built Windows EXE and SHA-256 checksum file from `dist`.
 Before tagging a future version, add a matching `RELEASE_NOTES_vX.Y.Z.md` file so the GitHub Release has clean notes and restore details.
 
 Automated GitHub release builds are not currently running, so the test EXE is linked directly from the repository for easy download and testing.
+
+Release checklist: [docs/notes/release-checklist.md](docs/notes/release-checklist.md)
 
 See [CHANGELOG.md](CHANGELOG.md) for version history.

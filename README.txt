@@ -63,10 +63,22 @@ docs\notes
 Important documentation pages:
 - docs\notes\user-guide.md
 - docs\notes\feature-reference.md
+- docs\notes\every-option-reference.md
+- docs\notes\input-examples.md
+- docs\notes\excel-clipboard-tips.md
 - docs\notes\keyboard-shortcuts.md
 - docs\notes\version-history.md
+- docs\notes\restore-older-versions.md
 - docs\notes\downloads-and-releases.md
+- docs\notes\release-checklist.md
+- docs\notes\roadmap-and-known-issues.md
 - docs\notes\troubleshooting.md
+
+Screenshot guide:
+docs\screenshots\README.md
+
+GitHub visual assets:
+docs\images\README.md
 
 Project tags:
 access-control, asset-protection, hex-converter, facility-code, card-number,
@@ -153,7 +165,7 @@ or clearing data.
 
 Queue Cleanup Tools
 -------------------
-The Batch Converter includes cleanup buttons next to Convert All:
+The Batch Converter includes cleanup buttons next to Convert:
 
 - Remove Duplicates keeps the first matching valid HEX ID and removes later
   repeated valid IDs.
@@ -199,6 +211,9 @@ The Results area includes tools for copying:
 - Selected FC,CN pair
 - Selected full result row
 - Right-click copy actions for full row, HEX/raw, notes, FC, CN, and pair
+
+The full right-click and menu option list is documented in:
+docs\notes\every-option-reference.md
 
 The Unconvert Batch area includes tools for copying HEX results.
 
@@ -274,7 +289,7 @@ browser.
 Help And About
 --------------
 Use Help > How To Use for a visual guide inside the app.
-Use Help > About This Utility for app purpose, contact information, and links.
+Use Help > About for app purpose, contact information, and links.
 
 Mouse And Keyboard
 ------------------

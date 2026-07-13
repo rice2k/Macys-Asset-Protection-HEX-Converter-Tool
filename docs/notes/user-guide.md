@@ -10,6 +10,13 @@ The Macy's Asset Protection China Grove Hex Converter Utility helps users conver
 
 The app is intended for quick operational review, cleanup, copying, and reporting.
 
+Useful reference pages:
+
+- [Every Option Reference](every-option-reference.md)
+- [Input Examples](input-examples.md)
+- [Excel And Clipboard Tips](excel-clipboard-tips.md)
+- [Screenshot Guide](../screenshots/README.md)
+
 ## Conversion Rule
 
 Facility Code (FC) is taken from the high 16 bits. Card Number (CN) is taken from the low 16 bits of the 32-bit HEX value.
@@ -110,6 +117,12 @@ Status meanings:
 
 Notes / Details stays blank for clean rows. It appears when the app cleaned a row, found a duplicate, flagged an unusual value, or explains why input is invalid.
 
+Right-click a result row for copy options:
+
+![Right-click results menu](../screenshots/right-click-results.png)
+
+More detail: [Every Option Reference](every-option-reference.md)
+
 ## Single Hex Lookup
 
 Use Single Hex Lookup when checking one HEX ID.
@@ -145,6 +158,8 @@ Export options:
 
 After export, the Export Complete window lets you open the file or open the folder.
 
+Download and release details are documented in [Downloads And Releases](downloads-and-releases.md).
+
 ## Settings
 
 Settings controls:
@@ -163,3 +178,7 @@ The BlueWave button opens the access-control site in the default browser.
 Help shows a visual guide inside the app.
 
 About shows app purpose, version, GitHub project, and contact/credit information.
+
+Project URL:
+
+<https://github.com/rice2k/Macys-Asset-Protection-HEX-Converter-Tool>
