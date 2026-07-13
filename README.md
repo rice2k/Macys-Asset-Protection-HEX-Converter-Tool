@@ -57,8 +57,8 @@ Made by Christopher Schumacher, Asset Protection FLO.
 
 GitHub project: https://github.com/rice2k/Macys-Asset-Protection-HEX-Converter-Tool
 
-## Future Trust Improvement
+## Release Notes
 
-Windows code signing is planned for a future release. A trusted signing certificate is required before the EXE can be signed.
+Releases use the built Windows EXE and SHA-256 checksum file from `dist`.
 
-See `CHANGELOG.md` for version history and `CODE_SIGNING.md` for the signing plan.
+See `CHANGELOG.md` for version history.

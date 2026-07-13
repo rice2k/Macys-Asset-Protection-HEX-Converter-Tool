@@ -271,7 +271,7 @@ The built Windows executable is located at:
 
 D:\Macys-Asset-Protection-HEX-Converter-Tool\dist\Macys_AP_China_Grove_Hex_Utility.exe
 
-Future Trust Improvement
-------------------------
-Windows code signing is planned for a future release after a trusted signing
-certificate is available.
+Release Notes
+-------------
+Releases use the built Windows EXE and SHA-256 checksum file from the dist
+folder. See CHANGELOG.md for version history.

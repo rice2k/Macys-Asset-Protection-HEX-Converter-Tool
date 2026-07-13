@@ -38,6 +38,5 @@
 
 ## Future
 
-- Add Windows code signing after a trusted signing certificate is available.
 - Publish GitHub Releases with EXE downloads, checksums, notes, and restore points.
 - Continue improving screenshots, help content, and visual consistency as the app evolves.
