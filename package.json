@@ -1,37 +1,14 @@
 {
-  "name": "ap-access-control-converter-desktop",
-  "version": "1.0.0",
-  "description": "Desktop AP access control hex converter with native import and export.",
-  "main": "src/main.js",
-  "author": "AP Operations",
+  "name": "macys-asset-protection-china-grove-hex-converter-utility",
+  "version": "1.0.5",
+  "description": "Python desktop utility for Macy's Asset Protection HEX, Facility Code, and Card Number conversion.",
+  "author": "Christopher Schumacher",
   "license": "UNLICENSED",
   "private": true,
   "scripts": {
-    "start": "electron .",
-    "test": "node tests/converter-core.test.js",
-    "build": "electron-builder --win portable"
-  },
-  "build": {
-    "appId": "com.ap.accesscontrol.converter",
-    "productName": "AP Access Control Converter",
-    "directories": {
-      "output": "dist"
-    },
-    "files": [
-      "src/**/*",
-      "node_modules/**/*",
-      "package.json"
-    ],
-    "win": {
-      "target": "portable",
-      "icon": "src/assets/app-icon.ico"
-    },
-    "portable": {
-      "artifactName": "AP_Access_Control_Converter_${version}.exe"
-    },
-    "asar": true
-  },
-  "dependencies": {
-    "xlsx": "^0.18.5"
+    "start": "python desktop_app.py",
+    "test": "python desktop_app.py --self-test",
+    "smoke": "python tests/desktop_app_smoke.py",
+    "build:win": "python -m PyInstaller --noconfirm --clean Macys_AP_China_Grove_Hex_Utility.spec"
   }
 }

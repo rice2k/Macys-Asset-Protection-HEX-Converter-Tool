@@ -1,0 +1,6 @@
+openpyxl>=3.1.5
+Pillow>=11.2.1
+reportlab>=4.4.2
+xlrd>=2.0.2
+tkinterdnd2>=0.4.3
+pyinstaller>=6.14.2

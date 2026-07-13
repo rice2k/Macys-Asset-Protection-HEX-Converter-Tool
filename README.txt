@@ -1,0 +1,255 @@
+Macy's Asset Protection - China Grove Hex Converter Utility
+README
+
+App Version: 1.0.5
+
+Purpose
+-------
+The Macy's Asset Protection - China Grove Hex Converter Utility is a desktop
+application built to help Asset Protection users convert access-control badge
+or card identifiers between HEX, Facility Code, and Card Number formats.
+
+The app is intended for quick operational review, cleanup, copying, and report
+exporting. It is especially useful when working with lists of access-control
+IDs from text files, spreadsheets, copied employee lines, or exported table
+data.
+
+Built For
+---------
+Macy's Asset Protection operations at the China Grove, North Carolina facility.
+
+Built By
+--------
+Christopher Schumacher, Asset Protection FLO
+Email: christopher.schumacher@macys.com
+GitHub: https://github.com/rice2k
+
+Main Functions
+--------------
+1. Batch Converter
+   Converts one or many 8-character HEX IDs into:
+   - Facility Code
+   - Card Number
+   - Status
+   - Notes or warnings
+
+2. Single Lookup
+   Converts one HEX ID quickly and copies the FC,CN pair to the clipboard.
+
+3. FC/CN to Hex
+   Converts one Facility Code and Card Number pair back into an 8-character
+   HEX ID.
+
+4. Unconvert Batch
+   Converts many FC/CN pairs back into HEX IDs.
+
+5. History
+   Shows recent conversion activity saved by the utility.
+
+How The Conversion Works
+------------------------
+For an 8-character HEX value, the app reads the value as a 32-bit number:
+
+- Facility Code = high 16 bits
+- Card Number = low 16 bits
+
+Example:
+HEX: 88984717
+Facility Code: 34968
+Card Number: 18199
+
+Supported Input
+---------------
+You can add data to the Input Queue several ways:
+
+1. Paste IDs directly into the Input Queue.
+2. Use Import > Browse Files.
+3. Use Import > Paste Clipboard To Queue.
+4. Drag supported files directly onto the Input Queue box.
+5. Use Sample to load example data.
+
+Supported file types:
+- TXT
+- CSV
+- TSV
+- XLS
+- XLSX
+- XLSM
+- XML Spreadsheet
+- HTML / HTM table files
+
+The app can also pull an 8-character ID out of a full employee-style line when
+possible. For example:
+
+Active Test User, 88984717
+
+Input Queue Highlights
+----------------------
+The Input Queue uses row colors to make review easier before conversion:
+
+- Green-tinted rows are clean valid HEX IDs.
+- Yellow-tinted rows are valid, but include a warning such as extracted text,
+  a duplicate ID, or an unusual value.
+- Red-tinted rows are invalid and need review or cleanup.
+
+Queue Cleanup Tools
+-------------------
+The Batch Converter includes cleanup buttons next to Convert All:
+
+- Remove Duplicates keeps the first matching valid HEX ID and removes later
+  repeated valid IDs.
+- Keep Valid removes rows that cannot be read as valid 8-character HEX IDs.
+
+These tools work on the Input Queue before conversion.
+
+Results And Warnings
+--------------------
+After conversion, the Results table shows:
+
+- Line number
+- HEX ID or raw input
+- Facility Code
+- Card Number
+- Status
+- Notes
+
+Statuses include:
+- Valid: The row converted normally.
+- Warning: The row converted, but the app noticed something unusual.
+- Invalid: The row could not be converted.
+
+Examples of possible warnings or notes:
+- Extracted an ID from a full text line
+- Duplicate value found
+- All zeros
+- High or unusual value
+- Too short or too long
+- Invalid HEX character
+
+Copy Tools
+----------
+The Results area includes tools for copying:
+
+- All valid FC/CN pairs
+- Selected Facility Code
+- Selected Card Number
+- Selected FC,CN pair
+
+The Unconvert Batch area includes tools for copying HEX results.
+
+Export Options
+--------------
+The Export menu creates professional reports in several formats:
+
+1. Excel Workbook (.xlsx)
+   Includes:
+   - Summary sheet
+   - Results sheet
+   - Frozen header row
+   - Filters
+   - Status colors
+   - Wrapped notes
+
+2. CSV Report (.csv)
+   Good for importing into other tools or spreadsheet programs.
+
+3. TXT Report (.txt)
+   Plain text report that opens easily in Notepad.
+
+4. PDF Report (.pdf)
+   Formatted report with:
+   - Title
+   - Summary section
+   - Results table
+   - Row striping
+   - Warning and invalid highlighting
+
+After an export finishes, the app shows an Export Complete window with:
+
+- Open File
+- Open Folder
+- Saved file path
+- App version and run summary
+
+Default Export Folder
+---------------------
+Use File > Default Export Folder to choose where reports should start saving.
+Use File > Open Export Folder to open that location.
+
+Settings
+--------
+Use File > Settings to control:
+
+- Default export type
+- Default export folder
+- Desktop shortcut creation
+
+Use Export > Export Default to export using the saved default report type.
+
+Desktop Shortcut
+----------------
+Use File > Create Desktop Shortcut or File > Settings > Create Shortcut to add
+a launcher to the Windows desktop.
+
+BlueWave Link
+-------------
+Use the BlueWave button in the top bar to open the access-control site in your
+browser.
+
+Help And About
+--------------
+Use Help > How To Use for a visual guide inside the app.
+Use Help > About This Utility for app purpose, contact information, and links.
+
+Mouse And Keyboard
+------------------
+The app supports mouse-wheel scrolling in:
+
+- Input Queue
+- Unconvert input
+- Results tables
+- History
+- Help window
+- Import preview
+
+Useful shortcuts:
+- Ctrl+I: Import
+- Ctrl+R: Convert batch
+- Ctrl+E: Export Excel
+- Ctrl+Shift+E: Export CSV
+- Ctrl+P: Export PDF
+- Ctrl+F: Jump to search
+- Ctrl+L: Clear workspace
+
+Important Notes
+---------------
+- The conversion is performed locally on the computer.
+- The app does not replace official access-control systems or records.
+- Always verify results against the proper system of record when needed.
+- Reports should be handled according to company policy.
+- The BlueWave and GitHub links open in your default web browser.
+
+Troubleshooting
+---------------
+If import does not find IDs:
+- Confirm the file contains 8-character HEX values.
+- Try opening the file in Excel or Notepad to confirm the data is visible.
+- Copy the ID column manually and paste it into the Input Queue.
+
+If export says there is no report:
+- Run a conversion first.
+- Make sure there are rows in the Results table.
+
+If drag and drop does not work:
+- Use Import > Browse Files instead.
+- Confirm the file type is supported.
+
+If a row is invalid:
+- Check that the HEX ID is exactly 8 characters.
+- Check that it only contains 0-9 and A-F.
+
+Current Executable
+------------------
+The built Windows executable is located at:
+
+D:\AP_Access_Control_Converter_Desktop\dist\Macys_AP_China_Grove_Hex_Utility.exe

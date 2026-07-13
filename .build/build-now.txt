@@ -1,3 +1,0 @@
-Build request: AP HEX Converter Tool v1.0.3
-Requested: 2026-07-12
-Trigger: direct main-branch Windows build
