@@ -4,6 +4,22 @@ Current version: `1.1.1`
 
 Windows desktop utility for Macy's Asset Protection access-control conversion work at China Grove, North Carolina.
 
+## Download Test Build
+
+Latest test EXE:
+
+[Download Macys_AP_China_Grove_Hex_Utility.exe](https://github.com/rice2k/Macys-Asset-Protection-HEX-Converter-Tool/raw/main/dist/Macys_AP_China_Grove_Hex_Utility.exe)
+
+Checksum file:
+
+[Download SHA-256 checksum](https://raw.githubusercontent.com/rice2k/Macys-Asset-Protection-HEX-Converter-Tool/main/dist/Macys_AP_China_Grove_Hex_Utility.exe.sha256.txt)
+
+Current SHA-256:
+
+`15F7DA4D211292EC21002E760655EFEFBB3628F86A6EA9E9A10E8C04B46F3815`
+
+Windows may show a SmartScreen warning because the EXE is not code-signed yet. For testing, users can choose More info, then Run anyway.
+
 ## What It Does
 
 - Converts one or many 8-character HEX IDs into Facility Code and Card Number.
