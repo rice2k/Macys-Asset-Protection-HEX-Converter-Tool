@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.8
+
+- Changed built-in samples to numeric-only data so Sample buttons do not insert employee text or bad-line examples.
+- Reduced Input Queue and Unconvert Queue text size for easier scanning.
+- Shortened Single Lookup and FC/CN input fields so they no longer stretch across the workspace.
+- Stabilized the sidebar and footer status areas so button clicks do not shift the workspace/status layout.
+- Removed a duplicate search-entry layout call that could make the Results filter row behave inconsistently.
+
 ## 1.0.7
 
 - Updated the app and EXE icon to a cleaner Macy's AP China Grove badge style.

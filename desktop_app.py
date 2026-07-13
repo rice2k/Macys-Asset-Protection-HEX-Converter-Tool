@@ -49,7 +49,7 @@ PROJECT_URL = "https://github.com/rice2k/Macys-Asset-Protection-HEX-Converter-To
 CONTACT_EMAIL = "christopher.schumacher@macys.com"
 APP_DISPLAY_NAME = "Macy's Asset Protection - China Grove Hex Converter Utility"
 APP_SHORT_NAME = "Macy's AP China Grove Hex Utility"
-APP_VERSION = "1.0.7"
+APP_VERSION = "1.0.8"
 APP_STATE_DIR = Path(os.environ.get("APPDATA", str(Path.home()))) / "AP_Access_Control_Converter"
 SETTINGS_FILE = APP_STATE_DIR / "settings.json"
 EXPORT_TYPE_CHOICES = ["Excel Workbook (.xlsx)", "CSV Report (.csv)", "TXT Report (.txt)", "PDF Report (.pdf)"]
@@ -1507,6 +1507,8 @@ class ConverterApp(TkRoot):
         self.nav_status = tk.StringVar(value="Paste IDs, import files, or choose a workspace.")
         status_card = self._card(nav, bg=UI_SURFACE_ALT, border=UI_BORDER)
         status_card.pack(fill="x", padx=10, pady=(0, 10))
+        status_card.configure(height=92)
+        status_card.pack_propagate(False)
         tk.Frame(status_card, bg=UI_RED, height=3).pack(fill="x")
         status_head = tk.Frame(status_card, bg=UI_SURFACE_ALT)
         status_head.pack(fill="x", padx=10, pady=(9, 4))
@@ -1522,6 +1524,8 @@ class ConverterApp(TkRoot):
             wraplength=176,
             justify="left",
             anchor="w",
+            width=24,
+            height=3,
             font=("Segoe UI", 9, "bold"),
         )
         self.nav_status_label.pack(fill="x", padx=10, pady=(0, 10))
@@ -1561,11 +1565,13 @@ class ConverterApp(TkRoot):
             font=("Segoe UI", 8, "bold"),
             padx=10,
             pady=3,
+            width=13,
             highlightthickness=1,
             highlightbackground=UI_BORDER,
         )
         self.status_state_chip.pack(side="left", padx=(12, 8))
-        tk.Label(footer, textvariable=self.status_var, bg=UI_HEADER, fg=UI_MUTED, anchor="w").pack(side="left", fill="x", expand=True)
+        self.footer_status_label = tk.Label(footer, textvariable=self.status_var, bg=UI_HEADER, fg=UI_MUTED, anchor="w")
+        self.footer_status_label.pack(side="left", fill="x", expand=True)
         github = self._link_label(footer, "GitHub Project", PROJECT_URL, UI_HEADER, "Open the GitHub project repository.")
         github.pack(side="right")
         credit = tk.Frame(footer, bg=UI_HEADER)
@@ -1661,9 +1667,9 @@ class ConverterApp(TkRoot):
             highlightthickness=1,
             highlightbackground=UI_BLUE,
             highlightcolor=UI_RED,
-            padx=12,
-            pady=12,
-            font=("Cascadia Mono", 11),
+            padx=10,
+            pady=8,
+            font=("Cascadia Mono", 10),
             wrap="none",
         )
         self.multi_text.tag_configure("input_valid", background=UI_GREEN_SOFT, foreground=UI_GREEN_TEXT)
@@ -1756,7 +1762,6 @@ class ConverterApp(TkRoot):
             font=("Segoe UI", 10),
         )
         self.search_entry.pack(side="left", fill="x", expand=True, ipady=7, padx=(0, 8))
-        self.search_entry.pack(side="left", ipady=7, padx=(0, 10))
         self.search_var.trace_add("write", lambda *_args: self.render_results())
         tk.Label(filter_row, text="Status", bg="#10141b", fg="#a8b2c2", font=("Segoe UI", 9, "bold")).pack(side="left", padx=(0, 8))
         self.status_filter_var = tk.StringVar(value="All")
@@ -1836,9 +1841,10 @@ class ConverterApp(TkRoot):
             highlightthickness=1,
             highlightbackground=UI_BLUE,
             highlightcolor=UI_RED,
-            font=("Cascadia Mono", 13),
+            font=("Cascadia Mono", 12),
+            width=24,
         )
-        entry.pack(fill="x", padx=12, ipady=9)
+        entry.pack(anchor="w", padx=12, ipady=9)
         entry.bind("<Return>", lambda _event: self.convert_single())
         row = tk.Frame(panel, bg="#10141b")
         row.pack(fill="x", padx=12, pady=12)
@@ -1876,8 +1882,9 @@ class ConverterApp(TkRoot):
                 highlightthickness=1,
                 highlightbackground=UI_WARN_TEXT,
                 highlightcolor=UI_RED,
-                font=("Cascadia Mono", 13),
-            ).pack(fill="x", padx=12, ipady=9)
+                font=("Cascadia Mono", 12),
+                width=14,
+            ).pack(anchor="w", padx=12, ipady=9)
         row = tk.Frame(panel, bg="#10141b")
         row.pack(fill="x", padx=12, pady=12)
         self._button(row, "Convert", self.convert_reverse, True, icon="icon-convert.png", tooltip="Build one 8-character HEX ID from FC and CN.").pack(side="left", padx=(0, 8))
@@ -1918,8 +1925,8 @@ class ConverterApp(TkRoot):
             highlightbackground=UI_WARN_TEXT,
             highlightcolor=UI_RED,
             padx=12,
-            pady=12,
-            font=("Cascadia Mono", 11),
+            pady=8,
+            font=("Cascadia Mono", 10),
             wrap="none",
         )
         unconvert_scroll_y = ttk.Scrollbar(unconvert_input_frame, orient="vertical", command=self.unconvert_text.yview, style="Dark.Vertical.TScrollbar")
@@ -2100,13 +2107,32 @@ class ConverterApp(TkRoot):
     def set_status(self, message: str, state: str | None = None) -> None:
         self.status_var.set(message)
         if hasattr(self, "nav_status"):
-            self.nav_status.set(message)
+            self.nav_status.set(self._compact_status(message))
         if not hasattr(self, "status_state_var"):
             return
         label = self._status_state_from_message(message, state)
         self.status_state_var.set(label.upper())
         bg, fg = self._status_state_colors(label)
         self.status_state_chip.configure(bg=bg, fg=fg, highlightbackground=fg if label != "Ready" else UI_BORDER)
+
+    def _compact_status(self, message: str) -> str:
+        text = re.sub(r"\s+", " ", str(message or "")).strip()
+        converted = re.match(r"Converted (\d+) valid line\(s\); (\d+) invalid line\(s\)\.", text)
+        if converted:
+            return f"{converted.group(1)} valid / {converted.group(2)} invalid"
+        unconverted = re.match(r"Unconverted (\d+) valid pair\(s\); (\d+) invalid line\(s\)\.", text)
+        if unconverted:
+            return f"{unconverted.group(1)} valid / {unconverted.group(2)} invalid"
+        kept = re.match(r"Kept (\d+) valid row\(s\); removed (\d+) invalid row\(s\)\.", text)
+        if kept:
+            return f"{kept.group(1)} valid / {kept.group(2)} removed"
+        if text == "Single ID converted and FC,CN copied.":
+            return "Single ID converted"
+        if text == "Hex value created and copied.":
+            return "HEX value copied"
+        if len(text) <= 56:
+            return text
+        return f"{text[:53]}..."
 
     def _status_state_from_message(self, message: str, state: str | None = None) -> str:
         if state in {"Ready", "Needs Review", "Exported"}:
@@ -2294,11 +2320,10 @@ class ConverterApp(TkRoot):
             "\n".join(
                 [
                     "88984717",
-                    "Excel row: Active - Christopher Benson - Colleague # 88984765.0",
-                    "8898-4130",
-                    "Badge 88981234 Ready",
-                    "Duplicate example 88984717",
-                    "BAD-LINE",
+                    "88984765",
+                    "88984130",
+                    "88981234",
+                    "88984717",
                 ]
             ),
         )
@@ -2313,10 +2338,9 @@ class ConverterApp(TkRoot):
             "\n".join(
                 [
                     "34968,18199",
-                    "FC 34968 CN 18192",
-                    "34968\t16700",
-                    "Facility Code 34968 / Card Number 4660",
-                    "BAD-LINE",
+                    "34968,18277",
+                    "34968,16700",
+                    "34968,4660",
                 ]
             ),
         )

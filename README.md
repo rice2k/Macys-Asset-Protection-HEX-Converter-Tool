@@ -1,6 +1,6 @@
 # Macy's Asset Protection China Grove Hex Converter Utility
 
-Current version: `1.0.7`
+Current version: `1.0.8`
 
 Windows desktop utility for Macy's Asset Protection access-control conversion work at China Grove, North Carolina.
 

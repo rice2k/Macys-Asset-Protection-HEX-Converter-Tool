@@ -1,7 +1,7 @@
 Macy's Asset Protection - China Grove Hex Converter Utility
 README
 
-App Version: 1.0.7
+App Version: 1.0.8
 
 Purpose
 -------
