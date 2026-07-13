@@ -71,7 +71,7 @@ jobs:
           if (Test-Path $notes) {
             Copy-Item $notes release-notes.md
           } else {
-            "# Macy's AP China Grove Hex Utility $tag`n`nSee CHANGELOG.md for version history and restore notes." | Set-Content release-notes.md -Encoding utf8
+            throw "Missing $notes. Copy RELEASE_NOTES_TEMPLATE.md, fill it in, commit it, and tag again."
           }
 
       - name: Publish GitHub Release

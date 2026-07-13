@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.1.0
+
+- Added cleaned clipboard preview for messy Excel-style pasted data so only numeric ID rows can be added to the queue.
+- Added live Input Queue row count while typing, pasting, importing, or clearing data.
+- Added Copy Row plus right-click copy menus for Results and Unconvert Results tables.
+- Added a small import working indicator for file reads and larger imports.
+- Added Settings support for clearing saved recent export shortcuts without deleting exported files.
+- Added release-note template guidance and a required matching release-notes file for future GitHub tags.
+- Kept v1.0.9 as the almost-done baseline restore point; this version builds workflow polish on top of it.
+
 ## 1.0.9
 
 - Removed the Salesforce toolbar shortcut and unused Salesforce icon asset.

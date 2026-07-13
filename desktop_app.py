@@ -48,7 +48,7 @@ PROJECT_URL = "https://github.com/rice2k/Macys-Asset-Protection-HEX-Converter-To
 CONTACT_EMAIL = "christopher.schumacher@macys.com"
 APP_DISPLAY_NAME = "Macy's Asset Protection - China Grove Hex Converter Utility"
 APP_SHORT_NAME = "Macy's AP China Grove Hex Utility"
-APP_VERSION = "1.0.9"
+APP_VERSION = "1.1.0"
 APP_STATE_DIR = Path(os.environ.get("APPDATA", str(Path.home()))) / "AP_Access_Control_Converter"
 SETTINGS_FILE = APP_STATE_DIR / "settings.json"
 EXPORT_TYPE_CHOICES = ["Excel Workbook (.xlsx)", "CSV Report (.csv)", "TXT Report (.txt)", "PDF Report (.pdf)"]
@@ -569,6 +569,60 @@ def parse_delimited_text(text: str) -> list[list[str]]:
     return [[cell_text(cell) for cell in row] for row in csv.reader(lines, delimiter=delimiter)]
 
 
+def clean_id_lines_from_text(text: str) -> dict[str, Any]:
+    normalized = str(text or "").replace("\r\n", "\n").replace("\r", "\n")
+    raw_lines = [line.strip() for line in normalized.split("\n") if line.strip()]
+    structured_lines: list[str] = []
+    structured = False
+    try:
+        rows = parse_delimited_text(normalized)
+        if any(len(row) > 1 for row in rows):
+            result = extract_name_id_lines_from_tables([rows], "clipboard")
+            if result.get("found_rows"):
+                structured_lines = [str(line) for line in result.get("lines", [])]
+                structured = True
+    except Exception:
+        structured_lines = []
+
+    candidate_lines = structured_lines or raw_lines
+    clean_ids: list[str] = []
+    for line in candidate_lines:
+        prepared = clean_candidate_line(line)
+        hex_value = prepared["extracted"].strip().upper()
+        if valid_hex8(hex_value):
+            clean_ids.append(hex_value)
+
+    if not clean_ids:
+        pattern = r"\b(?:\d{8}\.0+|\d{4}[\s-]+\d{4}|[0-9A-Fa-f]{8})\b"
+        for match in re.finditer(pattern, normalized):
+            prepared = clean_candidate_line(match.group(0))
+            hex_value = prepared["extracted"].strip().upper()
+            if valid_hex8(hex_value):
+                clean_ids.append(hex_value)
+
+    raw_normalized = "\n".join(raw_lines)
+    cleaned_normalized = "\n".join(clean_ids)
+    table_like = structured or "\t" in normalized or any("," in line or ";" in line for line in raw_lines)
+    changed = bool(clean_ids) and (table_like or cleaned_normalized != raw_normalized)
+    return {
+        "lines": clean_ids,
+        "raw_line_count": len(raw_lines),
+        "cleaned_count": len(clean_ids),
+        "structured": structured,
+        "changed": changed,
+        "message": f"Found {len(clean_ids)} clean ID row(s) from {len(raw_lines)} pasted line(s).",
+    }
+
+
+def import_result_queue_lines(result: dict[str, Any]) -> list[str]:
+    lines = [str(line) for line in result.get("lines", [])]
+    if result.get("found_rows"):
+        cleaned = clean_id_lines_from_text("\n".join(lines))
+        if cleaned["lines"]:
+            return cleaned["lines"]
+    return lines
+
+
 class SimpleTableParser(HTMLParser):
     def __init__(self) -> None:
         super().__init__()
@@ -782,6 +836,17 @@ class ConverterApp(TkRoot):
         recent.insert(0, item)
         self.settings["recent_exports"] = recent[:10]
         self.save_settings()
+
+    def clear_recent_exports(self) -> None:
+        count = len(self.settings.get("recent_exports", []))
+        if count == 0:
+            self.set_status("No recent exports saved.")
+            return
+        if not messagebox.askyesno("Clear recent exports", "Remove saved recent export shortcuts from this workstation?"):
+            return
+        self.settings["recent_exports"] = []
+        self.save_settings()
+        self.set_status(f"Cleared {count} recent export shortcut(s).")
 
     def build_error_report(self, title: str, details: list[str]) -> str:
         lines = [
@@ -1279,6 +1344,38 @@ class ConverterApp(TkRoot):
         tree.bind("<Motion>", on_motion, add="+")
         tree.bind("<Leave>", on_leave, add="+")
 
+    def _context_menu(self, items: list[tuple[str, Any] | None]) -> tk.Menu:
+        menu = tk.Menu(
+            self,
+            tearoff=False,
+            bg=UI_SURFACE,
+            fg=UI_TEXT,
+            activebackground=UI_RED,
+            activeforeground="#ffffff",
+            disabledforeground=UI_MUTED,
+            bd=0,
+            relief="flat",
+        )
+        for item in items:
+            if item is None:
+                menu.add_separator()
+            else:
+                label, command = item
+                menu.add_command(label=label, command=command)
+        return menu
+
+    def _show_tree_context_menu(self, event: Any, tree: ttk.Treeview, menu: tk.Menu) -> str:
+        item_id = tree.identify_row(event.y)
+        if not item_id:
+            return "break"
+        tree.selection_set(item_id)
+        tree.focus(item_id)
+        try:
+            menu.tk_popup(event.x_root, event.y_root)
+        finally:
+            menu.grab_release()
+        return "break"
+
     def _dialog_footer_accent(self, dialog: tk.Widget, accent: str = UI_RED, padx: int = 18, pady: tuple[int, int] = (0, 8)) -> None:
         tk.Frame(dialog, bg=accent, height=3).pack(fill="x", padx=padx, pady=pady)
 
@@ -1560,6 +1657,18 @@ class ConverterApp(TkRoot):
             highlightbackground=UI_BORDER,
         )
         self.status_state_chip.pack(side="left", padx=(12, 8))
+        self.busy_var = tk.StringVar(value="")
+        self.busy_label = tk.Label(
+            footer,
+            textvariable=self.busy_var,
+            bg=UI_RED_SOFT,
+            fg=UI_RED,
+            font=("Segoe UI", 8, "bold"),
+            padx=9,
+            pady=3,
+            highlightthickness=1,
+            highlightbackground=UI_RED_SOFT,
+        )
         self.footer_status_label = tk.Label(footer, textvariable=self.status_var, bg=UI_HEADER, fg=UI_MUTED, anchor="w")
         self.footer_status_label.pack(side="left", fill="x", expand=True)
         github = self._link_label(footer, "GitHub Project", PROJECT_URL, UI_HEADER, "Open the GitHub project repository.")
@@ -1634,6 +1743,19 @@ class ConverterApp(TkRoot):
                 highlightthickness=1,
                 highlightbackground=UI_BORDER,
             ).pack(side="left", padx=(6, 0))
+        self.queue_count_var = tk.StringVar(value="0 rows")
+        tk.Label(
+            queue_header,
+            textvariable=self.queue_count_var,
+            bg=UI_SURFACE_ALT,
+            fg=UI_BLUE,
+            font=("Segoe UI", 8, "bold"),
+            padx=8,
+            pady=3,
+            width=10,
+            highlightthickness=1,
+            highlightbackground=UI_BORDER,
+        ).pack(side="right", padx=(0, 10))
         tk.Label(
             input_panel,
             text="Paste HEX IDs, import files, or drag TXT/CSV/Excel/XML/HTML files onto this box. The app extracts clean 8-character IDs and flags duplicates.",
@@ -1736,7 +1858,8 @@ class ConverterApp(TkRoot):
         self._button(copy_row, "Clear Invalid", self.clear_invalid_rows, icon="icon-clear.png", tooltip="Remove invalid rows from the review table.").pack(side="left", padx=(0, 6))
         self._button(copy_row, "Copy FC", lambda: self.copy_selected("fc"), icon="icon-copy.png", tooltip="Copy the selected row's Facility Code.").pack(side="left", padx=(0, 6))
         self._button(copy_row, "Copy CN", lambda: self.copy_selected("cn"), icon="icon-copy.png", tooltip="Copy the selected row's Card Number.").pack(side="left", padx=(0, 6))
-        self._button(copy_row, "Copy Pair", lambda: self.copy_selected("pair"), icon="icon-copy.png", tooltip="Copy the selected row as FC,CN.").pack(side="left")
+        self._button(copy_row, "Copy Pair", lambda: self.copy_selected("pair"), icon="icon-copy.png", tooltip="Copy the selected row as FC,CN.").pack(side="left", padx=(0, 6))
+        self._button(copy_row, "Copy Row", lambda: self.copy_selected("row"), icon="icon-copy.png", tooltip="Copy the full selected result row.").pack(side="left")
 
         filter_row = tk.Frame(results_panel, bg="#10141b")
         filter_row.pack(fill="x", padx=12, pady=(0, 8))
@@ -1800,6 +1923,18 @@ class ConverterApp(TkRoot):
         self.tree.tag_configure("warning", background=UI_WARN_SOFT, foreground=UI_WARN_TEXT)
         self.tree.tag_configure("empty", foreground=UI_MUTED)
         self.tree.bind("<Double-1>", lambda _event: self.copy_selected("pair"))
+        self.results_context_menu = self._context_menu(
+            [
+                ("Copy Full Row", lambda: self.copy_selected("row")),
+                ("Copy FC,CN Pair", lambda: self.copy_selected("pair")),
+                ("Copy Facility Code", lambda: self.copy_selected("fc")),
+                ("Copy Card Number", lambda: self.copy_selected("cn")),
+                ("Copy HEX / Raw", lambda: self.copy_selected("hex")),
+                None,
+                ("Copy Notes", lambda: self.copy_selected("notes")),
+            ]
+        )
+        self.tree.bind("<Button-3>", lambda event: self._show_tree_context_menu(event, self.tree, self.results_context_menu))
         self._enable_mousewheel(self.tree, self.tree, self.tree)
         self._enable_tree_row_hover(self.tree)
         self._enable_tree_header_tooltips(
@@ -1995,6 +2130,17 @@ class ConverterApp(TkRoot):
         self.unconvert_tree.tag_configure("invalid", background=UI_BAD_SOFT, foreground=UI_BAD_TEXT)
         self.unconvert_tree.tag_configure("warning", background=UI_WARN_SOFT, foreground=UI_WARN_TEXT)
         self.unconvert_tree.tag_configure("empty", foreground=UI_MUTED)
+        self.unconvert_context_menu = self._context_menu(
+            [
+                ("Copy Full Row", lambda: self.copy_selected_unconvert("row")),
+                ("Copy HEX / Raw", lambda: self.copy_selected_unconvert("hex")),
+                ("Copy Facility Code", lambda: self.copy_selected_unconvert("fc")),
+                ("Copy Card Number", lambda: self.copy_selected_unconvert("cn")),
+                None,
+                ("Copy Notes", lambda: self.copy_selected_unconvert("notes")),
+            ]
+        )
+        self.unconvert_tree.bind("<Button-3>", lambda event: self._show_tree_context_menu(event, self.unconvert_tree, self.unconvert_context_menu))
         self._enable_mousewheel(self.unconvert_tree, self.unconvert_tree, self.unconvert_tree)
         self._enable_tree_row_hover(self.unconvert_tree)
         self._enable_tree_header_tooltips(
@@ -2117,6 +2263,24 @@ class ConverterApp(TkRoot):
         bg, fg = self._status_state_colors(label)
         self.status_state_chip.configure(bg=bg, fg=fg, highlightbackground=fg if label != "Ready" else UI_BORDER)
 
+    def set_busy(self, message: str) -> None:
+        if not hasattr(self, "busy_label"):
+            return
+        self.busy_var.set(message)
+        if not self.busy_label.winfo_ismapped():
+            self.busy_label.pack(side="left", padx=(0, 8), before=self.footer_status_label)
+        self.configure(cursor="watch")
+        self.update_idletasks()
+
+    def clear_busy(self) -> None:
+        if not hasattr(self, "busy_label"):
+            return
+        self.busy_var.set("")
+        if self.busy_label.winfo_ismapped():
+            self.busy_label.pack_forget()
+        self.configure(cursor="")
+        self.update_idletasks()
+
     def _compact_status(self, message: str) -> str:
         text = re.sub(r"\s+", " ", str(message or "")).strip()
         converted = re.match(r"Converted (\d+) valid line\(s\); (\d+) invalid line\(s\)\.", text)
@@ -2206,6 +2370,16 @@ class ConverterApp(TkRoot):
         if not text.strip():
             messagebox.showinfo("Clipboard empty", "There is no text on the clipboard to paste.")
             return
+        cleanup = clean_id_lines_from_text(text)
+        if cleanup["changed"] and cleanup["lines"]:
+            action = self.confirm_paste_cleanup_preview(text, cleanup)
+            if action == "cancel":
+                self.set_status("Clipboard paste canceled.")
+                return
+            if action == "clean":
+                self.append_text_to_queue("\n".join(cleanup["lines"]))
+                self.set_status(f"Added {len(cleanup['lines'])} cleaned ID row(s) from clipboard.")
+                return
         self.append_text_to_queue(text)
         self.set_status("Clipboard text added to the Input Queue.")
 
@@ -2213,11 +2387,19 @@ class ConverterApp(TkRoot):
         text = widget.get("1.0", "end").strip()
         return len([line for line in text.splitlines() if line.strip()]) if text else 0
 
+    def update_queue_count(self, queued: int | None = None) -> None:
+        if not hasattr(self, "queue_count_var") or not hasattr(self, "multi_text"):
+            return
+        count = self._count_nonempty_text_lines(self.multi_text) if queued is None else queued
+        label = "row" if count == 1 else "rows"
+        self.queue_count_var.set(f"{count} {label}")
+
     def handle_batch_input_changed(self, _event: Any | None = None) -> None:
         if not hasattr(self, "multi_text") or not self.multi_text.edit_modified():
             return
         self.multi_text.edit_modified(False)
         queued = self._count_nonempty_text_lines(self.multi_text)
+        self.update_queue_count(queued)
         self.highlight_input_queue()
         if hasattr(self, "stat_vars"):
             self.stat_vars["Input"].set(str(queued))
@@ -2258,6 +2440,7 @@ class ConverterApp(TkRoot):
                 has_warning = bool(prepared["suggestions"] or unusual_warnings(hex_value, facility, card) or hex_counts.get(hex_value, 0) > 1)
                 tag = "input_warning" if has_warning else "input_valid"
             self.multi_text.tag_add(tag, f"{idx}.0", f"{idx}.end")
+        self.update_queue_count(len([line for line in lines if line.strip()]))
 
     def remove_duplicate_input_lines(self) -> None:
         if not hasattr(self, "multi_text"):
@@ -2500,17 +2683,44 @@ class ConverterApp(TkRoot):
         if row is None:
             self.set_status("Select a converted result row first.")
             return
+        status_message = "Copied to clipboard."
         if isinstance(row, InvalidRow):
-            text = row.raw
+            values = [str(row.line), row.raw, "", "", "Invalid", row.reason]
+            if mode == "row":
+                text = "\t".join(values)
+                status_message = "Copied full invalid result row."
+            elif mode == "notes":
+                text = row.reason
+                status_message = "Copied row notes."
+            else:
+                text = row.raw
+                status_message = "Copied raw invalid input."
         elif mode == "fc":
             text = str(row.facility)
+            status_message = "Copied Facility Code."
         elif mode == "cn":
             text = str(row.card)
+            status_message = "Copied Card Number."
+        elif mode == "hex":
+            text = row.hex_value
+            status_message = "Copied HEX ID."
+        elif mode == "notes":
+            text = " | ".join([*row.suggestions, *row.warnings])
+            if not text:
+                self.set_status("Selected row has no notes.")
+                return
+            status_message = "Copied row notes."
+        elif mode == "row":
+            notes = " | ".join([*row.suggestions, *row.warnings])
+            status = "Warning" if row.warnings else "Valid"
+            text = "\t".join([str(row.line), row.hex_value, str(row.facility), str(row.card), status, notes])
+            status_message = "Copied full result row."
         else:
             text = f"{row.facility},{row.card}"
+            status_message = "Copied FC,CN pair."
         self.clipboard_clear()
         self.clipboard_append(text)
-        self.set_status("Copied to clipboard.")
+        self.set_status(status_message)
 
     def copy_all_pairs(self) -> None:
         if not self.results:
@@ -2531,17 +2741,55 @@ class ConverterApp(TkRoot):
         self.set_status(f"Cleared {count} invalid row(s).")
 
     def copy_selected_unconvert_hex(self) -> None:
+        self.copy_selected_unconvert("hex", require_valid=True)
+
+    def copy_selected_unconvert(self, mode: str, require_valid: bool = False) -> None:
         selected = self.unconvert_tree.selection()
         if not selected:
             self.set_status("Select an unconvert result first.")
             return
         row = self.unconvert_row_lookup.get(selected[0])
-        if not isinstance(row, UnconvertRow):
+        if row is None:
+            self.set_status("Select an unconvert result first.")
+            return
+        if require_valid and not isinstance(row, UnconvertRow):
             self.set_status("Select a valid unconvert result first.")
             return
+        status_message = "Copied to clipboard."
+        if isinstance(row, InvalidRow):
+            values = [str(row.line), "", "", row.raw, "Invalid", row.reason]
+            if mode == "row":
+                text = "\t".join(values)
+                status_message = "Copied full invalid unconvert row."
+            elif mode == "notes":
+                text = row.reason
+                status_message = "Copied row notes."
+            else:
+                text = row.raw
+                status_message = "Copied raw invalid input."
+        elif mode == "row":
+            notes = " | ".join(row.warnings)
+            status = "Warning" if row.warnings else "Valid"
+            text = "\t".join([str(row.line), str(row.facility), str(row.card), row.hex_value, status, notes])
+            status_message = "Copied full unconvert row."
+        elif mode == "fc":
+            text = str(row.facility)
+            status_message = "Copied Facility Code."
+        elif mode == "cn":
+            text = str(row.card)
+            status_message = "Copied Card Number."
+        elif mode == "notes":
+            text = " | ".join(row.warnings)
+            if not text:
+                self.set_status("Selected unconvert row has no notes.")
+                return
+            status_message = "Copied row notes."
+        else:
+            text = row.hex_value
+            status_message = "Copied HEX to clipboard."
         self.clipboard_clear()
-        self.clipboard_append(row.hex_value)
-        self.set_status("Copied HEX to clipboard.")
+        self.clipboard_append(text)
+        self.set_status(status_message)
 
     def copy_all_unconverted_hex(self) -> None:
         if not self.unconvert_results:
@@ -2636,13 +2884,28 @@ class ConverterApp(TkRoot):
 
     def show_settings(self) -> None:
         dialog = self._new_dialog("Settings")
-        dialog.geometry("720x620")
-        dialog.minsize(640, 560)
+        dialog.geometry("720x700")
+        dialog.minsize(640, 620)
 
         self._dialog_header(dialog, "Settings", "Defaults for exports and workstation shortcuts.", UI_RED)
 
-        body = tk.Frame(dialog, bg=UI_BG)
-        body.pack(fill="both", expand=True, padx=18, pady=18)
+        body_shell = tk.Frame(dialog, bg=UI_BG)
+        body_shell.pack(fill="both", expand=True, padx=18, pady=18)
+        body_shell.configure(height=500)
+        body_shell.pack_propagate(False)
+        body_shell.rowconfigure(0, weight=1)
+        body_shell.columnconfigure(0, weight=1)
+        settings_canvas = tk.Canvas(body_shell, bg=UI_BG, highlightthickness=0)
+        settings_scroll = ttk.Scrollbar(body_shell, orient="vertical", command=settings_canvas.yview, style="Dark.Vertical.TScrollbar")
+        body = tk.Frame(settings_canvas, bg=UI_BG)
+        body_id = settings_canvas.create_window((0, 0), window=body, anchor="nw")
+        settings_canvas.configure(yscrollcommand=settings_scroll.set)
+        settings_canvas.grid(row=0, column=0, sticky="nsew")
+        settings_scroll.grid(row=0, column=1, sticky="ns")
+        body.bind("<Configure>", lambda _event: settings_canvas.configure(scrollregion=settings_canvas.bbox("all")))
+        settings_canvas.bind("<Configure>", lambda event: settings_canvas.itemconfigure(body_id, width=event.width))
+        self._enable_mousewheel(settings_canvas, settings_canvas)
+        self._enable_mousewheel_tree(body, settings_canvas)
 
         folder_var = tk.StringVar(value=self.default_export_dir())
         export_type_var = tk.StringVar(value=self.settings.get("default_export_type", EXPORT_TYPE_CHOICES[0]))
@@ -2717,6 +2980,25 @@ class ConverterApp(TkRoot):
         tk.Label(shortcut_inner, text="Create a Windows desktop shortcut for the current utility so it is easy to launch.", bg=UI_SURFACE, fg=UI_MUTED, wraplength=620, justify="left", font=("Segoe UI", 9)).pack(anchor="w", pady=(4, 10))
         self._button(shortcut_inner, "Create Shortcut", self.create_desktop_shortcut, icon="icon-status.png", tooltip="Add a shortcut to your Windows desktop.").pack(anchor="w")
 
+        maintenance_card = self._card(body, bg=UI_SURFACE, border=UI_BORDER)
+        maintenance_card.pack(fill="x", pady=(12, 0))
+        tk.Frame(maintenance_card, bg=UI_WARN_TEXT, height=3).pack(fill="x")
+        maintenance_inner = tk.Frame(maintenance_card, bg=UI_SURFACE)
+        maintenance_inner.pack(fill="x", padx=14, pady=14)
+        maintenance_header = tk.Frame(maintenance_inner, bg=UI_SURFACE)
+        maintenance_header.pack(fill="x")
+        tk.Label(maintenance_header, text="Recent Export List", bg=UI_SURFACE, fg=UI_TEXT, font=("Segoe UI", 12, "bold")).pack(side="left", anchor="w")
+        self._button(maintenance_header, "Clear Recent Exports", self.clear_recent_exports, icon="icon-clear.png", tooltip="Clear the Recent Exports list only.").pack(side="right")
+        tk.Label(
+            maintenance_inner,
+            text="Clear saved export shortcuts from this workstation without deleting the exported files.",
+            bg=UI_SURFACE,
+            fg=UI_MUTED,
+            wraplength=620,
+            justify="left",
+            font=("Segoe UI", 9),
+        ).pack(anchor="w", pady=(4, 10))
+
         def save_and_close() -> None:
             folder = Path(folder_var.get() or self.default_export_dir())
             folder.mkdir(parents=True, exist_ok=True)
@@ -2726,11 +3008,11 @@ class ConverterApp(TkRoot):
             self.set_status("Settings saved.")
             dialog.destroy()
 
-        self._dialog_footer_accent(dialog)
         row = tk.Frame(dialog, bg=UI_BG)
-        row.pack(fill="x", padx=18, pady=(0, 18))
+        row.pack(side="bottom", fill="x", padx=18, pady=(0, 18))
         self._button(row, "Save Settings", save_and_close, True, icon="icon-status.png").pack(side="right", padx=(8, 0))
         self._button(row, "Cancel", dialog.destroy, icon="icon-clear.png").pack(side="right")
+        tk.Frame(dialog, bg=UI_RED, height=3).pack(side="bottom", fill="x", padx=18, pady=(0, 8))
 
     def open_path(self, path: Path, item_name: str = "item") -> None:
         try:
@@ -2893,8 +3175,47 @@ class ConverterApp(TkRoot):
         self.clipboard_append(hex_value)
         self.set_status("Hex value created and copied.")
 
+    def confirm_paste_cleanup_preview(self, raw_text: str, cleanup: dict[str, Any]) -> str:
+        preview = "\n".join(cleanup.get("lines", [])[:60])
+        dialog = self._new_dialog("Paste Cleanup Preview", "#10141b")
+        dialog.geometry("700x460")
+        dialog.minsize(620, 380)
+        choice = tk.StringVar(value="cancel")
+        tk.Label(dialog, text="Paste Cleanup Preview", bg="#10141b", fg="#ffffff", font=("Segoe UI", 13, "bold")).pack(anchor="w", padx=14, pady=(14, 5))
+        tk.Label(
+            dialog,
+            text=f"{cleanup.get('message', '')} Review the cleaned numeric IDs before adding them to the queue.",
+            bg="#10141b",
+            fg="#a8b2c2",
+            wraplength=660,
+            justify="left",
+        ).pack(anchor="w", padx=14, pady=(0, 8))
+        preview_frame = tk.Frame(dialog, bg="#10141b")
+        preview_frame.pack(fill="both", expand=True, padx=14, pady=(0, 12))
+        preview_frame.rowconfigure(0, weight=1)
+        preview_frame.columnconfigure(0, weight=1)
+        text = tk.Text(preview_frame, bg="#080a0f", fg="#f5f7fb", relief="flat", padx=10, pady=10, font=("Cascadia Mono", 10), wrap="none")
+        preview_scroll_y = ttk.Scrollbar(preview_frame, orient="vertical", command=text.yview, style="Dark.Vertical.TScrollbar")
+        preview_scroll_x = ttk.Scrollbar(preview_frame, orient="horizontal", command=text.xview, style="Dark.Horizontal.TScrollbar")
+        text.configure(yscrollcommand=preview_scroll_y.set, xscrollcommand=preview_scroll_x.set)
+        text.grid(row=0, column=0, sticky="nsew")
+        preview_scroll_y.grid(row=0, column=1, sticky="ns")
+        preview_scroll_x.grid(row=1, column=0, sticky="ew")
+        text.insert("1.0", preview)
+        text.configure(state="disabled")
+        self._enable_mousewheel(text, text, text)
+        self._dialog_footer_accent(dialog, padx=14, pady=(0, 8))
+        row = tk.Frame(dialog, bg="#10141b")
+        row.pack(fill="x", padx=14, pady=(0, 14))
+        self._button(row, "Add Clean IDs", lambda: (choice.set("clean"), dialog.destroy()), True, icon="icon-import.png").pack(side="right", padx=(8, 0))
+        self._button(row, "Paste Raw", lambda: (choice.set("raw"), dialog.destroy()), icon="icon-copy.png", tooltip="Paste the original clipboard text instead.").pack(side="right", padx=(8, 0))
+        self._button(row, "Cancel", dialog.destroy, icon="icon-clear.png").pack(side="right")
+        self._apply_corporate_skin(dialog)
+        self.wait_window(dialog)
+        return choice.get()
+
     def confirm_import_preview(self, path: Path, result: dict[str, Any]) -> bool:
-        preview = "\n".join(result.get("lines", [])[:30])
+        preview = "\n".join(import_result_queue_lines(result)[:30])
         if not preview:
             return messagebox.askyesno("Import preview", f"{result.get('message', '')}\n\nNo rows were extracted. Continue?")
         dialog = self._new_dialog("Import Preview", "#10141b")
@@ -2930,42 +3251,50 @@ class ConverterApp(TkRoot):
         if not files:
             messagebox.showinfo("No files", "Drop or choose one or more supported files.")
             return
+        self.set_busy(f"Importing {len(files)} file(s)...")
         all_lines: list[str] = []
         imported = 0
         errors: list[str] = []
         messages: list[str] = []
-        for path in files:
-            try:
-                result = import_structured_file(path)
-            except Exception as exc:
-                errors.append(f"{path.name}: {exc}")
-                continue
-            if preview and len(files) == 1 and not self.confirm_import_preview(path, result):
-                self.set_status("Import canceled.")
-                return
-            lines = result.get("lines", [])
-            if lines:
-                all_lines.extend(lines)
-                imported += 1
-            messages.append(f"{path.name}: {result.get('message', '')}")
-            self.add_recent_file(path)
-        if all_lines:
-            self.append_text_to_queue("\n".join(all_lines))
-        if errors:
-            self.record_error_report("Import failed for one or more files", errors)
-            messagebox.showwarning(
-                "Some imports failed",
-                "\n".join(errors[:8]) + "\n\nUse Help > Copy Last Error Report if you need to share troubleshooting details.",
-            )
-        if len(files) == 1 and messages:
-            self.notice_var.set(messages[0])
-            self.set_status(messages[0], "Needs Review" if errors else "Ready")
-        else:
-            status = f"Imported {len(all_lines)} row(s) from {imported} file(s)."
+        try:
+            for path in files:
+                self.set_busy(f"Reading {path.name}...")
+                try:
+                    result = import_structured_file(path)
+                except Exception as exc:
+                    errors.append(f"{path.name}: {exc}")
+                    continue
+                if preview and len(files) == 1:
+                    self.clear_busy()
+                    if not self.confirm_import_preview(path, result):
+                        self.set_status("Import canceled.")
+                        return
+                    self.set_busy("Adding import to queue...")
+                lines = import_result_queue_lines(result)
+                if lines:
+                    all_lines.extend(lines)
+                    imported += 1
+                messages.append(f"{path.name}: {result.get('message', '')}")
+                self.add_recent_file(path)
+            if all_lines:
+                self.append_text_to_queue("\n".join(all_lines))
             if errors:
-                status += f" {len(errors)} file(s) failed."
-            self.notice_var.set(status)
-            self.set_status(status, "Needs Review" if errors else "Ready")
+                self.record_error_report("Import failed for one or more files", errors)
+                messagebox.showwarning(
+                    "Some imports failed",
+                    "\n".join(errors[:8]) + "\n\nUse Help > Copy Last Error Report if you need to share troubleshooting details.",
+                )
+            if len(files) == 1 and messages:
+                self.notice_var.set(messages[0])
+                self.set_status(messages[0], "Needs Review" if errors else "Ready")
+            else:
+                status = f"Imported {len(all_lines)} row(s) from {imported} file(s)."
+                if errors:
+                    status += f" {len(errors)} file(s) failed."
+                self.notice_var.set(status)
+                self.set_status(status, "Needs Review" if errors else "Ready")
+        finally:
+            self.clear_busy()
 
     def import_file(self, path: Path | None = None) -> None:
         if path is None:
@@ -3537,6 +3866,9 @@ def main() -> None:
         assert clean_candidate_line("Excel cell 88984765.0")["extracted"] == "88984765"
         assert extract_eight_digit_id(88984765.0) == "88984765"
         assert extract_eight_digit_id("Badge 8898-4765") == "88984765"
+        cleaned_clipboard = clean_id_lines_from_text("Candidate Name\tColleague #\nChris Test\t88984765.0\nJordan Test\t8898-4130")
+        assert cleaned_clipboard["lines"] == ["88984765", "88984130"]
+        assert import_result_queue_lines({"lines": ["Chris Test, 88984765"], "found_rows": 1}) == ["88984765"]
         results, invalid = convert_lines("88984717\nBAD-LINE\n8898-4765", "TEST")
         assert len(results) == 2
         assert len(invalid) == 1

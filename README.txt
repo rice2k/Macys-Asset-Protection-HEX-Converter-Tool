@@ -1,7 +1,7 @@
 Macy's Asset Protection - China Grove Hex Converter Utility
 README
 
-App Version: 1.0.9
+App Version: 1.1.0
 
 Purpose
 -------
@@ -73,6 +73,8 @@ Excel and copied-table cleanup:
 - Numeric spreadsheet cells such as 88984765.0 are cleaned to 88984765.
 - Split IDs such as 8898-4765 or 8898 4765 are joined before conversion.
 - Full employee lines are scanned for the first clean 8-digit ID.
+- Messy Excel-style clipboard data shows a cleanup preview before it is added.
+- Structured spreadsheet imports place clean numeric IDs into the queue.
 
 Supported file types:
 - TXT
@@ -97,6 +99,9 @@ The Input Queue uses row colors to make review easier before conversion:
 - Yellow-tinted rows are valid, but include a warning such as extracted text,
   a duplicate ID, or an unusual value.
 - Red-tinted rows are invalid and need review or cleanup.
+
+The Input Queue also shows a live row count while typing, pasting, importing,
+or clearing data.
 
 Queue Cleanup Tools
 -------------------
@@ -140,6 +145,8 @@ The Results area includes tools for copying:
 - Selected Facility Code
 - Selected Card Number
 - Selected FC,CN pair
+- Selected full result row
+- Right-click copy actions for full row, HEX/raw, notes, FC, CN, and pair
 
 The Unconvert Batch area includes tools for copying HEX results.
 
@@ -183,6 +190,9 @@ Use Export > Recent Exports to reopen recently saved reports from this
 workstation. The list keeps the newest reports first and skips files that no
 longer exist.
 
+Use File > Settings > Clear Recent Exports to clear the saved shortcuts without
+deleting any exported files.
+
 Default Export Folder
 ---------------------
 Use File > Default Export Folder to choose where reports should start saving.
@@ -195,6 +205,7 @@ Use File > Settings to control:
 - Default export type
 - Default export folder
 - Desktop shortcut creation
+- Recent export list cleanup
 
 Use Export > Export Default to export using the saved default report type.
 
@@ -274,4 +285,7 @@ D:\Macys-Asset-Protection-HEX-Converter-Tool\dist\Macys_AP_China_Grove_Hex_Utili
 Release Notes
 -------------
 Releases use the built Windows EXE and SHA-256 checksum file from the dist
-folder. See CHANGELOG.md for version history.
+folder. Before creating a future tag, add a matching RELEASE_NOTES_vX.Y.Z.md
+file so the GitHub Release has clean notes and restore details.
+
+See CHANGELOG.md for version history.

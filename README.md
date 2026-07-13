@@ -1,6 +1,6 @@
 # Macy's Asset Protection China Grove Hex Converter Utility
 
-Current version: `1.0.9`
+Current version: `1.1.0`
 
 Windows desktop utility for Macy's Asset Protection access-control conversion work at China Grove, North Carolina.
 
@@ -11,9 +11,12 @@ Windows desktop utility for Macy's Asset Protection access-control conversion wo
 - Imports TXT, CSV, TSV, XLS, XLSX, XLSM, XML Spreadsheet, HTML, and copied table data.
 - Cleans Excel-style numeric IDs such as `88984765.0` and split IDs such as `8898-4765`.
 - Highlights valid, warning, and invalid input rows.
+- Shows a live row count while editing the input queue.
+- Previews cleaned numeric IDs before pasting messy Excel-style clipboard data.
 - Removes duplicates and keeps only valid rows when cleaning a queue.
+- Supports full-row copying and right-click copy actions in result tables.
 - Exports professional Excel, CSV, TXT, and PDF reports.
-- Includes Help, About, Settings, History, recent exports, default export settings, copyable error reports, and desktop shortcut support.
+- Includes Help, About, Settings, History, recent exports, clearable recent export history, default export settings, copyable error reports, and desktop shortcut support.
 
 ## Screenshots
 
@@ -60,5 +63,6 @@ GitHub project: https://github.com/rice2k/Macys-Asset-Protection-HEX-Converter-T
 ## Release Notes
 
 Releases use the built Windows EXE and SHA-256 checksum file from `dist`.
+Before tagging a future version, add a matching `RELEASE_NOTES_vX.Y.Z.md` file so the GitHub Release has clean notes and restore details.
 
 See `CHANGELOG.md` for version history.
