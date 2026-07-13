@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.0.7
+
+- Updated the app and EXE icon to a cleaner Macy's AP China Grove badge style.
+- Added a main-toolbar Salesforce shortcut and kept BlueWave as a main-app shortcut only.
+- Reworked first-open status text so the bottom strip no longer reads like duplicate Ready states.
+- Improved visibility for the search box, input queues, single lookup fields, and FC/CN fields.
+- Made Results and Unconvert Results easier to read with larger rows and valid/warning/invalid row colors.
+- Improved Single Lookup and FC/CN to Hex result text so each value is clearly separated.
+- Applied the app icon to custom popup windows.
+- Updated Help/About links so GitHub opens the project repository and BlueWave is not repeated in popups.
+- Improved examples and Excel-style import cleanup for numeric IDs, split IDs, and full employee lines.
+
 ## 1.0.6
 
 - Added a clearer bottom status strip with Ready, Needs Review, and Exported states.

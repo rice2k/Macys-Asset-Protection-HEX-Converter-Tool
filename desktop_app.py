@@ -44,10 +44,12 @@ except Exception:  # pragma: no cover - drag/drop is optional
 
 
 BLUEWAVE_URL = "http://ma000xsblw1001/"
+SALESFORCE_URL = "https://macys.my.salesforce.com/"
+PROJECT_URL = "https://github.com/rice2k/Macys-Asset-Protection-HEX-Converter-Tool"
 CONTACT_EMAIL = "christopher.schumacher@macys.com"
 APP_DISPLAY_NAME = "Macy's Asset Protection - China Grove Hex Converter Utility"
 APP_SHORT_NAME = "Macy's AP China Grove Hex Utility"
-APP_VERSION = "1.0.6"
+APP_VERSION = "1.0.7"
 APP_STATE_DIR = Path(os.environ.get("APPDATA", str(Path.home()))) / "AP_Access_Control_Converter"
 SETTINGS_FILE = APP_STATE_DIR / "settings.json"
 EXPORT_TYPE_CHOICES = ["Excel Workbook (.xlsx)", "CSV Report (.csv)", "TXT Report (.txt)", "PDF Report (.pdf)"]
@@ -203,10 +205,23 @@ def clean_candidate_line(line: str) -> dict[str, Any]:
     if not cleaned:
         return {"original": original, "cleaned": "", "extracted": "", "suggestions": suggestions}
 
+    excel_number = re.search(r"\b(\d{8})\.0+\b", cleaned)
+    numeric_token = re.search(r"\b(\d{8})\b", cleaned)
+    numeric_split = re.search(r"\b(\d{4})[\s-]+(\d{4})\b", cleaned)
     token = re.search(r"\b([0-9A-Fa-f]{8})\b", cleaned)
     split_token = re.search(r"\b([0-9A-Fa-f]{4})[\s-]+([0-9A-Fa-f]{4})\b", cleaned)
     extracted = ""
-    if token:
+    if excel_number:
+        extracted = excel_number.group(1)
+        suggestions.append("Cleaned Excel numeric ID.")
+    elif numeric_token:
+        extracted = numeric_token.group(1)
+        if cleaned != numeric_token.group(1):
+            suggestions.append("Extracted 8-digit ID from full text.")
+    elif numeric_split:
+        extracted = f"{numeric_split.group(1)}{numeric_split.group(2)}"
+        suggestions.append("Joined a split 8-digit ID.")
+    elif token:
         extracted = token.group(1).upper()
         if cleaned != token.group(1):
             suggestions.append("Extracted 8-character ID from full text.")
@@ -325,6 +340,8 @@ def unconvert_lines(text: str, converted_at: str) -> tuple[list[UnconvertRow], l
 
 
 def cell_text(value: Any) -> str:
+    if isinstance(value, float) and value.is_integer():
+        return str(int(value))
     return re.sub(r"\s+", " ", "" if value is None else str(value)).strip()
 
 
@@ -432,9 +449,15 @@ def find_header_pair(rows: list[list[str]]) -> dict[str, Any] | None:
 
 def extract_eight_digit_id(value: Any) -> str:
     raw = cell_text(value)
+    excel_number = re.search(r"\b(\d{8})\.0+\b", raw)
+    if excel_number:
+        return excel_number.group(1)
     preferred = re.search(r"\b(88\d{6})\b", raw)
     if preferred:
         return preferred.group(1)
+    split = re.search(r"\b(\d{4})[\s-]+(\d{4})\b", raw)
+    if split:
+        return f"{split.group(1)}{split.group(2)}"
     generic = re.search(r"\b(\d{8})\b", raw)
     return generic.group(1) if generic else ""
 
@@ -698,6 +721,7 @@ class ConverterApp(TkRoot):
         self.sort_column = "Line"
         self.sort_reverse = False
         self.logo_photo: ImageTk.PhotoImage | None = None
+        self.app_icon_photo: ImageTk.PhotoImage | None = None
         self.header_accent_photo: ImageTk.PhotoImage | None = None
         self.nav_icon_photos: list[ImageTk.PhotoImage] = []
         self.icon_photos: dict[tuple[str, int, int], ImageTk.PhotoImage] = {}
@@ -794,12 +818,41 @@ class ConverterApp(TkRoot):
             self.render_history()
 
     def _setup_icon(self) -> None:
+        image_icon = asset_path("macys-ap-icon.png")
+        if image_icon.exists():
+            try:
+                self.app_icon_photo = ImageTk.PhotoImage(Image.open(image_icon).resize((64, 64), Image.LANCZOS))
+                self.iconphoto(True, self.app_icon_photo)
+            except (tk.TclError, OSError):
+                self.app_icon_photo = None
         icon = asset_path("app-icon.ico")
         if icon.exists():
             try:
                 self.iconbitmap(str(icon))
             except tk.TclError:
                 pass
+
+    def _apply_window_icon(self, window: tk.Toplevel | tk.Tk) -> None:
+        if self.app_icon_photo:
+            try:
+                window.iconphoto(False, self.app_icon_photo)
+            except tk.TclError:
+                pass
+        icon = asset_path("app-icon.ico")
+        if icon.exists():
+            try:
+                window.iconbitmap(str(icon))
+            except tk.TclError:
+                pass
+
+    def _new_dialog(self, title: str, bg: str = UI_BG) -> tk.Toplevel:
+        dialog = tk.Toplevel(self)
+        dialog.title(title)
+        dialog.configure(bg=bg)
+        self._apply_window_icon(dialog)
+        dialog.transient(self)
+        dialog.grab_set()
+        return dialog
 
     def _setup_styles(self) -> None:
         style = ttk.Style(self)
@@ -813,7 +866,8 @@ class ConverterApp(TkRoot):
             background=UI_SURFACE,
             foreground=UI_TEXT,
             fieldbackground=UI_SURFACE,
-            rowheight=32,
+            font=("Segoe UI", 10),
+            rowheight=34,
             borderwidth=0,
             relief="flat",
             bordercolor=UI_BORDER,
@@ -824,7 +878,7 @@ class ConverterApp(TkRoot):
             "Treeview.Heading",
             background="#eef2f6",
             foreground=UI_TEXT,
-            font=("Segoe UI", 9, "bold"),
+            font=("Segoe UI", 10, "bold"),
             relief="flat",
             borderwidth=1,
             bordercolor=UI_BORDER,
@@ -898,8 +952,6 @@ class ConverterApp(TkRoot):
         help_menu.add_command(label="How To Use", command=self.show_help)
         help_menu.add_command(label="About", command=self.show_about)
         help_menu.add_command(label="Copy Last Error Report", command=self.copy_error_report)
-        help_menu.add_separator()
-        help_menu.add_command(label="Open BlueWave", command=self.open_bluewave)
         menubar.add_cascade(label="Help", menu=help_menu)
         self.config(menu=menubar)
 
@@ -1124,7 +1176,7 @@ class ConverterApp(TkRoot):
 
             if widget_class in {"Text", "Entry"}:
                 try:
-                    widget.configure(bg=UI_INPUT, fg=UI_TEXT, insertbackground=UI_RED, highlightbackground=UI_BORDER)
+                    widget.configure(bg=UI_INPUT, fg=UI_TEXT, insertbackground=UI_RED)
                 except tk.TclError:
                     pass
             if widget_class == "Menu":
@@ -1409,6 +1461,13 @@ class ConverterApp(TkRoot):
             icon="icon-bluewave.png",
             tooltip="Open the BlueWave access-control site in your browser.",
         ).pack(side="right", padx=(0, 8), pady=8)
+        self._button(
+            toolbar,
+            "Salesforce",
+            self.open_salesforce,
+            icon="icon-salesforce.png",
+            tooltip="Open the Macy's Salesforce sign-in page in your browser.",
+        ).pack(side="right", padx=(0, 8), pady=8)
 
         body = tk.Frame(self, bg=UI_BG)
         body.pack(fill="both", expand=True, padx=16, pady=16)
@@ -1445,7 +1504,7 @@ class ConverterApp(TkRoot):
             self.nav_buttons.append(button)
             button.pack(fill="x", padx=10, pady=(0, 8))
         tk.Frame(nav, bg=UI_BORDER, height=1).pack(fill="x", padx=12, pady=(8, 10))
-        self.nav_status = tk.StringVar(value="Ready")
+        self.nav_status = tk.StringVar(value="Paste IDs, import files, or choose a workspace.")
         status_card = self._card(nav, bg=UI_SURFACE_ALT, border=UI_BORDER)
         status_card.pack(fill="x", padx=10, pady=(0, 10))
         tk.Frame(status_card, bg=UI_RED, height=3).pack(fill="x")
@@ -1492,7 +1551,7 @@ class ConverterApp(TkRoot):
         footer = tk.Frame(self, bg=UI_HEADER, height=34, highlightthickness=1, highlightbackground=UI_BORDER)
         footer.pack(side="bottom", fill="x")
         footer.pack_propagate(False)
-        self.status_var = tk.StringVar(value="Ready")
+        self.status_var = tk.StringVar(value="Paste IDs, import files, or choose a workspace.")
         self.status_state_var = tk.StringVar(value="READY")
         self.status_state_chip = tk.Label(
             footer,
@@ -1507,7 +1566,7 @@ class ConverterApp(TkRoot):
         )
         self.status_state_chip.pack(side="left", padx=(12, 8))
         tk.Label(footer, textvariable=self.status_var, bg=UI_HEADER, fg=UI_MUTED, anchor="w").pack(side="left", fill="x", expand=True)
-        github = self._link_label(footer, "GitHub: rice2k", "https://github.com/rice2k", UI_HEADER, "Open Christopher Schumacher's GitHub profile.")
+        github = self._link_label(footer, "GitHub Project", PROJECT_URL, UI_HEADER, "Open the GitHub project repository.")
         github.pack(side="right")
         credit = tk.Frame(footer, bg=UI_HEADER)
         credit.pack(side="right", padx=(8, 4))
@@ -1557,26 +1616,6 @@ class ConverterApp(TkRoot):
             )
             chip.pack(side="left", padx=(0, 8))
 
-        workflow = tk.Frame(self.batch_tab, bg=UI_BG)
-        workflow.pack(fill="x", pady=(0, 12))
-        steps = [
-            ("01", "Import", "Paste, browse, or drop files", UI_BLUE),
-            ("02", "Clean", "Remove duplicates or invalid rows", UI_WARN_TEXT),
-            ("03", "Convert", "Build FC/CN review rows", UI_RED),
-            ("04", "Export", "Save a professional report", UI_GREEN_TEXT),
-        ]
-        for index, (number, title, body, color) in enumerate(steps):
-            step = self._card(workflow, bg=UI_SURFACE, border=UI_BORDER)
-            step.pack(side="left", fill="x", expand=True, padx=(0, 8) if index < len(steps) - 1 else (0, 0))
-            tk.Frame(step, bg=color, height=3).pack(fill="x")
-            inner = tk.Frame(step, bg=UI_SURFACE)
-            inner.pack(fill="x", padx=12, pady=8)
-            tk.Label(inner, text=number, bg=UI_SURFACE, fg=color, font=("Segoe UI", 9, "bold")).pack(side="left", padx=(0, 10))
-            text_box = tk.Frame(inner, bg=UI_SURFACE)
-            text_box.pack(side="left", fill="x", expand=True)
-            tk.Label(text_box, text=title, bg=UI_SURFACE, fg=UI_TEXT, font=("Segoe UI", 9, "bold")).pack(anchor="w")
-            tk.Label(text_box, text=body, bg=UI_SURFACE, fg=UI_MUTED, font=("Segoe UI", 8)).pack(anchor="w")
-
         top = tk.Frame(self.batch_tab, bg="#0b0d12")
         top.pack(fill="x", pady=(0, 12))
 
@@ -1612,7 +1651,21 @@ class ConverterApp(TkRoot):
         multi_frame.pack(fill="both", expand=True, padx=12)
         multi_frame.rowconfigure(0, weight=1)
         multi_frame.columnconfigure(0, weight=1)
-        self.multi_text = tk.Text(multi_frame, height=8, bg="#080a0f", fg="#f5f7fb", insertbackground="#46d9ff", relief="flat", padx=10, pady=10, font=("Cascadia Mono", 10), wrap="none")
+        self.multi_text = tk.Text(
+            multi_frame,
+            height=7,
+            bg=UI_INPUT,
+            fg=UI_TEXT,
+            insertbackground=UI_RED,
+            relief="flat",
+            highlightthickness=1,
+            highlightbackground=UI_BLUE,
+            highlightcolor=UI_RED,
+            padx=12,
+            pady=12,
+            font=("Cascadia Mono", 11),
+            wrap="none",
+        )
         self.multi_text.tag_configure("input_valid", background=UI_GREEN_SOFT, foreground=UI_GREEN_TEXT)
         self.multi_text.tag_configure("input_warning", background=UI_WARN_SOFT, foreground=UI_WARN_TEXT)
         self.multi_text.tag_configure("input_invalid", background=UI_BAD_SOFT, foreground=UI_BAD_TEXT)
@@ -1687,7 +1740,22 @@ class ConverterApp(TkRoot):
         filter_row.pack(fill="x", padx=12, pady=(0, 8))
         tk.Label(filter_row, text="Search", bg="#10141b", fg="#a8b2c2", font=("Segoe UI", 9, "bold")).pack(side="left", padx=(0, 8))
         self.search_var = tk.StringVar()
-        self.search_entry = tk.Entry(filter_row, textvariable=self.search_var, bg="#080a0f", fg="#f5f7fb", insertbackground="#46d9ff", relief="flat", width=32)
+        search_shell = tk.Frame(filter_row, bg=UI_INPUT, highlightthickness=1, highlightbackground=UI_BLUE)
+        search_shell.pack(side="left", fill="x", expand=True, padx=(0, 10))
+        search_icon = self._load_icon("icon-search.png", 16)
+        if search_icon:
+            tk.Label(search_shell, image=search_icon, bg=UI_INPUT).pack(side="left", padx=(9, 4))
+        self.search_entry = tk.Entry(
+            search_shell,
+            textvariable=self.search_var,
+            bg=UI_INPUT,
+            fg=UI_TEXT,
+            insertbackground=UI_RED,
+            relief="flat",
+            width=32,
+            font=("Segoe UI", 10),
+        )
+        self.search_entry.pack(side="left", fill="x", expand=True, ipady=7, padx=(0, 8))
         self.search_entry.pack(side="left", ipady=7, padx=(0, 10))
         self.search_var.trace_add("write", lambda *_args: self.render_results())
         tk.Label(filter_row, text="Status", bg="#10141b", fg="#a8b2c2", font=("Segoe UI", 9, "bold")).pack(side="left", padx=(0, 8))
@@ -1726,6 +1794,7 @@ class ConverterApp(TkRoot):
         xscroll.grid(row=1, column=0, sticky="ew")
         table_frame.rowconfigure(0, weight=1)
         table_frame.columnconfigure(0, weight=1)
+        self.tree.tag_configure("valid", background=UI_GREEN_SOFT, foreground=UI_GREEN_TEXT)
         self.tree.tag_configure("invalid", background=UI_BAD_SOFT, foreground=UI_BAD_TEXT)
         self.tree.tag_configure("warning", background=UI_WARN_SOFT, foreground=UI_WARN_TEXT)
         self.tree.tag_configure("empty", foreground=UI_MUTED)
@@ -1757,18 +1826,29 @@ class ConverterApp(TkRoot):
         tk.Label(panel, text="HEX ID", bg="#10141b", fg="#ffffff", font=("Segoe UI", 12, "bold")).pack(anchor="w", padx=12, pady=(12, 4))
         tk.Label(panel, text="Enter one 8-character HEX value. Press Enter or use Convert.", bg="#10141b", fg="#a8b2c2", font=("Segoe UI", 9)).pack(anchor="w", padx=12, pady=(0, 8))
         self.single_var = tk.StringVar()
-        entry = tk.Entry(panel, textvariable=self.single_var, bg="#080a0f", fg="#f5f7fb", insertbackground="#46d9ff", relief="flat", font=("Cascadia Mono", 12))
+        entry = tk.Entry(
+            panel,
+            textvariable=self.single_var,
+            bg=UI_INPUT,
+            fg=UI_TEXT,
+            insertbackground=UI_RED,
+            relief="flat",
+            highlightthickness=1,
+            highlightbackground=UI_BLUE,
+            highlightcolor=UI_RED,
+            font=("Cascadia Mono", 13),
+        )
         entry.pack(fill="x", padx=12, ipady=9)
         entry.bind("<Return>", lambda _event: self.convert_single())
         row = tk.Frame(panel, bg="#10141b")
         row.pack(fill="x", padx=12, pady=12)
         self._button(row, "Convert", self.convert_single, True, icon="icon-convert.png", tooltip="Convert one HEX ID and copy the FC,CN pair.").pack(side="left", padx=(0, 8))
         self._button(row, "Clear", self.clear_single, icon="icon-clear.png", tooltip="Clear the single lookup field.").pack(side="left")
-        self.single_result = tk.StringVar(value="Waiting for a hex ID.")
+        self.single_result = tk.StringVar(value="Waiting for one 8-character HEX ID.")
         result_card = self._card(panel, bg=UI_SURFACE_ALT, border=UI_BORDER)
         result_card.pack(fill="x", padx=12, pady=(0, 12))
         tk.Frame(result_card, bg=UI_BLUE, width=4).pack(side="left", fill="y")
-        tk.Label(result_card, textvariable=self.single_result, bg=UI_SURFACE_ALT, fg=UI_BLUE, anchor="w", justify="left", padx=14, pady=16, font=("Cascadia Mono", 13), wraplength=900).pack(fill="x", side="left", expand=True)
+        tk.Label(result_card, textvariable=self.single_result, bg=UI_SURFACE_ALT, fg=UI_BLUE, anchor="w", justify="left", padx=14, pady=16, font=("Cascadia Mono", 12, "bold"), wraplength=900).pack(fill="x", side="left", expand=True)
 
     def _build_reverse_tab(self) -> None:
         self._workspace_title(
@@ -1786,16 +1866,27 @@ class ConverterApp(TkRoot):
         self.cn_var = tk.StringVar()
         for label, var in [("Facility Code", self.fc_var), ("Card Number", self.cn_var)]:
             tk.Label(panel, text=label, bg="#10141b", fg="#a8b2c2").pack(anchor="w", padx=12, pady=(8, 4))
-            tk.Entry(panel, textvariable=var, bg="#080a0f", fg="#f5f7fb", insertbackground="#46d9ff", relief="flat", font=("Cascadia Mono", 12)).pack(fill="x", padx=12, ipady=9)
+            tk.Entry(
+                panel,
+                textvariable=var,
+                bg=UI_INPUT,
+                fg=UI_TEXT,
+                insertbackground=UI_RED,
+                relief="flat",
+                highlightthickness=1,
+                highlightbackground=UI_WARN_TEXT,
+                highlightcolor=UI_RED,
+                font=("Cascadia Mono", 13),
+            ).pack(fill="x", padx=12, ipady=9)
         row = tk.Frame(panel, bg="#10141b")
         row.pack(fill="x", padx=12, pady=12)
         self._button(row, "Convert", self.convert_reverse, True, icon="icon-convert.png", tooltip="Build one 8-character HEX ID from FC and CN.").pack(side="left", padx=(0, 8))
         self._button(row, "Clear", self.clear_reverse, icon="icon-clear.png", tooltip="Clear the FC and CN fields.").pack(side="left")
-        self.reverse_result = tk.StringVar(value="Waiting for FC and CN values.")
+        self.reverse_result = tk.StringVar(value="Waiting for Facility Code and Card Number.")
         result_card = self._card(panel, bg=UI_SURFACE_ALT, border=UI_BORDER)
         result_card.pack(fill="x", padx=12, pady=(0, 12))
         tk.Frame(result_card, bg=UI_WARN_TEXT, width=4).pack(side="left", fill="y")
-        tk.Label(result_card, textvariable=self.reverse_result, bg=UI_SURFACE_ALT, fg=UI_WARN_TEXT, anchor="w", justify="left", padx=14, pady=16, font=("Cascadia Mono", 13), wraplength=900).pack(fill="x", side="left", expand=True)
+        tk.Label(result_card, textvariable=self.reverse_result, bg=UI_SURFACE_ALT, fg=UI_WARN_TEXT, anchor="w", justify="left", padx=14, pady=16, font=("Cascadia Mono", 12, "bold"), wraplength=900).pack(fill="x", side="left", expand=True)
 
     def _build_unconvert_tab(self) -> None:
         self._workspace_title(
@@ -1816,7 +1907,21 @@ class ConverterApp(TkRoot):
         unconvert_input_frame.pack(fill="both", expand=True, padx=12)
         unconvert_input_frame.rowconfigure(0, weight=1)
         unconvert_input_frame.columnconfigure(0, weight=1)
-        self.unconvert_text = tk.Text(unconvert_input_frame, height=8, bg="#080a0f", fg="#f5f7fb", insertbackground="#46d9ff", relief="flat", padx=10, pady=10, font=("Cascadia Mono", 10), wrap="none")
+        self.unconvert_text = tk.Text(
+            unconvert_input_frame,
+            height=7,
+            bg=UI_INPUT,
+            fg=UI_TEXT,
+            insertbackground=UI_RED,
+            relief="flat",
+            highlightthickness=1,
+            highlightbackground=UI_WARN_TEXT,
+            highlightcolor=UI_RED,
+            padx=12,
+            pady=12,
+            font=("Cascadia Mono", 11),
+            wrap="none",
+        )
         unconvert_scroll_y = ttk.Scrollbar(unconvert_input_frame, orient="vertical", command=self.unconvert_text.yview, style="Dark.Vertical.TScrollbar")
         unconvert_scroll_x = ttk.Scrollbar(unconvert_input_frame, orient="horizontal", command=self.unconvert_text.xview, style="Dark.Horizontal.TScrollbar")
         self.unconvert_text.configure(yscrollcommand=unconvert_scroll_y.set, xscrollcommand=unconvert_scroll_x.set)
@@ -1877,6 +1982,7 @@ class ConverterApp(TkRoot):
         xscroll.grid(row=1, column=0, sticky="ew")
         table_frame.rowconfigure(0, weight=1)
         table_frame.columnconfigure(0, weight=1)
+        self.unconvert_tree.tag_configure("valid", background=UI_GREEN_SOFT, foreground=UI_GREEN_TEXT)
         self.unconvert_tree.tag_configure("invalid", background=UI_BAD_SOFT, foreground=UI_BAD_TEXT)
         self.unconvert_tree.tag_configure("warning", background=UI_WARN_SOFT, foreground=UI_WARN_TEXT)
         self.unconvert_tree.tag_configure("empty", foreground=UI_MUTED)
@@ -2183,14 +2289,37 @@ class ConverterApp(TkRoot):
 
     def load_sample(self) -> None:
         self.multi_text.delete("1.0", "end")
-        self.multi_text.insert("1.0", "88984717\n88984130\nActive Christopher Benson, 88984765\nBAD-LINE")
+        self.multi_text.insert(
+            "1.0",
+            "\n".join(
+                [
+                    "88984717",
+                    "Excel row: Active - Christopher Benson - Colleague # 88984765.0",
+                    "8898-4130",
+                    "Badge 88981234 Ready",
+                    "Duplicate example 88984717",
+                    "BAD-LINE",
+                ]
+            ),
+        )
         self.multi_text.edit_modified(True)
         self.handle_batch_input_changed()
         self.set_status("Sample IDs loaded.")
 
     def load_unconvert_sample(self) -> None:
         self.unconvert_text.delete("1.0", "end")
-        self.unconvert_text.insert("1.0", "34968,18199\nFC 34968 CN 18192\n34968\t18277\nBAD-LINE")
+        self.unconvert_text.insert(
+            "1.0",
+            "\n".join(
+                [
+                    "34968,18199",
+                    "FC 34968 CN 18192",
+                    "34968\t16700",
+                    "Facility Code 34968 / Card Number 4660",
+                    "BAD-LINE",
+                ]
+            ),
+        )
         self.unconvert_text.edit_modified(True)
         self.handle_unconvert_input_changed()
         self.set_status("Unconvert sample loaded.")
@@ -2206,8 +2335,8 @@ class ConverterApp(TkRoot):
         self.notice_var.set("")
         self.time_var.set("No run yet")
         self.single_var.set("")
-        self.single_result.set("Waiting for a hex ID.")
-        self.reverse_result.set("Waiting for FC and CN values.")
+        self.single_result.set("Waiting for one 8-character HEX ID.")
+        self.reverse_result.set("Waiting for Facility Code and Card Number.")
         self.fc_var.set("")
         self.cn_var.set("")
         if hasattr(self, "unconvert_text"):
@@ -2300,7 +2429,7 @@ class ConverterApp(TkRoot):
             else:
                 notes = " | ".join([*row.suggestions, *row.warnings])
                 status = "Warning" if row.warnings else "Valid"
-                tags = ("warning",) if row.warnings else ()
+                tags = ("warning",) if row.warnings else ("valid",)
                 item_id = self.tree.insert("", "end", values=(row.line, row.hex_value, row.facility, row.card, status, notes), tags=tags)
             self.row_lookup[item_id] = row
         warn_count = sum(len(row.warnings) for row in self.results)
@@ -2329,7 +2458,7 @@ class ConverterApp(TkRoot):
             else:
                 notes = " | ".join(row.warnings)
                 status = "Warning" if row.warnings else "Valid"
-                tags = ("warning",) if row.warnings else ()
+                tags = ("warning",) if row.warnings else ("valid",)
                 item_id = self.unconvert_tree.insert("", "end", values=(row.line, row.facility, row.card, row.hex_value, status, notes), tags=tags)
             self.unconvert_row_lookup[item_id] = row
         warn_count = sum(len(row.warnings) for row in self.unconvert_results)
@@ -2421,13 +2550,9 @@ class ConverterApp(TkRoot):
         return str(folder if folder.exists() else Path.home())
 
     def show_recent_exports(self) -> None:
-        dialog = tk.Toplevel(self)
-        dialog.title("Recent Exports")
-        dialog.configure(bg=UI_BG)
+        dialog = self._new_dialog("Recent Exports")
         dialog.geometry("720x460")
         dialog.minsize(640, 380)
-        dialog.transient(self)
-        dialog.grab_set()
 
         self._dialog_header(dialog, "Recent Exports", "Reopen recently saved reports from this workstation.", UI_BLUE)
 
@@ -2484,13 +2609,9 @@ class ConverterApp(TkRoot):
         self._button(row, "Close", dialog.destroy, True, icon="icon-clear.png").pack(side="right")
 
     def show_settings(self) -> None:
-        dialog = tk.Toplevel(self)
-        dialog.title("Settings")
-        dialog.configure(bg=UI_BG)
+        dialog = self._new_dialog("Settings")
         dialog.geometry("720x620")
         dialog.minsize(640, 560)
-        dialog.transient(self)
-        dialog.grab_set()
 
         self._dialog_header(dialog, "Settings", "Defaults for exports and workstation shortcuts.", UI_RED)
 
@@ -2642,6 +2763,10 @@ class ConverterApp(TkRoot):
         webbrowser.open(BLUEWAVE_URL)
         self.set_status("Opened BlueWave in your browser.")
 
+    def open_salesforce(self) -> None:
+        webbrowser.open(SALESFORCE_URL)
+        self.set_status("Opened Salesforce in your browser.")
+
     def render_history(self) -> None:
         if hasattr(self, "history_tree"):
             history = self.settings.get("history", [])
@@ -2705,20 +2830,27 @@ class ConverterApp(TkRoot):
             return
         facility, card = hex_to_fc_cn(hex_value)
         notes = [*prepared["suggestions"], *unusual_warnings(hex_value, facility, card)]
-        self.single_result.set(f"HEX: {hex_value}    FC: {facility}    CN: {card}" + (f"\n{' '.join(notes)}" if notes else ""))
+        result_lines = [
+            f"HEX  {hex_value}",
+            f"FC   {facility}",
+            f"CN   {card}",
+        ]
+        if notes:
+            result_lines.append("NOTE " + " ".join(notes))
+        self.single_result.set("\n".join(result_lines))
         self.clipboard_clear()
         self.clipboard_append(f"{facility},{card}")
         self.set_status("Single ID converted and FC,CN copied.")
 
     def clear_single(self) -> None:
         self.single_var.set("")
-        self.single_result.set("Waiting for a hex ID.")
+        self.single_result.set("Waiting for one 8-character HEX ID.")
         self.set_status("Single lookup cleared.")
 
     def clear_reverse(self) -> None:
         self.fc_var.set("")
         self.cn_var.set("")
-        self.reverse_result.set("Waiting for FC and CN values.")
+        self.reverse_result.set("Waiting for Facility Code and Card Number.")
 
     def convert_reverse(self) -> None:
         try:
@@ -2727,7 +2859,14 @@ class ConverterApp(TkRoot):
         except ValueError as exc:
             messagebox.showerror("Invalid FC/CN", str(exc))
             return
-        self.reverse_result.set(f"HEX: {hex_value}" + (f"\n{' '.join(warnings)}" if warnings else ""))
+        result_lines = [
+            f"FC   {self.fc_var.get().strip()}",
+            f"CN   {self.cn_var.get().strip()}",
+            f"HEX  {hex_value}",
+        ]
+        if warnings:
+            result_lines.append("NOTE " + " ".join(warnings))
+        self.reverse_result.set("\n".join(result_lines))
         self.clipboard_clear()
         self.clipboard_append(hex_value)
         self.set_status("Hex value created and copied.")
@@ -2736,12 +2875,8 @@ class ConverterApp(TkRoot):
         preview = "\n".join(result.get("lines", [])[:30])
         if not preview:
             return messagebox.askyesno("Import preview", f"{result.get('message', '')}\n\nNo rows were extracted. Continue?")
-        dialog = tk.Toplevel(self)
-        dialog.title("Import Preview")
-        dialog.configure(bg="#10141b")
+        dialog = self._new_dialog("Import Preview", "#10141b")
         dialog.geometry("680x420")
-        dialog.transient(self)
-        dialog.grab_set()
         approved = tk.BooleanVar(value=False)
         tk.Label(dialog, text=f"Preview: {path.name}", bg="#10141b", fg="#ffffff", font=("Segoe UI", 12, "bold")).pack(anchor="w", padx=14, pady=(14, 6))
         tk.Label(dialog, text=result.get("message", ""), bg="#10141b", fg="#a8b2c2", wraplength=640, justify="left").pack(anchor="w", padx=14, pady=(0, 8))
@@ -2868,13 +3003,9 @@ class ConverterApp(TkRoot):
         actions.get(export_type, self.export_excel)()
 
     def show_export_complete(self, path: Path, export_name: str) -> None:
-        dialog = tk.Toplevel(self)
-        dialog.title("Export Complete")
-        dialog.configure(bg=UI_BG)
+        dialog = self._new_dialog("Export Complete")
         dialog.geometry("640x360")
         dialog.minsize(580, 320)
-        dialog.transient(self)
-        dialog.grab_set()
 
         self._dialog_header(dialog, "Export Complete", f"{export_name} report saved successfully.", UI_GREEN_TEXT)
 
@@ -3224,18 +3355,11 @@ class ConverterApp(TkRoot):
         return "\n".join(lines) + "\n"
 
     def show_help(self) -> None:
-        dialog = tk.Toplevel(self)
-        dialog.title("How To Use")
-        dialog.configure(bg=UI_BG)
-        dialog.geometry("840x640")
-        dialog.minsize(760, 560)
-        dialog.transient(self)
-        dialog.grab_set()
+        dialog = self._new_dialog("How To Use")
+        dialog.geometry("900x660")
+        dialog.minsize(820, 580)
 
-        def help_header_link(parent: tk.Widget) -> None:
-            self._link_label(parent, "BlueWave", BLUEWAVE_URL, UI_HEADER, "Open BlueWave in your browser.", font_size=9, bold=True).pack(side="right", padx=(0, 18))
-
-        self._dialog_header(dialog, "How To Use This Utility", "Fast guide for imports, conversions, exports, and review actions.", UI_BLUE, help_header_link)
+        self._dialog_header(dialog, "How To Use This Utility", "Fast guide for imports, conversions, exports, and review actions.", UI_BLUE)
 
         content = tk.Frame(dialog, bg=UI_BG)
         content.pack(fill="both", expand=True, padx=16, pady=16)
@@ -3267,7 +3391,7 @@ class ConverterApp(TkRoot):
         contact.pack(fill="x", padx=14, pady=(4, 8), side="bottom")
         tk.Label(contact, text="Need help?", bg=UI_RED_SOFT, fg=UI_TEXT, font=("Segoe UI", 10, "bold")).pack(anchor="w", padx=10, pady=(7, 1))
         self._link_label(contact, "Email Christopher Schumacher", f"mailto:{CONTACT_EMAIL}", UI_RED_SOFT, "Open an email draft.", font_size=9, bold=True, padx=10).pack(anchor="w", pady=(0, 4))
-        self._link_label(contact, "GitHub profile", "https://github.com/rice2k", UI_RED_SOFT, "Open GitHub profile.", font_size=9, padx=10).pack(anchor="w", pady=(0, 7))
+        self._link_label(contact, "GitHub project", PROJECT_URL, UI_RED_SOFT, "Open the GitHub project repository.", font_size=9, padx=10).pack(anchor="w", pady=(0, 7))
 
         scroll_shell = tk.Frame(content, bg=UI_BG)
         scroll_shell.pack(side="left", fill="both", expand=True)
@@ -3308,13 +3432,9 @@ class ConverterApp(TkRoot):
         self._button(row, "Close", dialog.destroy, True, icon="icon-clear.png").pack(side="right")
 
     def show_about(self) -> None:
-        dialog = tk.Toplevel(self)
-        dialog.title("About")
-        dialog.configure(bg=UI_BG)
-        dialog.geometry("680x560")
-        dialog.minsize(620, 520)
-        dialog.transient(self)
-        dialog.grab_set()
+        dialog = self._new_dialog("About")
+        dialog.geometry("720x560")
+        dialog.minsize(660, 520)
 
         self._dialog_header(
             dialog,
@@ -3379,8 +3499,7 @@ class ConverterApp(TkRoot):
         links = tk.Frame(contact_inner, bg=UI_SURFACE)
         links.pack(fill="x", pady=(6, 0))
         self._link_label(links, "Email: christopher.schumacher@macys.com", f"mailto:{CONTACT_EMAIL}", UI_SURFACE, "Open an email draft.", font_size=9, padx=0).pack(anchor="w", pady=(0, 5))
-        self._link_label(links, "GitHub: github.com/rice2k", "https://github.com/rice2k", UI_SURFACE, "Open the project profile link.", font_size=9, padx=0).pack(anchor="w", pady=(0, 5))
-        self._link_label(links, "BlueWave access-control site", BLUEWAVE_URL, UI_SURFACE, "Open BlueWave in your browser.", font_size=9, padx=0).pack(anchor="w")
+        self._link_label(links, "GitHub project repository", PROJECT_URL, UI_SURFACE, "Open the GitHub project repository.", font_size=9, padx=0).pack(anchor="w")
 
         self._dialog_footer_accent(dialog)
         row = tk.Frame(dialog, bg=UI_BG)
@@ -3393,6 +3512,9 @@ def main() -> None:
         assert hex_to_fc_cn("88984717") == (34968, 18199)
         assert fc_cn_to_hex(34968, 18199) == "88984717"
         assert clean_candidate_line("Active Christopher Benson, 88984765")["extracted"] == "88984765"
+        assert clean_candidate_line("Excel cell 88984765.0")["extracted"] == "88984765"
+        assert extract_eight_digit_id(88984765.0) == "88984765"
+        assert extract_eight_digit_id("Badge 8898-4765") == "88984765"
         results, invalid = convert_lines("88984717\nBAD-LINE\n8898-4765", "TEST")
         assert len(results) == 2
         assert len(invalid) == 1
@@ -3405,6 +3527,11 @@ def main() -> None:
             "sample.xlsx",
         )
         assert imported["lines"] == ["Christopher Benson, 88984765"]
+        excel_imported = extract_name_id_lines_from_tables(
+            [[["Candidate Name", "Colleague #"], ["Christopher Benson", 88984765.0], ["Jordan Smith", "ID 8898-4130"]]],
+            "sample.xlsx",
+        )
+        assert excel_imported["lines"] == ["Christopher Benson, 88984765", "Jordan Smith, 88984130"]
         return
     app = ConverterApp()
     app.mainloop()

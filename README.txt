@@ -1,7 +1,7 @@
 Macy's Asset Protection - China Grove Hex Converter Utility
 README
 
-App Version: 1.0.6
+App Version: 1.0.7
 
 Purpose
 -------
@@ -22,7 +22,8 @@ Built By
 --------
 Christopher Schumacher, Asset Protection FLO
 Email: christopher.schumacher@macys.com
-GitHub: https://github.com/rice2k
+GitHub project:
+https://github.com/rice2k/Macys-Asset-Protection-HEX-Converter-Tool
 
 Main Functions
 --------------
@@ -67,6 +68,11 @@ You can add data to the Input Queue several ways:
 3. Use Import > Paste Clipboard To Queue.
 4. Drag supported files directly onto the Input Queue box.
 5. Use Sample to load example data.
+
+Excel and copied-table cleanup:
+- Numeric spreadsheet cells such as 88984765.0 are cleaned to 88984765.
+- Split IDs such as 8898-4765 or 8898 4765 are joined before conversion.
+- Full employee lines are scanned for the first clean 8-digit ID.
 
 Supported file types:
 - TXT

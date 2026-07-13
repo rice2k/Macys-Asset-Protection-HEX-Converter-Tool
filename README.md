@@ -1,6 +1,6 @@
 # Macy's Asset Protection China Grove Hex Converter Utility
 
-Current version: `1.0.6`
+Current version: `1.0.7`
 
 Windows desktop utility for Macy's Asset Protection access-control conversion work at China Grove, North Carolina.
 
@@ -9,6 +9,7 @@ Windows desktop utility for Macy's Asset Protection access-control conversion wo
 - Converts one or many 8-character HEX IDs into Facility Code and Card Number.
 - Converts FC/CN pairs back into HEX IDs.
 - Imports TXT, CSV, TSV, XLS, XLSX, XLSM, XML Spreadsheet, HTML, and copied table data.
+- Cleans Excel-style numeric IDs such as `88984765.0` and split IDs such as `8898-4765`.
 - Highlights valid, warning, and invalid input rows.
 - Removes duplicates and keeps only valid rows when cleaning a queue.
 - Exports professional Excel, CSV, TXT, and PDF reports.
@@ -54,7 +55,7 @@ The current built executable is:
 
 Made by Christopher Schumacher, Asset Protection FLO.
 
-GitHub: https://github.com/rice2k
+GitHub project: https://github.com/rice2k/Macys-Asset-Protection-HEX-Converter-Tool
 
 ## Future Trust Improvement
 
