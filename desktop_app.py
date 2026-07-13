@@ -48,7 +48,7 @@ PROJECT_URL = "https://github.com/rice2k/Macys-Asset-Protection-HEX-Converter-To
 CONTACT_EMAIL = "christopher.schumacher@macys.com"
 APP_DISPLAY_NAME = "Macy's Asset Protection - China Grove Hex Converter Utility"
 APP_SHORT_NAME = "Macy's AP China Grove Hex Utility"
-APP_VERSION = "1.1.0"
+APP_VERSION = "1.1.1"
 APP_STATE_DIR = Path(os.environ.get("APPDATA", str(Path.home()))) / "AP_Access_Control_Converter"
 SETTINGS_FILE = APP_STATE_DIR / "settings.json"
 EXPORT_TYPE_CHOICES = ["Excel Workbook (.xlsx)", "CSV Report (.csv)", "TXT Report (.txt)", "PDF Report (.pdf)"]
@@ -1771,7 +1771,7 @@ class ConverterApp(TkRoot):
         multi_frame.columnconfigure(0, weight=1)
         self.multi_text = tk.Text(
             multi_frame,
-            height=7,
+            height=4,
             bg=UI_INPUT,
             fg=UI_TEXT,
             insertbackground=UI_RED,
@@ -1800,7 +1800,7 @@ class ConverterApp(TkRoot):
         self._enable_drop_target(self.multi_text)
         self._enable_drop_target(multi_frame)
         btns = tk.Frame(input_panel, bg="#10141b")
-        btns.pack(fill="x", padx=12, pady=12)
+        btns.pack(fill="x", padx=12, pady=8)
         batch_actions = [
             ("Import", self.import_file, False, "icon-import.png", "Browse for one or more supported files and add extracted IDs to the queue."),
             ("Sample", self.load_sample, False, "icon-sample.png", "Load numeric sample data so you can see conversion results."),
@@ -1811,14 +1811,14 @@ class ConverterApp(TkRoot):
         ]
         for idx, (text, command, primary, icon, tooltip) in enumerate(batch_actions):
             button = self._button(btns, text, command, primary, icon=icon, tooltip=tooltip)
-            button.grid(row=idx // 3, column=idx % 3, sticky="w", padx=(0, 8), pady=(0, 8) if idx < 3 else (0, 0))
+            button.grid(row=idx // 3, column=idx % 3, sticky="w", padx=(0, 8), pady=(0, 5) if idx < 3 else (0, 0))
 
         summary = self._panel(top)
         summary.pack(side="right", fill="y")
-        summary.configure(width=268)
+        summary.configure(width=262)
         summary.pack_propagate(False)
-        tk.Label(summary, text="Run Summary", bg="#10141b", fg="#ffffff", font=("Segoe UI", 12, "bold")).pack(anchor="w", padx=12, pady=(12, 5))
-        tk.Label(summary, text="Live queue and conversion status.", bg="#10141b", fg="#a8b2c2", font=("Segoe UI", 9), wraplength=230, justify="left").pack(anchor="w", padx=12, pady=(0, 10))
+        tk.Label(summary, text="Run Summary", bg="#10141b", fg="#ffffff", font=("Segoe UI", 12, "bold")).pack(anchor="w", padx=12, pady=(10, 2))
+        tk.Label(summary, text="Live queue and conversion status.", bg="#10141b", fg="#a8b2c2", font=("Segoe UI", 9), wraplength=230, justify="left").pack(anchor="w", padx=12, pady=(0, 6))
         self.stat_vars = {name: tk.StringVar(value="0") for name in ["Input", "Valid", "Invalid", "Warnings"]}
         grid = tk.Frame(summary, bg="#10141b")
         grid.pack(fill="x", padx=12, pady=(4, 8))
@@ -1826,12 +1826,12 @@ class ConverterApp(TkRoot):
         grid.columnconfigure(1, weight=1)
         stat_colors = {"Input": UI_BLUE, "Valid": UI_GREEN_TEXT, "Invalid": UI_BAD_TEXT, "Warnings": UI_WARN_TEXT}
         for idx, name in enumerate(self.stat_vars):
-            card = tk.Frame(grid, bg=UI_SURFACE_ALT, width=108, height=70, highlightthickness=1, highlightbackground=UI_BORDER)
+            card = tk.Frame(grid, bg=UI_SURFACE_ALT, width=104, height=58, highlightthickness=1, highlightbackground=UI_BORDER)
             card.grid(row=idx // 2, column=idx % 2, sticky="ew", padx=5, pady=5)
             card.grid_propagate(False)
             tk.Frame(card, bg=stat_colors[name], height=3).pack(fill="x")
-            tk.Label(card, text=name, bg=UI_SURFACE_ALT, fg=UI_MUTED, font=("Segoe UI", 8, "bold")).pack(pady=(8, 0))
-            tk.Label(card, textvariable=self.stat_vars[name], bg=UI_SURFACE_ALT, fg=stat_colors[name], font=("Segoe UI", 16, "bold")).pack()
+            tk.Label(card, text=name, bg=UI_SURFACE_ALT, fg=UI_MUTED, font=("Segoe UI", 8, "bold")).pack(pady=(5, 0))
+            tk.Label(card, textvariable=self.stat_vars[name], bg=UI_SURFACE_ALT, fg=stat_colors[name], font=("Segoe UI", 14, "bold")).pack()
         self.time_var = tk.StringVar(value="No run yet")
         tk.Label(
             summary,
@@ -1841,10 +1841,10 @@ class ConverterApp(TkRoot):
             wraplength=220,
             justify="center",
             padx=10,
-            pady=8,
+            pady=6,
             highlightthickness=1,
             highlightbackground=UI_BORDER,
-        ).pack(fill="x", padx=12, pady=(4, 8))
+        ).pack(fill="x", padx=12, pady=(3, 6))
         self.notice_var = tk.StringVar(value="")
         tk.Label(summary, textvariable=self.notice_var, bg="#10141b", fg="#ffca63", wraplength=230, justify="left").pack(anchor="w", padx=12, pady=(0, 12))
         results_panel = self._panel(self.batch_tab)
@@ -1905,11 +1905,13 @@ class ConverterApp(TkRoot):
         table_frame.pack(fill="both", expand=True, padx=12, pady=(0, 12))
         columns = ("Line", "Hex ID", "FC", "CN", "Status", "Notes")
         self.tree = ttk.Treeview(table_frame, columns=columns, show="headings")
+        result_heading_text = {"Notes": "Notes / Details"}
+        result_anchors = {"Line": "center", "Hex ID": "center", "FC": "center", "CN": "center", "Status": "center", "Notes": "w"}
         for col in columns:
-            self.tree.heading(col, text=col, command=lambda c=col: self.sort_results_by(c))
+            self.tree.heading(col, text=result_heading_text.get(col, col), anchor=result_anchors[col], command=lambda c=col: self.sort_results_by(c))
         widths = {"Line": 60, "Hex ID": 150, "FC": 90, "CN": 90, "Status": 120, "Notes": 420}
         for col, width in widths.items():
-            self.tree.column(col, width=width, minwidth=60, stretch=col == "Notes")
+            self.tree.column(col, width=width, minwidth=60, anchor=result_anchors[col], stretch=col == "Notes")
         yscroll = ttk.Scrollbar(table_frame, orient="vertical", command=self.tree.yview, style="Dark.Vertical.TScrollbar")
         xscroll = ttk.Scrollbar(table_frame, orient="horizontal", command=self.tree.xview, style="Dark.Horizontal.TScrollbar")
         self.tree.configure(yscrollcommand=yscroll.set, xscrollcommand=xscroll.set)
@@ -1945,7 +1947,7 @@ class ConverterApp(TkRoot):
                 "FC": "Facility Code. This is the high 16-bit value from the HEX ID.",
                 "CN": "Card Number. This is the low 16-bit value from the HEX ID.",
                 "Status": "Valid, Warning, or Invalid conversion result.",
-                "Notes": "Cleanup details, duplicate notices, or validation warnings.",
+                "Notes": "Details appear only when the app cleaned a row, found a duplicate, flagged an unusual value, or explains invalid input.",
             },
         )
 
@@ -2047,7 +2049,7 @@ class ConverterApp(TkRoot):
         unconvert_input_frame.columnconfigure(0, weight=1)
         self.unconvert_text = tk.Text(
             unconvert_input_frame,
-            height=7,
+            height=5,
             bg=UI_INPUT,
             fg=UI_TEXT,
             insertbackground=UI_RED,
@@ -2113,11 +2115,13 @@ class ConverterApp(TkRoot):
         table_frame.pack(fill="both", expand=True, padx=12, pady=(0, 12))
         columns = ("Line", "FC", "CN", "Hex ID", "Status", "Notes")
         self.unconvert_tree = ttk.Treeview(table_frame, columns=columns, show="headings")
+        unconvert_heading_text = {"Notes": "Notes / Details"}
+        unconvert_anchors = {"Line": "center", "FC": "center", "CN": "center", "Hex ID": "center", "Status": "center", "Notes": "w"}
         for col in columns:
-            self.unconvert_tree.heading(col, text=col)
+            self.unconvert_tree.heading(col, text=unconvert_heading_text.get(col, col), anchor=unconvert_anchors[col])
         widths = {"Line": 60, "FC": 120, "CN": 120, "Hex ID": 150, "Status": 120, "Notes": 430}
         for col, width in widths.items():
-            self.unconvert_tree.column(col, width=width, minwidth=60, stretch=col == "Notes")
+            self.unconvert_tree.column(col, width=width, minwidth=60, anchor=unconvert_anchors[col], stretch=col == "Notes")
         yscroll = ttk.Scrollbar(table_frame, orient="vertical", command=self.unconvert_tree.yview, style="Dark.Vertical.TScrollbar")
         xscroll = ttk.Scrollbar(table_frame, orient="horizontal", command=self.unconvert_tree.xview, style="Dark.Horizontal.TScrollbar")
         self.unconvert_tree.configure(yscrollcommand=yscroll.set, xscrollcommand=xscroll.set)
@@ -2151,7 +2155,7 @@ class ConverterApp(TkRoot):
                 "CN": "Card Number used to rebuild the HEX ID.",
                 "Hex ID": "The 8-character HEX ID created from FC and CN.",
                 "Status": "Valid, Warning, or Invalid unconvert result.",
-                "Notes": "Warnings or cleanup details for the row.",
+                "Notes": "Details appear when an FC/CN pair is duplicate, unusual, or invalid.",
             },
         )
 
@@ -3460,7 +3464,7 @@ class ConverterApp(TkRoot):
     def _write_csv(self, path: Path) -> None:
         with path.open("w", newline="", encoding="utf-8-sig") as handle:
             writer = csv.writer(handle)
-            writer.writerow(["Line", "Hex ID / Raw Input", "Facility Code", "Card Number", "Status", "Notes", "Converted At", "App Version"])
+            writer.writerow(["Line", "Hex ID / Raw Input", "Facility Code", "Card Number", "Status", "Notes / Details", "Converted At", "App Version"])
             for row in self._export_records():
                 writer.writerow([row["line"], row["hex"], row["facility"], row["card"], row["status"], row["notes"], row["converted_at"], APP_VERSION])
 
@@ -3522,7 +3526,7 @@ class ConverterApp(TkRoot):
         ]))
         story.extend([summary, Spacer(1, 12)])
 
-        data = [["Line", "Hex ID / Raw Input", "Facility Code", "Card Number", "Status", "Notes"]]
+        data = [["Line", "Hex ID / Raw Input", "Facility Code", "Card Number", "Status", "Notes / Details"]]
         for row in self._export_records():
             data.append([
                 row["line"],
@@ -3622,7 +3626,7 @@ class ConverterApp(TkRoot):
         widths = {"A": 8, "B": 22, "C": 16, "D": 16, "E": 14, "F": 48, "G": 24}
         for column, width in widths.items():
             results_ws.column_dimensions[column].width = width
-        headers = ["Line", "Hex ID / Raw Input", "Facility Code", "Card Number", "Status", "Notes", "Converted At"]
+        headers = ["Line", "Hex ID / Raw Input", "Facility Code", "Card Number", "Status", "Notes / Details", "Converted At"]
         row_index = 1
         for col, label in enumerate(headers, start=1):
             cell = results_ws.cell(row_index, col, label)
@@ -3696,7 +3700,7 @@ class ConverterApp(TkRoot):
             "",
         ]
         if records:
-            lines.append(f"{'LINE':<6} {'HEX / RAW INPUT':<20} {'FC':<10} {'CN':<10} {'STATUS':<10} NOTES")
+            lines.append(f"{'LINE':<6} {'HEX / RAW INPUT':<20} {'FC':<10} {'CN':<10} {'STATUS':<10} NOTES / DETAILS")
             lines.append("-" * 108)
             for row in records:
                 lines.append(
@@ -3770,7 +3774,7 @@ class ConverterApp(TkRoot):
         add_help_card("Import Options", "Use Import > Browse Files for TXT, CSV, TSV, XLS, XLSX, XLSM, XML, HTML, or HTM files. Use Paste Clipboard To Queue for copied lines. Drag files directly onto the Input Queue when you want the fastest import.", "#46d9ff")
         add_help_card("Batch Converter", "Paste HEX IDs one per line, or paste full employee lines. The app highlights valid rows, warning rows, and invalid rows directly in the queue before you convert.", "#e51b2d")
         add_help_card("Queue Cleanup", "Use Remove Duplicates to keep the first valid matching HEX ID. Use Keep Valid to remove rows that cannot be read as valid 8-character HEX IDs.", "#35d07f")
-        add_help_card("Results Review", "Valid rows show HEX, Facility Code, Card Number, status, and notes. Use Search and Status to narrow the table. Copy All, Copy FC, Copy CN, and Copy Pair work from the Results area.", "#f1b84b")
+        add_help_card("Results Review", "Valid rows show HEX, Facility Code, Card Number, status, and Notes / Details. Notes stay blank for clean rows and appear when the app cleaned imported text, found a duplicate, flagged an unusual value, or explains why an input row is invalid.", "#f1b84b")
         add_help_card("Reverse Tools", "Use FC/CN to Hex for one pair. Use Unconvert Batch when you have many FC/CN pairs. Accepted batch examples include 34968,18199, tab-separated values, or FC 34968 CN 18199.", "#35d07f")
         add_help_card("Exports", "Use Export to save Excel, CSV, TXT, or PDF reports. Export Default uses your saved default report type. After saving, Open File and Open Folder are available from the completion window.", "#8beaff")
         add_help_card("Settings", "Use File > Settings to choose the default export type, default export folder, and create a desktop shortcut for the utility.", "#ff6d78")

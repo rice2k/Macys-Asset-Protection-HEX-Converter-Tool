@@ -1,6 +1,6 @@
 # Macy's Asset Protection China Grove Hex Converter Utility
 
-Current version: `1.1.0`
+Current version: `1.1.1`
 
 Windows desktop utility for Macy's Asset Protection access-control conversion work at China Grove, North Carolina.
 
@@ -13,6 +13,7 @@ Windows desktop utility for Macy's Asset Protection access-control conversion wo
 - Highlights valid, warning, and invalid input rows.
 - Shows a live row count while editing the input queue.
 - Previews cleaned numeric IDs before pasting messy Excel-style clipboard data.
+- Shows Notes / Details only when a row was cleaned, duplicated, unusual, or invalid.
 - Removes duplicates and keeps only valid rows when cleaning a queue.
 - Supports full-row copying and right-click copy actions in result tables.
 - Exports professional Excel, CSV, TXT, and PDF reports.

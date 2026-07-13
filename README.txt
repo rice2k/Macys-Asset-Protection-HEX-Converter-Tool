@@ -1,7 +1,7 @@
 Macy's Asset Protection - China Grove Hex Converter Utility
 README
 
-App Version: 1.1.0
+App Version: 1.1.1
 
 Purpose
 -------
@@ -122,12 +122,16 @@ After conversion, the Results table shows:
 - Facility Code
 - Card Number
 - Status
-- Notes
+- Notes / Details
 
 Statuses include:
 - Valid: The row converted normally.
 - Warning: The row converted, but the app noticed something unusual.
 - Invalid: The row could not be converted.
+
+Notes / Details stays blank for clean rows. It fills in when the app has a
+reason to explain something about that row, such as cleanup, duplicates,
+unusual values, or invalid input.
 
 Examples of possible warnings or notes:
 - Extracted an ID from a full text line

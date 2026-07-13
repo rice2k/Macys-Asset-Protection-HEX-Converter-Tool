@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.1
+
+- Improved Results and Unconvert Results column alignment so headers and row values line up more clearly.
+- Renamed the table display header to Notes / Details and left-aligned it with the note text.
+- Added in-app Help and README wording explaining where Notes / Details messages come from.
+- Updated CSV, Excel, PDF, and TXT report headers to use Notes / Details consistently.
+
 ## 1.1.0
 
 - Added cleaned clipboard preview for messy Excel-style pasted data so only numeric ID rows can be added to the queue.

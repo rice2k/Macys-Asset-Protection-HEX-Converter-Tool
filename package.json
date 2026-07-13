@@ -1,6 +1,6 @@
 {
   "name": "macys-asset-protection-china-grove-hex-converter-utility",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Python desktop utility for Macy's Asset Protection HEX, Facility Code, and Card Number conversion.",
   "author": "Christopher Schumacher",
   "license": "UNLICENSED",
