@@ -1,0 +1,85 @@
+name: Publish Windows Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing tag to publish, such as v1.0.5'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: windows-2022
+    timeout-minutes: 30
+
+    steps:
+      - name: Choose tag
+        id: release_tag
+        shell: pwsh
+        run: |
+          if ("${{ github.event_name }}" -eq "workflow_dispatch") {
+            "tag=${{ inputs.tag }}" >> $env:GITHUB_OUTPUT
+          } else {
+            "tag=${{ github.ref_name }}" >> $env:GITHUB_OUTPUT
+          }
+
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.release_tag.outputs.tag }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          architecture: 'x64'
+
+      - name: Install dependencies
+        shell: pwsh
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+
+      - name: Validate source
+        shell: pwsh
+        run: |
+          python -m py_compile desktop_app.py tests\desktop_app_smoke.py
+          python tests\desktop_app_smoke.py
+          python desktop_app.py --self-test
+
+      - name: Build Windows executable
+        shell: pwsh
+        run: |
+          python -m PyInstaller --noconfirm --clean Macys_AP_China_Grove_Hex_Utility.spec
+          $exe = 'dist\Macys_AP_China_Grove_Hex_Utility.exe'
+          if (!(Test-Path $exe)) { throw "PyInstaller did not create $exe" }
+          $hash = (Get-FileHash $exe -Algorithm SHA256).Hash.ToUpper()
+          "$hash  Macys_AP_China_Grove_Hex_Utility.exe" | Set-Content 'dist\Macys_AP_China_Grove_Hex_Utility.exe.sha256.txt' -Encoding ascii
+
+      - name: Prepare release notes
+        shell: pwsh
+        run: |
+          $tag = "${{ steps.release_tag.outputs.tag }}"
+          $notes = "RELEASE_NOTES_$tag.md"
+          if (Test-Path $notes) {
+            Copy-Item $notes release-notes.md
+          } else {
+            "# Macy's AP China Grove Hex Utility $tag`n`nSee CHANGELOG.md for version history and restore notes." | Set-Content release-notes.md -Encoding utf8
+          }
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.release_tag.outputs.tag }}
+          name: Macy's AP China Grove Hex Utility ${{ steps.release_tag.outputs.tag }}
+          body_path: release-notes.md
+          files: |
+            dist/Macys_AP_China_Grove_Hex_Utility.exe
+            dist/Macys_AP_China_Grove_Hex_Utility.exe.sha256.txt

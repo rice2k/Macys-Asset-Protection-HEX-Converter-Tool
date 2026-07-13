@@ -1,6 +1,6 @@
 # Macy's Asset Protection China Grove Hex Converter Utility
 
-Current version: `1.0.5`
+Current version: `1.0.6`
 
 Windows desktop utility for Macy's Asset Protection access-control conversion work at China Grove, North Carolina.
 
@@ -12,7 +12,19 @@ Windows desktop utility for Macy's Asset Protection access-control conversion wo
 - Highlights valid, warning, and invalid input rows.
 - Removes duplicates and keeps only valid rows when cleaning a queue.
 - Exports professional Excel, CSV, TXT, and PDF reports.
-- Includes Help, About, Settings, History, default export settings, and desktop shortcut support.
+- Includes Help, About, Settings, History, recent exports, default export settings, copyable error reports, and desktop shortcut support.
+
+## Screenshots
+
+![Main screen](docs/screenshots/main.png)
+
+![Settings](docs/screenshots/settings.png)
+
+![Help](docs/screenshots/help.png)
+
+![About](docs/screenshots/about.png)
+
+![Export complete](docs/screenshots/export-complete.png)
 
 ## Run From Source
 
@@ -43,3 +55,9 @@ The current built executable is:
 Made by Christopher Schumacher, Asset Protection FLO.
 
 GitHub: https://github.com/rice2k
+
+## Future Trust Improvement
+
+Windows code signing is planned for a future release. A trusted signing certificate is required before the EXE can be signed.
+
+See `CHANGELOG.md` for version history and `CODE_SIGNING.md` for the signing plan.

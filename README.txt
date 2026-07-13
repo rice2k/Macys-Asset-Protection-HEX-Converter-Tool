@@ -1,7 +1,7 @@
 Macy's Asset Protection - China Grove Hex Converter Utility
 README
 
-App Version: 1.0.5
+App Version: 1.0.6
 
 Purpose
 -------
@@ -171,6 +171,12 @@ After an export finishes, the app shows an Export Complete window with:
 - Saved file path
 - App version and run summary
 
+Recent Exports
+--------------
+Use Export > Recent Exports to reopen recently saved reports from this
+workstation. The list keeps the newest reports first and skips files that no
+longer exist.
+
 Default Export Folder
 ---------------------
 Use File > Default Export Folder to choose where reports should start saving.
@@ -248,8 +254,18 @@ If a row is invalid:
 - Check that the HEX ID is exactly 8 characters.
 - Check that it only contains 0-9 and A-F.
 
+If import, export, or opening a saved report fails:
+- Use Help > Copy Last Error Report.
+- Paste the copied report into an email or support note so the file path,
+  app version, time, and error details are available.
+
 Current Executable
 ------------------
 The built Windows executable is located at:
 
-D:\AP_Access_Control_Converter_Desktop\dist\Macys_AP_China_Grove_Hex_Utility.exe
+D:\Macys-Asset-Protection-HEX-Converter-Tool\dist\Macys_AP_China_Grove_Hex_Utility.exe
+
+Future Trust Improvement
+------------------------
+Windows code signing is planned for a future release after a trusted signing
+certificate is available.

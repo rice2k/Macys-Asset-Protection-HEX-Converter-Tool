@@ -47,7 +47,7 @@ BLUEWAVE_URL = "http://ma000xsblw1001/"
 CONTACT_EMAIL = "christopher.schumacher@macys.com"
 APP_DISPLAY_NAME = "Macy's Asset Protection - China Grove Hex Converter Utility"
 APP_SHORT_NAME = "Macy's AP China Grove Hex Utility"
-APP_VERSION = "1.0.5"
+APP_VERSION = "1.0.6"
 APP_STATE_DIR = Path(os.environ.get("APPDATA", str(Path.home()))) / "AP_Access_Control_Converter"
 SETTINGS_FILE = APP_STATE_DIR / "settings.json"
 EXPORT_TYPE_CHOICES = ["Excel Workbook (.xlsx)", "CSV Report (.csv)", "TXT Report (.txt)", "PDF Report (.pdf)"]
@@ -692,6 +692,7 @@ class ConverterApp(TkRoot):
         self.unconvert_results: list[UnconvertRow] = []
         self.unconvert_invalid: list[InvalidRow] = []
         self.last_converted_at = ""
+        self.last_error_report = ""
         self.row_lookup: dict[str, ConvertedRow | InvalidRow] = {}
         self.unconvert_row_lookup: dict[str, UnconvertRow | InvalidRow] = {}
         self.sort_column = "Line"
@@ -722,6 +723,7 @@ class ConverterApp(TkRoot):
             "default_export_dir": str(Path.home() / "Desktop"),
             "default_export_type": EXPORT_TYPE_CHOICES[0],
             "recent_files": [],
+            "recent_exports": [],
             "history": [],
         }
         try:
@@ -745,6 +747,42 @@ class ConverterApp(TkRoot):
         self.save_settings()
         if hasattr(self, "recent_menu"):
             self.refresh_recent_menu()
+
+    def add_recent_export(self, path: Path, export_name: str) -> None:
+        item = {
+            "path": str(path),
+            "name": path.name,
+            "type": export_name,
+            "timestamp": datetime.now().strftime("%m/%d/%Y %I:%M:%S %p"),
+        }
+        recent = [entry for entry in self.settings.get("recent_exports", []) if entry.get("path") != str(path)]
+        recent.insert(0, item)
+        self.settings["recent_exports"] = recent[:10]
+        self.save_settings()
+
+    def build_error_report(self, title: str, details: list[str]) -> str:
+        lines = [
+            f"{APP_SHORT_NAME} Error Report",
+            f"Version: {APP_VERSION}",
+            f"Time: {datetime.now().strftime('%m/%d/%Y %I:%M:%S %p')}",
+            f"Issue: {title}",
+            "",
+            "Details:",
+        ]
+        lines.extend(details or ["No additional details were captured."])
+        return "\n".join(lines)
+
+    def record_error_report(self, title: str, details: list[str]) -> None:
+        self.last_error_report = self.build_error_report(title, details)
+        self.set_status(f"{title}. Error report ready to copy.", "Needs Review")
+
+    def copy_error_report(self) -> None:
+        if not self.last_error_report:
+            messagebox.showinfo("No error report", "No import or export error has been captured in this session.")
+            return
+        self.clipboard_clear()
+        self.clipboard_append(self.last_error_report)
+        self.set_status("Error report copied to clipboard.", "Needs Review")
 
     def add_history(self, action: str, total: int, valid: int, invalid: int, warnings: int) -> None:
         entry = HistoryEntry(datetime.now().strftime("%m/%d/%Y %I:%M:%S %p"), action, total, valid, invalid, warnings)
@@ -852,11 +890,14 @@ class ConverterApp(TkRoot):
         export_menu.add_command(label="CSV Report", command=self.export_csv)
         export_menu.add_command(label="TXT Report", command=self.export_txt)
         export_menu.add_command(label="PDF Report", command=self.export_pdf)
+        export_menu.add_separator()
+        export_menu.add_command(label="Recent Exports", command=self.show_recent_exports)
         menubar.add_cascade(label="Export", menu=export_menu)
 
         help_menu = tk.Menu(menubar, tearoff=False)
         help_menu.add_command(label="How To Use", command=self.show_help)
         help_menu.add_command(label="About", command=self.show_about)
+        help_menu.add_command(label="Copy Last Error Report", command=self.copy_error_report)
         help_menu.add_separator()
         help_menu.add_command(label="Open BlueWave", command=self.open_bluewave)
         menubar.add_cascade(label="Help", menu=help_menu)
@@ -1134,6 +1175,62 @@ class ConverterApp(TkRoot):
         for child in widget.winfo_children():
             self._enable_mousewheel_tree(child, y_target, x_target)
 
+    def _enable_tree_header_tooltips(self, tree: ttk.Treeview, tips: dict[str, str]) -> None:
+        tooltip = ToolTip(tree, "")
+
+        def update_tip(event: Any) -> None:
+            if tree.identify_region(event.x, event.y) != "heading":
+                tooltip.hide()
+                return
+            column_id = tree.identify_column(event.x)
+            try:
+                column = tree["columns"][int(column_id.replace("#", "")) - 1]
+            except (ValueError, IndexError, tk.TclError):
+                tooltip.hide()
+                return
+            tooltip.text = tips.get(str(column), "")
+            if tooltip.text:
+                tooltip.schedule()
+            else:
+                tooltip.hide()
+
+        tree.bind("<Motion>", update_tip, add="+")
+        tree.bind("<Leave>", tooltip.hide, add="+")
+
+    def _enable_tree_row_hover(self, tree: ttk.Treeview) -> None:
+        tree.tag_configure("hover", background="#eef6ff", foreground=UI_TEXT)
+        state: dict[str, Any] = {"item": "", "tags": {}}
+
+        def restore(item_id: str) -> None:
+            tags = state["tags"].pop(item_id, None)
+            if tags is not None and tree.exists(item_id):
+                tree.item(item_id, tags=tags)
+
+        def on_motion(event: Any) -> None:
+            item_id = tree.identify_row(event.y)
+            previous = state.get("item", "")
+            if item_id == previous:
+                return
+            if previous:
+                restore(previous)
+            state["item"] = item_id
+            if item_id and tree.exists(item_id):
+                current_tags = tuple(tree.item(item_id, "tags"))
+                state["tags"][item_id] = current_tags
+                tree.item(item_id, tags=(*current_tags, "hover"))
+
+        def on_leave(_event: Any) -> None:
+            previous = state.get("item", "")
+            if previous:
+                restore(previous)
+            state["item"] = ""
+
+        tree.bind("<Motion>", on_motion, add="+")
+        tree.bind("<Leave>", on_leave, add="+")
+
+    def _dialog_footer_accent(self, dialog: tk.Widget, accent: str = UI_RED, padx: int = 18, pady: tuple[int, int] = (0, 8)) -> None:
+        tk.Frame(dialog, bg=accent, height=3).pack(fill="x", padx=padx, pady=pady)
+
     def _link_label(
         self,
         parent: tk.Widget,
@@ -1296,10 +1393,14 @@ class ConverterApp(TkRoot):
             ("CSV Report", self.export_csv),
             ("TXT Report", self.export_txt),
             ("PDF Report", self.export_pdf),
+            None,
+            ("Recent Exports", self.show_recent_exports),
         ], icon="icon-excel.png", tooltip="Save the current conversion results as a report. Settings controls the default export type.").pack(side="left", padx=(0, 8), pady=8)
         self._menu_button(toolbar, "Help", [
             ("How To Use", self.show_help),
             ("About This Utility", self.show_about),
+            None,
+            ("Copy Last Error Report", self.copy_error_report),
         ], icon="icon-help.png", tooltip="Open usage help, app details, and support links.").pack(side="right", padx=(0, 16), pady=8)
         self._button(
             toolbar,
@@ -1389,10 +1490,23 @@ class ConverterApp(TkRoot):
         self.select_tab(0)
 
         footer = tk.Frame(self, bg=UI_HEADER, height=34, highlightthickness=1, highlightbackground=UI_BORDER)
-        footer.pack(fill="x")
+        footer.pack(side="bottom", fill="x")
         footer.pack_propagate(False)
         self.status_var = tk.StringVar(value="Ready")
-        tk.Label(footer, textvariable=self.status_var, bg=UI_HEADER, fg=UI_MUTED, anchor="w", padx=12).pack(side="left", fill="x", expand=True)
+        self.status_state_var = tk.StringVar(value="READY")
+        self.status_state_chip = tk.Label(
+            footer,
+            textvariable=self.status_state_var,
+            bg=UI_GREEN_SOFT,
+            fg=UI_GREEN_TEXT,
+            font=("Segoe UI", 8, "bold"),
+            padx=10,
+            pady=3,
+            highlightthickness=1,
+            highlightbackground=UI_BORDER,
+        )
+        self.status_state_chip.pack(side="left", padx=(12, 8))
+        tk.Label(footer, textvariable=self.status_var, bg=UI_HEADER, fg=UI_MUTED, anchor="w").pack(side="left", fill="x", expand=True)
         github = self._link_label(footer, "GitHub: rice2k", "https://github.com/rice2k", UI_HEADER, "Open Christopher Schumacher's GitHub profile.")
         github.pack(side="right")
         credit = tk.Frame(footer, bg=UI_HEADER)
@@ -1409,6 +1523,8 @@ class ConverterApp(TkRoot):
             padx=0,
         ).pack(side="left")
         tk.Label(credit, text=", Asset Protection FLO", bg=UI_HEADER, fg=UI_MUTED).pack(side="left")
+        body.pack_forget()
+        body.pack(fill="both", expand=True, padx=16, pady=16)
         self._apply_corporate_skin(self)
 
     def _build_batch_tab(self) -> None:
@@ -1615,6 +1731,18 @@ class ConverterApp(TkRoot):
         self.tree.tag_configure("empty", foreground=UI_MUTED)
         self.tree.bind("<Double-1>", lambda _event: self.copy_selected("pair"))
         self._enable_mousewheel(self.tree, self.tree, self.tree)
+        self._enable_tree_row_hover(self.tree)
+        self._enable_tree_header_tooltips(
+            self.tree,
+            {
+                "Line": "Original row number from the Input Queue.",
+                "Hex ID": "The 8-character access-control HEX value.",
+                "FC": "Facility Code. This is the high 16-bit value from the HEX ID.",
+                "CN": "Card Number. This is the low 16-bit value from the HEX ID.",
+                "Status": "Valid, Warning, or Invalid conversion result.",
+                "Notes": "Cleanup details, duplicate notices, or validation warnings.",
+            },
+        )
 
     def _build_single_tab(self) -> None:
         self._workspace_title(
@@ -1753,6 +1881,18 @@ class ConverterApp(TkRoot):
         self.unconvert_tree.tag_configure("warning", background=UI_WARN_SOFT, foreground=UI_WARN_TEXT)
         self.unconvert_tree.tag_configure("empty", foreground=UI_MUTED)
         self._enable_mousewheel(self.unconvert_tree, self.unconvert_tree, self.unconvert_tree)
+        self._enable_tree_row_hover(self.unconvert_tree)
+        self._enable_tree_header_tooltips(
+            self.unconvert_tree,
+            {
+                "Line": "Original row number from the FC/CN input queue.",
+                "FC": "Facility Code used to rebuild the HEX ID.",
+                "CN": "Card Number used to rebuild the HEX ID.",
+                "Hex ID": "The 8-character HEX ID created from FC and CN.",
+                "Status": "Valid, Warning, or Invalid unconvert result.",
+                "Notes": "Warnings or cleanup details for the row.",
+            },
+        )
 
     def _build_history_tab(self) -> None:
         self._workspace_title(
@@ -1819,6 +1959,18 @@ class ConverterApp(TkRoot):
         self.history_tree.tag_configure("warning", background=UI_WARN_SOFT, foreground=UI_WARN_TEXT)
         self.history_tree.tag_configure("empty", foreground=UI_MUTED)
         self._enable_mousewheel(self.history_tree, self.history_tree, self.history_tree)
+        self._enable_tree_row_hover(self.history_tree)
+        self._enable_tree_header_tooltips(
+            self.history_tree,
+            {
+                "Date/Time": "When the conversion run happened.",
+                "Action": "The workspace used for the run.",
+                "Input": "Total input rows reviewed.",
+                "Valid": "Rows that converted successfully.",
+                "Invalid": "Rows that need review.",
+                "Warnings": "Rows that converted but had unusual or duplicate values.",
+            },
+        )
         self.render_history()
 
     def _mode_changed(self, _event: Any) -> None:
@@ -1839,10 +1991,35 @@ class ConverterApp(TkRoot):
         if index == 4:
             self.render_history()
 
-    def set_status(self, message: str) -> None:
+    def set_status(self, message: str, state: str | None = None) -> None:
         self.status_var.set(message)
         if hasattr(self, "nav_status"):
             self.nav_status.set(message)
+        if not hasattr(self, "status_state_var"):
+            return
+        label = self._status_state_from_message(message, state)
+        self.status_state_var.set(label.upper())
+        bg, fg = self._status_state_colors(label)
+        self.status_state_chip.configure(bg=bg, fg=fg, highlightbackground=fg if label != "Ready" else UI_BORDER)
+
+    def _status_state_from_message(self, message: str, state: str | None = None) -> str:
+        if state in {"Ready", "Needs Review", "Exported"}:
+            return state
+        text = message.lower()
+        if text.startswith(("cleared", "removed", "kept", "workspace", "settings", "sample", "clipboard", "opened", "copied")):
+            return "Ready"
+        if any(word in text for word in ("failed", "error", "invalid", "warning", "review", "unavailable")):
+            return "Needs Review"
+        if any(word in text for word in ("saved", "exported", "report")):
+            return "Exported"
+        return "Ready"
+
+    def _status_state_colors(self, state: str) -> tuple[str, str]:
+        if state == "Needs Review":
+            return UI_WARN_SOFT, UI_WARN_TEXT
+        if state == "Exported":
+            return UI_BLUE, "#ffffff"
+        return UI_GREEN_SOFT, UI_GREEN_TEXT
 
     def _enable_drop_target(self, widget: tk.Widget) -> None:
         if DND_FILES is None or not hasattr(widget, "drop_target_register"):
@@ -2243,6 +2420,69 @@ class ConverterApp(TkRoot):
         folder = Path(self.settings.get("default_export_dir") or Path.home() / "Desktop")
         return str(folder if folder.exists() else Path.home())
 
+    def show_recent_exports(self) -> None:
+        dialog = tk.Toplevel(self)
+        dialog.title("Recent Exports")
+        dialog.configure(bg=UI_BG)
+        dialog.geometry("720x460")
+        dialog.minsize(640, 380)
+        dialog.transient(self)
+        dialog.grab_set()
+
+        self._dialog_header(dialog, "Recent Exports", "Reopen recently saved reports from this workstation.", UI_BLUE)
+
+        body = tk.Frame(dialog, bg=UI_BG)
+        body.pack(fill="both", expand=True, padx=18, pady=18)
+
+        recent = [
+            entry
+            for entry in self.settings.get("recent_exports", [])
+            if entry.get("path") and Path(entry.get("path", "")).exists()
+        ]
+        if len(recent) != len(self.settings.get("recent_exports", [])):
+            self.settings["recent_exports"] = recent
+            self.save_settings()
+
+        if not recent:
+            empty = self._card(body, bg=UI_SURFACE, border=UI_BORDER)
+            empty.pack(fill="both", expand=True)
+            tk.Frame(empty, bg=UI_RED, height=3).pack(fill="x")
+            inner = tk.Frame(empty, bg=UI_SURFACE)
+            inner.pack(fill="both", expand=True, padx=18, pady=18)
+            tk.Label(inner, text="No saved exports yet", bg=UI_SURFACE, fg=UI_TEXT, font=("Segoe UI", 13, "bold")).pack(anchor="w")
+            tk.Label(inner, text="After you export a report, it will appear here for quick reopen access.", bg=UI_SURFACE, fg=UI_MUTED, wraplength=620, justify="left").pack(anchor="w", pady=(6, 0))
+        else:
+            canvas = tk.Canvas(body, bg=UI_BG, highlightthickness=0)
+            scrollbar = ttk.Scrollbar(body, orient="vertical", command=canvas.yview, style="Dark.Vertical.TScrollbar")
+            list_frame = tk.Frame(canvas, bg=UI_BG)
+            list_id = canvas.create_window((0, 0), window=list_frame, anchor="nw")
+            canvas.configure(yscrollcommand=scrollbar.set)
+            canvas.pack(side="left", fill="both", expand=True)
+            scrollbar.pack(side="right", fill="y")
+            list_frame.bind("<Configure>", lambda _event: canvas.configure(scrollregion=canvas.bbox("all")))
+            canvas.bind("<Configure>", lambda event: canvas.itemconfigure(list_id, width=event.width))
+            self._enable_mousewheel(canvas, canvas)
+            self._enable_mousewheel_tree(list_frame, canvas)
+            for entry in recent:
+                path = Path(entry.get("path", ""))
+                card = self._card(list_frame, bg=UI_SURFACE, border=UI_BORDER)
+                card.pack(fill="x", pady=(0, 10))
+                tk.Frame(card, bg=UI_RED if entry.get("type") != "PDF" else UI_BLUE, height=3).pack(fill="x")
+                row = tk.Frame(card, bg=UI_SURFACE)
+                row.pack(fill="x", padx=12, pady=10)
+                copy = tk.Frame(row, bg=UI_SURFACE)
+                copy.pack(side="left", fill="x", expand=True)
+                tk.Label(copy, text=entry.get("name", path.name), bg=UI_SURFACE, fg=UI_TEXT, font=("Segoe UI", 10, "bold")).pack(anchor="w")
+                tk.Label(copy, text=f"{entry.get('type', 'Report')} | {entry.get('timestamp', '')}", bg=UI_SURFACE, fg=UI_MUTED, font=("Segoe UI", 8)).pack(anchor="w", pady=(2, 0))
+                tk.Label(copy, text=str(path), bg=UI_SURFACE, fg=UI_MUTED, font=("Segoe UI", 8), wraplength=440, justify="left").pack(anchor="w", pady=(3, 0))
+                self._button(row, "Open", lambda p=path: self.open_path(p, "export"), True, icon="icon-status.png").pack(side="right", padx=(8, 0))
+                self._button(row, "Folder", lambda p=path: self.open_path(p.parent, "folder"), icon="icon-folder.png").pack(side="right")
+
+        self._dialog_footer_accent(dialog)
+        row = tk.Frame(dialog, bg=UI_BG)
+        row.pack(fill="x", padx=18, pady=(0, 18))
+        self._button(row, "Close", dialog.destroy, True, icon="icon-clear.png").pack(side="right")
+
     def show_settings(self) -> None:
         dialog = tk.Toplevel(self)
         dialog.title("Settings")
@@ -2339,6 +2579,7 @@ class ConverterApp(TkRoot):
             self.set_status("Settings saved.")
             dialog.destroy()
 
+        self._dialog_footer_accent(dialog)
         row = tk.Frame(dialog, bg=UI_BG)
         row.pack(fill="x", padx=18, pady=(0, 18))
         self._button(row, "Save Settings", save_and_close, True, icon="icon-status.png").pack(side="right", padx=(8, 0))
@@ -2349,6 +2590,7 @@ class ConverterApp(TkRoot):
             os.startfile(path)  # type: ignore[attr-defined]
             self.set_status(f"Opened {item_name}: {path}")
         except OSError as exc:
+            self.record_error_report(f"Open {item_name} failed", [f"Path: {path}", f"Error: {exc}"])
             messagebox.showerror("Open failed", f"Could not open this {item_name}.\n\n{exc}")
 
     def app_launch_target(self) -> Path:
@@ -2517,6 +2759,7 @@ class ConverterApp(TkRoot):
         text.insert("1.0", preview)
         text.configure(state="disabled")
         self._enable_mousewheel(text, text, text)
+        self._dialog_footer_accent(dialog, padx=14, pady=(0, 8))
         row = tk.Frame(dialog, bg="#10141b")
         row.pack(fill="x", padx=14, pady=(0, 14))
         self._button(row, "Add To Queue", lambda: (approved.set(True), dialog.destroy()), True, icon="icon-import.png").pack(side="right", padx=(8, 0))
@@ -2552,16 +2795,20 @@ class ConverterApp(TkRoot):
         if all_lines:
             self.append_text_to_queue("\n".join(all_lines))
         if errors:
-            messagebox.showwarning("Some imports failed", "\n".join(errors[:8]))
+            self.record_error_report("Import failed for one or more files", errors)
+            messagebox.showwarning(
+                "Some imports failed",
+                "\n".join(errors[:8]) + "\n\nUse Help > Copy Last Error Report if you need to share troubleshooting details.",
+            )
         if len(files) == 1 and messages:
             self.notice_var.set(messages[0])
-            self.set_status(messages[0])
+            self.set_status(messages[0], "Needs Review" if errors else "Ready")
         else:
             status = f"Imported {len(all_lines)} row(s) from {imported} file(s)."
             if errors:
                 status += f" {len(errors)} file(s) failed."
             self.notice_var.set(status)
-            self.set_status(status)
+            self.set_status(status, "Needs Review" if errors else "Ready")
 
     def import_file(self, path: Path | None = None) -> None:
         if path is None:
@@ -2658,11 +2905,31 @@ class ConverterApp(TkRoot):
             highlightbackground=UI_BORDER,
         ).pack(fill="x")
 
+        self._dialog_footer_accent(dialog, pady=(0, 8))
         row = tk.Frame(dialog, bg=UI_BG)
         row.pack(fill="x", padx=18, pady=(0, 18))
         self._button(row, "Open File", lambda: self.open_path(path, "file"), True, icon="icon-status.png").pack(side="left", padx=(0, 8))
         self._button(row, "Open Folder", lambda: self.open_path(path.parent, "folder"), icon="icon-folder.png").pack(side="left")
         self._button(row, "Close", dialog.destroy, icon="icon-clear.png").pack(side="right")
+
+    def complete_export(self, path: Path, export_name: str) -> None:
+        self.add_recent_export(path, export_name)
+        self.set_status(f"Saved {export_name} report: {path}", "Exported")
+        self.show_export_complete(path, export_name)
+
+    def handle_export_failure(self, export_name: str, path: Path, exc: Exception) -> None:
+        self.record_error_report(
+            f"{export_name} export failed",
+            [
+                f"Export type: {export_name}",
+                f"Target file: {path}",
+                f"Error: {exc}",
+            ],
+        )
+        messagebox.showerror(
+            "Export failed",
+            f"The {export_name} export could not be saved.\n\n{exc}\n\nUse Help > Copy Last Error Report if you need to share troubleshooting details.",
+        )
 
     def export_excel(self) -> None:
         if not self.results and not self.invalid:
@@ -2679,9 +2946,12 @@ class ConverterApp(TkRoot):
         if not path_text:
             return
         path = Path(path_text)
-        self._write_excel(path)
-        self.set_status(f"Saved Excel report: {path_text}")
-        self.show_export_complete(path, "Excel Workbook")
+        try:
+            self._write_excel(path)
+        except Exception as exc:
+            self.handle_export_failure("Excel Workbook", path, exc)
+            return
+        self.complete_export(path, "Excel Workbook")
 
     def export_csv(self) -> None:
         if not self.results and not self.invalid:
@@ -2698,9 +2968,12 @@ class ConverterApp(TkRoot):
         if not path_text:
             return
         path = Path(path_text)
-        self._write_csv(path)
-        self.set_status(f"Saved CSV report: {path_text}")
-        self.show_export_complete(path, "CSV")
+        try:
+            self._write_csv(path)
+        except Exception as exc:
+            self.handle_export_failure("CSV", path, exc)
+            return
+        self.complete_export(path, "CSV")
 
     def _write_csv(self, path: Path) -> None:
         with path.open("w", newline="", encoding="utf-8-sig") as handle:
@@ -2724,12 +2997,16 @@ class ConverterApp(TkRoot):
         if not path_text:
             return
         if SimpleDocTemplate is None:
+            self.record_error_report("PDF export unavailable", ["PDF export needs reportlab installed."])
             messagebox.showerror("PDF export unavailable", "PDF export needs reportlab installed.")
             return
         path = Path(path_text)
-        self._write_pdf(path)
-        self.set_status(f"Saved PDF report: {path_text}")
-        self.show_export_complete(path, "PDF")
+        try:
+            self._write_pdf(path)
+        except Exception as exc:
+            self.handle_export_failure("PDF", path, exc)
+            return
+        self.complete_export(path, "PDF")
 
     def _write_pdf(self, path: Path) -> None:
         doc = SimpleDocTemplate(str(path), pagesize=landscape(letter), rightMargin=24, leftMargin=24, topMargin=24, bottomMargin=24)
@@ -2912,9 +3189,12 @@ class ConverterApp(TkRoot):
         if not path_text:
             return
         path = Path(path_text)
-        path.write_text(self._build_text_report(), encoding="utf-8")
-        self.set_status(f"Saved TXT report: {path_text}")
-        self.show_export_complete(path, "TXT")
+        try:
+            path.write_text(self._build_text_report(), encoding="utf-8")
+        except Exception as exc:
+            self.handle_export_failure("TXT", path, exc)
+            return
+        self.complete_export(path, "TXT")
 
     def _build_text_report(self) -> str:
         records = self._export_records()
@@ -3022,6 +3302,7 @@ class ConverterApp(TkRoot):
         add_help_card("Shortcuts", "Ctrl+I imports, Ctrl+R converts, Ctrl+E exports Excel, Ctrl+P exports PDF, Ctrl+F jumps to search, and Ctrl+L clears the workspace. Hover over controls for quick tips.", "#ff6d78")
         self._enable_mousewheel_tree(cards, canvas)
 
+        self._dialog_footer_accent(dialog, padx=16, pady=(0, 8))
         row = tk.Frame(dialog, bg=UI_BG)
         row.pack(fill="x", padx=16, pady=(0, 16))
         self._button(row, "Close", dialog.destroy, True, icon="icon-clear.png").pack(side="right")
@@ -3101,6 +3382,7 @@ class ConverterApp(TkRoot):
         self._link_label(links, "GitHub: github.com/rice2k", "https://github.com/rice2k", UI_SURFACE, "Open the project profile link.", font_size=9, padx=0).pack(anchor="w", pady=(0, 5))
         self._link_label(links, "BlueWave access-control site", BLUEWAVE_URL, UI_SURFACE, "Open BlueWave in your browser.", font_size=9, padx=0).pack(anchor="w")
 
+        self._dialog_footer_accent(dialog)
         row = tk.Frame(dialog, bg=UI_BG)
         row.pack(fill="x", padx=18, pady=(0, 16))
         self._button(row, "Close", dialog.destroy, True, icon="icon-clear.png").pack(side="right")
