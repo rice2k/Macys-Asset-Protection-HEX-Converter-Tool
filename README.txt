@@ -50,6 +50,29 @@ Conversion rule:
 Facility Code (FC) is taken from the high 16 bits. Card Number (CN) is taken
 from the low 16 bits of the 32-bit HEX value.
 
+Documentation Hub
+-----------------
+Detailed GitHub documentation is organized in:
+
+docs\README.md
+
+Detailed notes are organized in:
+
+docs\notes
+
+Important documentation pages:
+- docs\notes\user-guide.md
+- docs\notes\feature-reference.md
+- docs\notes\keyboard-shortcuts.md
+- docs\notes\version-history.md
+- docs\notes\downloads-and-releases.md
+- docs\notes\troubleshooting.md
+
+Project tags:
+access-control, asset-protection, hex-converter, facility-code, card-number,
+windows-desktop, python, tkinter, excel-import, report-export, macy-style-ui,
+china-grove
+
 Main Functions
 --------------
 1. Batch Converter
