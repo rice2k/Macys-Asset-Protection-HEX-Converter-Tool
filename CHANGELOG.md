@@ -2,6 +2,11 @@
 
 ## 1.1.1
 
+- Added Batch Scanner Input so keyboard-style handheld scanners can place each new scan at the top of the Input Queue.
+- Added scanner-ready Single Lookup behavior so a scanned HEX ID can auto-convert and copy the FC,CN pair.
+- Redesigned Single Lookup, FC/CN to Hex, Help, and About for cleaner spacing, clearer result cards, and more professional formatting.
+- Made the sidebar status card and bottom status strip clickable so Needs Review messages can jump back to the related workspace.
+- Polished dropdown and right-click menu styling with larger text and clearer hover states.
 - Added right-click edit menus for Batch Converter, Unconvert Batch, search, Single Lookup, FC, CN, and Settings input fields.
 - Added drag-to-resize handles for the Batch and Unconvert input boxes so long pasted data is easier to review.
 - Tightened import cleanup so Batch imports only detected 8-character numeric IDs and Unconvert imports only detected FC/CN pairs.

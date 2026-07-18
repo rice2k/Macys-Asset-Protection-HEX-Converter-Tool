@@ -873,6 +873,10 @@ class ConverterApp(TkRoot):
         self.sort_column = "Line"
         self.sort_reverse = False
         self.active_tab_index = 0
+        self.status_target_tab = 0
+        self._batch_scan_after: str | None = None
+        self._single_scan_after: str | None = None
+        self.last_single_auto_value = ""
         self.logo_photo: ImageTk.PhotoImage | None = None
         self.app_icon_photo: ImageTk.PhotoImage | None = None
         self.header_accent_photo: ImageTk.PhotoImage | None = None
@@ -1084,15 +1088,37 @@ class ConverterApp(TkRoot):
             self.search_entry.focus_set()
         self.set_status("Search is ready.")
 
+    def _menu_options(self) -> dict[str, Any]:
+        return {
+            "bg": UI_SURFACE,
+            "fg": UI_TEXT,
+            "activebackground": UI_RED,
+            "activeforeground": "#ffffff",
+            "disabledforeground": UI_MUTED,
+            "bd": 1,
+            "relief": "solid",
+            "activeborderwidth": 0,
+            "font": ("Segoe UI", 10),
+        }
+
+    def _styled_menu(self, parent: tk.Widget) -> tk.Menu:
+        return tk.Menu(parent, tearoff=False, **self._menu_options())
+
+    def _style_menu(self, menu: tk.Menu) -> None:
+        try:
+            menu.configure(**self._menu_options())
+        except tk.TclError:
+            pass
+
     def _build_menu(self) -> None:
         menubar = tk.Menu(self)
-        import_menu = tk.Menu(menubar, tearoff=False)
+        import_menu = self._styled_menu(menubar)
         import_menu.add_command(label="Browse Files", command=self.import_file)
         import_menu.add_command(label="Paste Clipboard To Queue", command=self.paste_clipboard_to_queue)
         import_menu.add_command(label="Load Sample IDs", command=self.load_sample)
         menubar.add_cascade(label="Import", menu=import_menu)
 
-        file_menu = tk.Menu(menubar, tearoff=False)
+        file_menu = self._styled_menu(menubar)
         file_menu.add_command(label="Settings", command=self.show_settings)
         file_menu.add_command(label="Choose Default Export Folder", command=self.choose_export_folder)
         file_menu.add_command(label="Open Export Folder", command=self.open_export_folder)
@@ -1101,7 +1127,7 @@ class ConverterApp(TkRoot):
         file_menu.add_command(label="Exit", command=self.destroy)
         menubar.add_cascade(label="File", menu=file_menu)
 
-        export_menu = tk.Menu(menubar, tearoff=False)
+        export_menu = self._styled_menu(menubar)
         export_menu.add_command(label="Export Default", command=self.export_default)
         export_menu.add_separator()
         export_menu.add_command(label="Excel Workbook", command=self.export_excel)
@@ -1112,7 +1138,7 @@ class ConverterApp(TkRoot):
         export_menu.add_command(label="Recent Exports", command=self.show_recent_exports)
         menubar.add_cascade(label="Export", menu=export_menu)
 
-        help_menu = tk.Menu(menubar, tearoff=False)
+        help_menu = self._styled_menu(menubar)
         help_menu.add_command(label="How To Use", command=self.show_help)
         help_menu.add_command(label="About", command=self.show_about)
         help_menu.add_command(label="Copy Last Error Report", command=self.copy_error_report)
@@ -1148,11 +1174,12 @@ class ConverterApp(TkRoot):
         primary: bool = False,
         icon: str | None = None,
         tooltip: str | None = None,
+        compact: bool = False,
     ) -> tk.Button:
         bg = UI_RED if primary else UI_SURFACE_ALT
         hover = UI_RED_DARK if primary else "#eef2f6"
         fg = "#ffffff" if primary else UI_TEXT
-        icon_photo = self._load_icon(icon, 18) if icon else None
+        icon_photo = self._load_icon(icon, 16 if compact else 18) if icon else None
         button = tk.Button(
             parent,
             text=text,
@@ -1167,9 +1194,9 @@ class ConverterApp(TkRoot):
             bd=0,
             highlightthickness=1,
             highlightbackground=UI_BORDER if not primary else UI_RED_DARK,
-            font=("Segoe UI", 9, "bold"),
-            padx=13,
-            pady=8,
+            font=("Segoe UI", 8 if compact else 9, "bold"),
+            padx=8 if compact else 13,
+            pady=7 if compact else 8,
             cursor="hand2",
         )
         button.bind("<Enter>", lambda _event: button.configure(bg=hover))
@@ -1207,17 +1234,7 @@ class ConverterApp(TkRoot):
             pady=8,
             cursor="hand2",
         )
-        menu = tk.Menu(
-            button,
-            tearoff=False,
-            bg=UI_SURFACE,
-            fg=UI_TEXT,
-            activebackground=UI_RED,
-            activeforeground="#ffffff",
-            disabledforeground=UI_MUTED,
-            bd=0,
-            relief="flat",
-        )
+        menu = self._styled_menu(button)
         for item in items:
             if item is None:
                 menu.add_separator()
@@ -1445,17 +1462,7 @@ class ConverterApp(TkRoot):
         tree.bind("<Leave>", on_leave, add="+")
 
     def _context_menu(self, items: list[tuple[str, Any] | None]) -> tk.Menu:
-        menu = tk.Menu(
-            self,
-            tearoff=False,
-            bg=UI_SURFACE,
-            fg=UI_TEXT,
-            activebackground=UI_RED,
-            activeforeground="#ffffff",
-            disabledforeground=UI_MUTED,
-            bd=0,
-            relief="flat",
-        )
+        menu = self._styled_menu(self)
         for item in items:
             if item is None:
                 menu.add_separator()
@@ -1818,7 +1825,7 @@ class ConverterApp(TkRoot):
         self.nav_status = tk.StringVar(value="Paste IDs, import files, or choose a workspace.")
         status_card = self._card(nav, bg=UI_SURFACE_ALT, border=UI_BORDER)
         status_card.pack(fill="x", padx=10, pady=(0, 10))
-        status_card.configure(height=92)
+        status_card.configure(height=118)
         status_card.pack_propagate(False)
         tk.Frame(status_card, bg=UI_RED, height=3).pack(fill="x")
         status_head = tk.Frame(status_card, bg=UI_SURFACE_ALT)
@@ -1832,15 +1839,18 @@ class ConverterApp(TkRoot):
             textvariable=self.nav_status,
             bg=UI_SURFACE_ALT,
             fg=UI_BLUE,
-            wraplength=176,
+            wraplength=178,
             justify="left",
             anchor="w",
             width=24,
-            height=3,
-            font=("Segoe UI", 9, "bold"),
+            height=5,
+            font=("Segoe UI", 8, "bold"),
         )
         self.nav_status_label.pack(fill="x", padx=10, pady=(0, 10))
-        ToolTip(status_card, "Shows the latest action or result from the current workspace.")
+        for widget in (status_card, status_head, self.nav_status_label):
+            widget.configure(cursor="hand2")
+            widget.bind("<Button-1>", self.open_status_target, add="+")
+        ToolTip(status_card, "Shows the latest action or result. Click to open the related workspace.")
 
         content = tk.Frame(body, bg=UI_BG)
         content.grid(row=0, column=1, sticky="nsew")
@@ -1895,6 +1905,10 @@ class ConverterApp(TkRoot):
         )
         self.footer_status_label = tk.Label(footer, textvariable=self.status_var, bg=UI_HEADER, fg=UI_MUTED, anchor="w")
         self.footer_status_label.pack(side="left", fill="x", expand=True)
+        for widget in (self.status_state_chip, self.footer_status_label):
+            widget.configure(cursor="hand2")
+            widget.bind("<Button-1>", self.open_status_target, add="+")
+            ToolTip(widget, "Click to open the workspace related to this status message.")
         tk.Label(
             footer,
             text=f"Version {APP_VERSION} | Contact and project links are in Help > About",
@@ -1974,13 +1988,51 @@ class ConverterApp(TkRoot):
         ).pack(side="right", padx=(0, 10))
         tk.Label(
             input_panel,
-            text="Paste HEX IDs, import files, or drag TXT/CSV/Excel/XML/HTML files onto this box. The app extracts clean 8-character IDs and flags duplicates.",
+            text="Paste HEX IDs, import files, drag supported files onto this box, or use Scanner Input for handheld scans.",
             bg="#10141b",
             fg="#a8b2c2",
             font=("Segoe UI", 9),
             wraplength=520,
             justify="left",
         ).pack(anchor="w", padx=12, pady=(0, 8))
+        scan_panel = tk.Frame(input_panel, bg=UI_SURFACE_ALT, highlightthickness=1, highlightbackground=UI_BORDER)
+        scan_panel.pack(fill="x", padx=12, pady=(0, 8))
+        tk.Frame(scan_panel, bg=UI_RED, width=4).pack(side="left", fill="y")
+        scan_copy = tk.Frame(scan_panel, bg=UI_SURFACE_ALT)
+        scan_copy.pack(side="left", fill="x", expand=True, padx=10, pady=8)
+        tk.Label(scan_copy, text="Scanner Input", bg=UI_SURFACE_ALT, fg=UI_TEXT, font=("Segoe UI", 10, "bold")).pack(anchor="w")
+        tk.Label(
+            scan_copy,
+            text="Focus here, scan an ID, and press Enter/Tab from the scanner. New scans go to the top of the queue.",
+            bg=UI_SURFACE_ALT,
+            fg=UI_MUTED,
+            font=("Segoe UI", 8),
+            wraplength=430,
+            justify="left",
+        ).pack(anchor="w", pady=(2, 0))
+        self.batch_scan_var = tk.StringVar()
+        scan_entry_shell = tk.Frame(scan_panel, bg=UI_INPUT, highlightthickness=1, highlightbackground=UI_RED)
+        scan_entry_shell.pack(side="right", fill="x", expand=False, padx=(8, 10), pady=10)
+        scan_icon = self._load_icon("icon-search.png", 16)
+        if scan_icon:
+            tk.Label(scan_entry_shell, image=scan_icon, bg=UI_INPUT).pack(side="left", padx=(8, 3))
+        self.batch_scan_entry = tk.Entry(
+            scan_entry_shell,
+            textvariable=self.batch_scan_var,
+            bg=UI_INPUT,
+            fg=UI_TEXT,
+            insertbackground=UI_RED,
+            relief="flat",
+            width=22,
+            font=("Cascadia Mono", 11, "bold"),
+        )
+        self.batch_scan_entry.pack(side="left", fill="x", ipady=7, padx=(0, 8))
+        self.batch_scan_entry.bind("<Return>", self.handle_batch_scan_submit)
+        self.batch_scan_entry.bind("<KP_Enter>", self.handle_batch_scan_submit)
+        self.batch_scan_entry.bind("<Tab>", self.handle_batch_scan_submit)
+        self.batch_scan_entry.bind("<KeyRelease>", self.schedule_batch_scan_autofill)
+        self._enable_edit_context_menu(self.batch_scan_entry)
+        ToolTip(self.batch_scan_entry, "Most handheld scanners type like a keyboard. Configure the scanner suffix to Enter or Tab when possible.")
         multi_frame = tk.Frame(input_panel, bg="#10141b")
         multi_frame.pack(fill="both", expand=True, padx=12)
         multi_frame.rowconfigure(0, weight=1)
@@ -2028,8 +2080,8 @@ class ConverterApp(TkRoot):
             ("Clear", self.clear_workspace, False, "icon-clear.png", "Clear input, results, and single-lookup fields."),
         ]
         for idx, (text, command, primary, icon, tooltip) in enumerate(batch_actions):
-            button = self._button(btns, text, command, primary, icon=icon, tooltip=tooltip)
-            button.grid(row=idx // 3, column=idx % 3, sticky="w", padx=(0, 8), pady=(0, 5) if idx < 3 else (0, 0))
+            button = self._button(btns, text, command, primary, icon=icon, tooltip=tooltip, compact=True)
+            button.pack(side="left", padx=(0, 6), pady=0)
 
         summary = self._panel(top)
         summary.pack(side="right", fill="y")
@@ -2104,8 +2156,8 @@ class ConverterApp(TkRoot):
         tk.Label(filter_row, text="Status", bg="#10141b", fg="#a8b2c2", font=("Segoe UI", 9, "bold")).pack(side="left", padx=(0, 8))
         self.status_filter_var = tk.StringVar(value="All")
         status_menu = tk.OptionMenu(filter_row, self.status_filter_var, "All", "Valid", "Warning", "Invalid", command=lambda _value: self.render_results())
-        status_menu.configure(bg="#202633", fg="#ffffff", activebackground="#2c3444", activeforeground="#ffffff", relief="flat", highlightthickness=1, highlightbackground="#4a5261")
-        status_menu["menu"].configure(bg="#151922", fg="#ffffff", activebackground="#e51b2d", activeforeground="#ffffff")
+        status_menu.configure(bg=UI_SURFACE_ALT, fg=UI_TEXT, activebackground="#eef2f6", activeforeground=UI_TEXT, relief="flat", highlightthickness=1, highlightbackground=UI_BORDER, font=("Segoe UI", 9, "bold"), padx=10, pady=5)
+        self._style_menu(status_menu["menu"])
         status_menu.pack(side="left")
 
         self.results_empty_frame = tk.Frame(results_panel, bg=UI_SURFACE_ALT, highlightthickness=1, highlightbackground=UI_BORDER)
@@ -2178,36 +2230,94 @@ class ConverterApp(TkRoot):
             [("Quick check", UI_BLUE), ("Copies FC,CN", UI_GREEN_TEXT)],
             UI_BLUE,
         )
-        panel = self._panel(self.single_tab)
-        panel.pack(fill="x", padx=2, pady=2)
-        tk.Label(panel, text="HEX ID", bg="#10141b", fg="#ffffff", font=("Segoe UI", 12, "bold")).pack(anchor="w", padx=12, pady=(12, 4))
-        tk.Label(panel, text="Enter one 8-character HEX value. Press Enter or use Convert.", bg="#10141b", fg="#a8b2c2", font=("Segoe UI", 9)).pack(anchor="w", padx=12, pady=(0, 8))
-        self.single_var = tk.StringVar()
-        entry = tk.Entry(
+        top = tk.Frame(self.single_tab, bg=UI_BG)
+        top.pack(fill="x", pady=(0, 12))
+
+        panel = self._panel(top)
+        panel.pack(side="left", fill="both", expand=True, padx=(0, 12))
+        tk.Frame(panel, bg=UI_BLUE, height=3).pack(fill="x")
+        tk.Label(panel, text="Scanner / Single Lookup", bg="#10141b", fg="#ffffff", font=("Segoe UI", 13, "bold")).pack(anchor="w", padx=12, pady=(12, 4))
+        tk.Label(
             panel,
+            text="Scan or type one 8-character HEX ID. A handheld scanner can send Enter or Tab after the scan; the app converts automatically.",
+            bg="#10141b",
+            fg="#a8b2c2",
+            font=("Segoe UI", 9),
+            wraplength=560,
+            justify="left",
+        ).pack(anchor="w", padx=12, pady=(0, 10))
+        self.single_var = tk.StringVar()
+        entry_shell = tk.Frame(panel, bg=UI_INPUT, highlightthickness=1, highlightbackground=UI_BLUE)
+        entry_shell.configure(width=360, height=48)
+        entry_shell.pack(anchor="w", padx=12, pady=(0, 10))
+        entry_shell.pack_propagate(False)
+        single_icon = self._load_icon("nav-single.png", 18)
+        if single_icon:
+            tk.Label(entry_shell, image=single_icon, bg=UI_INPUT).pack(side="left", padx=(10, 5))
+        entry = tk.Entry(
+            entry_shell,
             textvariable=self.single_var,
             bg=UI_INPUT,
             fg=UI_TEXT,
             insertbackground=UI_RED,
             relief="flat",
-            highlightthickness=1,
-            highlightbackground=UI_BLUE,
-            highlightcolor=UI_RED,
             font=("Cascadia Mono", 12),
             width=24,
         )
-        entry.pack(anchor="w", padx=12, ipady=9)
-        entry.bind("<Return>", lambda _event: self.convert_single())
+        entry.pack(side="left", fill="x", expand=True, ipady=10, padx=(0, 10))
+        self.single_entry = entry
+        entry.bind("<Return>", lambda _event: self.convert_single(source="scan"))
+        entry.bind("<KP_Enter>", lambda _event: self.convert_single(source="scan"))
+        entry.bind("<Tab>", self.handle_single_scan_tab)
+        entry.bind("<KeyRelease>", self.schedule_single_scan_autoconvert)
         self._enable_edit_context_menu(entry)
         row = tk.Frame(panel, bg="#10141b")
-        row.pack(fill="x", padx=12, pady=12)
-        self._button(row, "Convert", self.convert_single, True, icon="icon-convert.png", tooltip="Convert one HEX ID and copy the FC,CN pair.").pack(side="left", padx=(0, 8))
-        self._button(row, "Clear", self.clear_single, icon="icon-clear.png", tooltip="Clear the single lookup field.").pack(side="left")
+        row.pack(fill="x", padx=12, pady=(0, 12))
+        self._button(row, "Convert", self.convert_single, True, icon="icon-convert.png", tooltip="Convert one HEX ID and copy the FC,CN pair.", compact=True).pack(side="left", padx=(0, 6))
+        self._button(row, "Clear", self.clear_single, icon="icon-clear.png", tooltip="Clear the single lookup field.", compact=True).pack(side="left", padx=(0, 6))
+        self._button(row, "Focus Scanner", lambda: self.single_entry.focus_set(), icon="icon-search.png", tooltip="Move the cursor back to the scanner input field.", compact=True).pack(side="left")
+
+        info = self._card(panel, bg=UI_SURFACE_ALT, border=UI_BORDER)
+        info.pack(fill="x", padx=12, pady=(0, 12))
+        tk.Frame(info, bg=UI_BLUE, width=4).pack(side="left", fill="y")
+        tk.Label(
+            info,
+            text="Scanner tip: most USB handheld scanners work as keyboard input. Enter or Tab as the scanner suffix is recommended.",
+            bg=UI_SURFACE_ALT,
+            fg=UI_MUTED,
+            justify="left",
+            wraplength=560,
+            padx=12,
+            pady=10,
+            font=("Segoe UI", 9),
+        ).pack(side="left", fill="x", expand=True)
+
+        result_panel = self._panel(top)
+        result_panel.pack(side="right", fill="both")
+        result_panel.configure(width=330, height=300)
+        result_panel.pack_propagate(False)
+        tk.Frame(result_panel, bg=UI_BLUE, height=3).pack(fill="x")
+        tk.Label(result_panel, text="Lookup Result", bg="#10141b", fg="#ffffff", font=("Segoe UI", 13, "bold")).pack(anchor="w", padx=12, pady=(12, 4))
+        tk.Label(result_panel, text="Result is copied as FC,CN after conversion.", bg="#10141b", fg="#a8b2c2", font=("Segoe UI", 9), wraplength=290, justify="left").pack(anchor="w", padx=12, pady=(0, 10))
         self.single_result = tk.StringVar(value="Waiting for one 8-character HEX ID.")
-        result_card = self._card(panel, bg=UI_SURFACE_ALT, border=UI_BORDER)
-        result_card.pack(fill="x", padx=12, pady=(0, 12))
-        tk.Frame(result_card, bg=UI_BLUE, width=4).pack(side="left", fill="y")
-        tk.Label(result_card, textvariable=self.single_result, bg=UI_SURFACE_ALT, fg=UI_BLUE, anchor="w", justify="left", padx=14, pady=16, font=("Cascadia Mono", 12, "bold"), wraplength=900).pack(fill="x", side="left", expand=True)
+        self.single_hex_var = tk.StringVar(value="--")
+        self.single_fc_var = tk.StringVar(value="--")
+        self.single_cn_var = tk.StringVar(value="--")
+        self.single_note_var = tk.StringVar(value="No lookup has run yet.")
+
+        def result_row(label_text: str, variable: tk.StringVar, accent: str) -> None:
+            item = tk.Frame(result_panel, bg=UI_SURFACE_ALT, highlightthickness=1, highlightbackground=UI_BORDER)
+            item.pack(fill="x", padx=12, pady=(0, 8))
+            tk.Frame(item, bg=accent, width=4).pack(side="left", fill="y")
+            copy = tk.Frame(item, bg=UI_SURFACE_ALT)
+            copy.pack(side="left", fill="x", expand=True, padx=10, pady=8)
+            tk.Label(copy, text=label_text.upper(), bg=UI_SURFACE_ALT, fg=UI_MUTED, font=("Segoe UI", 8, "bold")).pack(anchor="w")
+            tk.Label(copy, textvariable=variable, bg=UI_SURFACE_ALT, fg=accent, font=("Cascadia Mono", 13, "bold")).pack(anchor="w", pady=(2, 0))
+
+        result_row("Hex ID", self.single_hex_var, UI_BLUE)
+        result_row("Facility Code", self.single_fc_var, UI_GREEN_TEXT)
+        result_row("Card Number", self.single_cn_var, UI_RED)
+        tk.Label(result_panel, textvariable=self.single_note_var, bg="#10141b", fg=UI_WARN_TEXT, wraplength=290, justify="left", font=("Segoe UI", 9, "bold")).pack(anchor="w", padx=12, pady=(2, 12))
 
     def _build_reverse_tab(self) -> None:
         self._workspace_title(
@@ -2217,16 +2327,34 @@ class ConverterApp(TkRoot):
             [("Reverse lookup", UI_WARN_TEXT), ("Local conversion", UI_GREEN_TEXT)],
             UI_WARN_TEXT,
         )
-        panel = self._panel(self.reverse_tab)
-        panel.pack(fill="x", padx=2, pady=2)
-        tk.Label(panel, text="Facility Code and Card Number", bg="#10141b", fg="#ffffff", font=("Segoe UI", 12, "bold")).pack(anchor="w", padx=12, pady=(12, 4))
-        tk.Label(panel, text="Enter whole numbers from 0 to 65535.", bg="#10141b", fg="#a8b2c2", font=("Segoe UI", 9)).pack(anchor="w", padx=12, pady=(0, 8))
+        top = tk.Frame(self.reverse_tab, bg=UI_BG)
+        top.pack(fill="x", pady=(0, 12))
+
+        panel = self._panel(top)
+        panel.pack(side="left", fill="both", expand=True, padx=(0, 12))
+        tk.Frame(panel, bg=UI_WARN_TEXT, height=3).pack(fill="x")
+        tk.Label(panel, text="Facility Code and Card Number", bg="#10141b", fg="#ffffff", font=("Segoe UI", 13, "bold")).pack(anchor="w", padx=12, pady=(12, 4))
+        tk.Label(
+            panel,
+            text="Enter whole numbers from 0 to 65535. Press Enter in either field or use Convert to build the HEX ID.",
+            bg="#10141b",
+            fg="#a8b2c2",
+            font=("Segoe UI", 9),
+            wraplength=560,
+            justify="left",
+        ).pack(anchor="w", padx=12, pady=(0, 10))
         self.fc_var = tk.StringVar()
         self.cn_var = tk.StringVar()
-        for label, var in [("Facility Code", self.fc_var), ("Card Number", self.cn_var)]:
-            tk.Label(panel, text=label, bg="#10141b", fg="#a8b2c2").pack(anchor="w", padx=12, pady=(8, 4))
+        entry_grid = tk.Frame(panel, bg="#10141b")
+        entry_grid.pack(anchor="w", padx=12, pady=(0, 10))
+        for column, (label, var) in enumerate([("Facility Code", self.fc_var), ("Card Number", self.cn_var)]):
+            shell = tk.Frame(entry_grid, bg=UI_SURFACE_ALT)
+            shell.configure(width=260, height=78)
+            shell.pack(side="left", padx=(0, 12) if column == 0 else (0, 0))
+            shell.pack_propagate(False)
+            tk.Label(shell, text=label.upper(), bg=UI_SURFACE_ALT, fg=UI_MUTED, font=("Segoe UI", 8, "bold")).pack(anchor="w", padx=10, pady=(8, 3))
             entry = tk.Entry(
-                panel,
+                shell,
                 textvariable=var,
                 bg=UI_INPUT,
                 fg=UI_TEXT,
@@ -2238,17 +2366,52 @@ class ConverterApp(TkRoot):
                 font=("Cascadia Mono", 12),
                 width=14,
             )
-            entry.pack(anchor="w", padx=12, ipady=9)
+            entry.pack(fill="x", padx=10, pady=(0, 10), ipady=9)
+            entry.bind("<Return>", lambda _event: self.convert_reverse())
+            entry.bind("<KP_Enter>", lambda _event: self.convert_reverse())
             self._enable_edit_context_menu(entry)
+            if label == "Facility Code":
+                self.fc_entry = entry
+            else:
+                self.cn_entry = entry
         row = tk.Frame(panel, bg="#10141b")
-        row.pack(fill="x", padx=12, pady=12)
-        self._button(row, "Convert", self.convert_reverse, True, icon="icon-convert.png", tooltip="Build one 8-character HEX ID from FC and CN.").pack(side="left", padx=(0, 8))
-        self._button(row, "Clear", self.clear_reverse, icon="icon-clear.png", tooltip="Clear the FC and CN fields.").pack(side="left")
+        row.pack(fill="x", padx=12, pady=(0, 12))
+        self._button(row, "Convert", self.convert_reverse, True, icon="icon-convert.png", tooltip="Build one 8-character HEX ID from FC and CN.", compact=True).pack(side="left", padx=(0, 6))
+        self._button(row, "Clear", self.clear_reverse, icon="icon-clear.png", tooltip="Clear the FC and CN fields.", compact=True).pack(side="left")
+
+        guide = self._card(panel, bg=UI_SURFACE_ALT, border=UI_BORDER)
+        guide.pack(fill="x", padx=12, pady=(0, 12))
+        tk.Frame(guide, bg=UI_WARN_TEXT, width=4).pack(side="left", fill="y")
+        tk.Label(
+            guide,
+            text="Formula: Facility Code uses the high 16 bits. Card Number uses the low 16 bits. The app combines both into one 8-character HEX value.",
+            bg=UI_SURFACE_ALT,
+            fg=UI_MUTED,
+            justify="left",
+            wraplength=560,
+            padx=12,
+            pady=10,
+            font=("Segoe UI", 9),
+        ).pack(side="left", fill="x", expand=True)
+
+        result_panel = self._panel(top)
+        result_panel.pack(side="right", fill="both")
+        result_panel.configure(width=330, height=240)
+        result_panel.pack_propagate(False)
+        tk.Frame(result_panel, bg=UI_WARN_TEXT, height=3).pack(fill="x")
+        tk.Label(result_panel, text="HEX Output", bg="#10141b", fg="#ffffff", font=("Segoe UI", 13, "bold")).pack(anchor="w", padx=12, pady=(12, 4))
+        tk.Label(result_panel, text="HEX is copied after conversion.", bg="#10141b", fg="#a8b2c2", font=("Segoe UI", 9), wraplength=290, justify="left").pack(anchor="w", padx=12, pady=(0, 10))
         self.reverse_result = tk.StringVar(value="Waiting for Facility Code and Card Number.")
-        result_card = self._card(panel, bg=UI_SURFACE_ALT, border=UI_BORDER)
-        result_card.pack(fill="x", padx=12, pady=(0, 12))
-        tk.Frame(result_card, bg=UI_WARN_TEXT, width=4).pack(side="left", fill="y")
-        tk.Label(result_card, textvariable=self.reverse_result, bg=UI_SURFACE_ALT, fg=UI_WARN_TEXT, anchor="w", justify="left", padx=14, pady=16, font=("Cascadia Mono", 12, "bold"), wraplength=900).pack(fill="x", side="left", expand=True)
+        self.reverse_hex_var = tk.StringVar(value="--")
+        self.reverse_note_var = tk.StringVar(value="No reverse lookup has run yet.")
+        hex_card = tk.Frame(result_panel, bg=UI_SURFACE_ALT, highlightthickness=1, highlightbackground=UI_BORDER)
+        hex_card.pack(fill="x", padx=12, pady=(0, 8))
+        tk.Frame(hex_card, bg=UI_WARN_TEXT, width=4).pack(side="left", fill="y")
+        hex_copy = tk.Frame(hex_card, bg=UI_SURFACE_ALT)
+        hex_copy.pack(side="left", fill="x", expand=True, padx=10, pady=10)
+        tk.Label(hex_copy, text="HEX ID", bg=UI_SURFACE_ALT, fg=UI_MUTED, font=("Segoe UI", 8, "bold")).pack(anchor="w")
+        tk.Label(hex_copy, textvariable=self.reverse_hex_var, bg=UI_SURFACE_ALT, fg=UI_WARN_TEXT, font=("Cascadia Mono", 16, "bold")).pack(anchor="w", pady=(2, 0))
+        tk.Label(result_panel, textvariable=self.reverse_note_var, bg="#10141b", fg=UI_WARN_TEXT, wraplength=290, justify="left", font=("Segoe UI", 9, "bold")).pack(anchor="w", padx=12, pady=(2, 12))
 
     def _build_unconvert_tab(self) -> None:
         self._workspace_title(
@@ -2306,15 +2469,15 @@ class ConverterApp(TkRoot):
             ("Clear", self.clear_unconvert, False, "icon-clear.png", "Clear the unconvert input and results."),
         ]
         for idx, (text, command, primary, icon, tooltip) in enumerate(unconvert_actions):
-            button = self._button(row, text, command, primary, icon=icon, tooltip=tooltip)
-            button.grid(row=idx // 2, column=idx % 2, sticky="w", padx=(0, 8), pady=(0, 8) if idx < 2 else (0, 0))
+            button = self._button(row, text, command, primary, icon=icon, tooltip=tooltip, compact=True)
+            button.pack(side="left", padx=(0, 6), pady=0)
 
         summary = self._panel(top)
         summary.pack(side="right", fill="y")
         summary.configure(width=280)
         summary.pack_propagate(False)
         tk.Label(summary, text="Unconvert Summary", bg="#10141b", fg="#ffffff", font=("Segoe UI", 12, "bold")).pack(anchor="w", padx=12, pady=(12, 8))
-        self.unconvert_summary_var = tk.StringVar(value="No unconvert run yet")
+        self.unconvert_summary_var = tk.StringVar(value="No Unconvert run yet")
         tk.Label(summary, textvariable=self.unconvert_summary_var, bg="#10141b", fg="#46d9ff", wraplength=235, justify="left", font=("Segoe UI", 11, "bold")).pack(anchor="w", padx=12, pady=(8, 12))
         tk.Label(summary, text="This tab reverses FC/CN pairs back into 8-character HEX IDs.", bg="#10141b", fg="#a8b2c2", wraplength=235, justify="left").pack(anchor="w", padx=12, pady=(0, 12))
 
@@ -2475,7 +2638,7 @@ class ConverterApp(TkRoot):
         tab_status = {
             0: "Batch: import IDs, convert, review, export.",
             1: "Single: check one HEX ID.",
-            2: "Reverse: build one HEX from FC/CN.",
+            2: "Reverse: FC/CN to HEX.",
             3: "Unconvert: import or paste FC/CN pairs.",
             4: "History: recent local activity.",
         }
@@ -2491,8 +2654,29 @@ class ConverterApp(TkRoot):
                 button.configure(bg=UI_SURFACE, fg=UI_TEXT, highlightbackground=UI_BORDER)
         if index == 4:
             self.render_history()
+        self.after(120, lambda idx=index: self.focus_primary_control(idx))
 
-    def set_status(self, message: str, state: str | None = None) -> None:
+    def focus_primary_control(self, index: int | None = None) -> None:
+        target = getattr(self, "active_tab_index", 0) if index is None else index
+        try:
+            if target == 0 and hasattr(self, "batch_scan_entry"):
+                self.batch_scan_entry.focus_set()
+            elif target == 1 and hasattr(self, "single_entry"):
+                self.single_entry.focus_set()
+            elif target == 2 and hasattr(self, "fc_entry"):
+                self.fc_entry.focus_set()
+            elif target == 3 and hasattr(self, "unconvert_text"):
+                self.unconvert_text.focus_set()
+            elif target == 4 and hasattr(self, "history_tree"):
+                self.history_tree.focus_set()
+        except tk.TclError:
+            pass
+
+    def set_status(self, message: str, state: str | None = None, target_tab: int | None = None) -> None:
+        if target_tab is not None:
+            self.status_target_tab = target_tab
+        else:
+            self.status_target_tab = self._infer_status_target_tab(message)
         self.status_var.set(message)
         if hasattr(self, "nav_status"):
             self.nav_status.set(self._compact_status(message))
@@ -2502,6 +2686,43 @@ class ConverterApp(TkRoot):
         self.status_state_var.set(label.upper())
         bg, fg = self._status_state_colors(label)
         self.status_state_chip.configure(bg=bg, fg=fg, highlightbackground=fg if label != "Ready" else UI_BORDER)
+
+    def _infer_status_target_tab(self, message: str) -> int:
+        text = str(message or "").lower()
+        if "single" in text:
+            return 1
+        if "unconvert" in text or "fc/cn pair" in text or "fc/cn pairs" in text:
+            return 3
+        if "hex value created" in text or "fc/cn to hex" in text or "facility code" in text:
+            return 2
+        if "history" in text:
+            return 4
+        return getattr(self, "active_tab_index", 0)
+
+    def open_status_target(self, _event: Any | None = None) -> str:
+        target = max(0, min(4, int(getattr(self, "status_target_tab", getattr(self, "active_tab_index", 0)))))
+        self.select_tab(target)
+
+        def focus_target() -> None:
+            if target == 0:
+                if (self.results or self.invalid) and hasattr(self, "tree"):
+                    self.tree.focus_set()
+                elif hasattr(self, "batch_scan_entry"):
+                    self.batch_scan_entry.focus_set()
+            elif target == 1 and hasattr(self, "single_entry"):
+                self.single_entry.focus_set()
+            elif target == 2 and hasattr(self, "fc_entry"):
+                self.fc_entry.focus_set()
+            elif target == 3:
+                if (self.unconvert_results or self.unconvert_invalid) and hasattr(self, "unconvert_tree"):
+                    self.unconvert_tree.focus_set()
+                elif hasattr(self, "unconvert_text"):
+                    self.unconvert_text.focus_set()
+            elif target == 4 and hasattr(self, "history_tree"):
+                self.history_tree.focus_set()
+
+        self.after(180, focus_target)
+        return "break"
 
     def set_busy(self, message: str) -> None:
         if not hasattr(self, "busy_label"):
@@ -2532,7 +2753,7 @@ class ConverterApp(TkRoot):
         kept = re.match(r"Kept (\d+) valid row\(s\); removed (\d+) invalid row\(s\)\.", text)
         if kept:
             return f"{kept.group(1)} valid / {kept.group(2)} removed"
-        if text == "Single ID converted and FC,CN copied.":
+        if text in {"Single ID converted and FC,CN copied.", "Single scan converted and FC,CN copied."}:
             return "Single ID converted"
         if text == "Hex value created and copied.":
             return "HEX value copied"
@@ -2603,6 +2824,51 @@ class ConverterApp(TkRoot):
         self.multi_text.insert("1.0", f"{current}\n{incoming}".strip() if current else incoming)
         self.multi_text.edit_modified(True)
         self.handle_batch_input_changed()
+
+    def prepend_text_to_queue(self, text: str) -> None:
+        incoming = text.strip()
+        if not incoming:
+            return
+        current = self.multi_text.get("1.0", "end").strip()
+        self.multi_text.delete("1.0", "end")
+        self.multi_text.insert("1.0", f"{incoming}\n{current}".strip() if current else incoming)
+        self.multi_text.edit_modified(True)
+        self.handle_batch_input_changed()
+
+    def handle_batch_scan_submit(self, _event: Any | None = None) -> str:
+        if self._batch_scan_after:
+            self.after_cancel(self._batch_scan_after)
+            self._batch_scan_after = None
+        text = self.batch_scan_var.get() if hasattr(self, "batch_scan_var") else ""
+        cleanup = clean_id_lines_from_text(text)
+        if not cleanup["lines"]:
+            self.set_status("Scanner input needs review: no clean 8-character ID found.", "Needs Review", target_tab=0)
+            return "break"
+        self.prepend_text_to_queue("\n".join(cleanup["lines"]))
+        self.batch_scan_var.set("")
+        if hasattr(self, "batch_scan_entry"):
+            self.batch_scan_entry.focus_set()
+        label = "ID" if len(cleanup["lines"]) == 1 else "IDs"
+        self.notice_var.set(f"Scanner added {len(cleanup['lines'])} clean {label} to the top of the queue.")
+        self.set_status(f"Scanner added {len(cleanup['lines'])} clean {label} to Batch Converter.", "Ready", target_tab=0)
+        return "break"
+
+    def schedule_batch_scan_autofill(self, event: Any | None = None) -> None:
+        key = getattr(event, "keysym", "")
+        if key in {"Return", "KP_Enter", "Tab", "Shift_L", "Shift_R", "Control_L", "Control_R", "Alt_L", "Alt_R"}:
+            return
+        if self._batch_scan_after:
+            self.after_cancel(self._batch_scan_after)
+        self._batch_scan_after = self.after(260, self.autofill_batch_scan_if_ready)
+
+    def autofill_batch_scan_if_ready(self) -> None:
+        self._batch_scan_after = None
+        text = self.batch_scan_var.get().strip() if hasattr(self, "batch_scan_var") else ""
+        if not text:
+            return
+        cleanup = clean_id_lines_from_text(text)
+        if cleanup["lines"]:
+            self.handle_batch_scan_submit()
 
     def append_text_to_unconvert(self, text: str) -> None:
         incoming = text.strip()
@@ -2782,7 +3048,7 @@ class ConverterApp(TkRoot):
         if queued:
             self.unconvert_summary_var.set(f"{queued} line(s) queued")
         elif not self.unconvert_results and not self.unconvert_invalid:
-            self.unconvert_summary_var.set("No unconvert run yet")
+            self.unconvert_summary_var.set("No Unconvert run yet")
 
     def load_sample(self) -> None:
         self.multi_text.delete("1.0", "end")
@@ -2830,14 +3096,24 @@ class ConverterApp(TkRoot):
         self.last_unconverted_at = ""
         self.notice_var.set("")
         self.time_var.set("No run yet")
+        if hasattr(self, "batch_scan_var"):
+            self.batch_scan_var.set("")
         self.single_var.set("")
         self.single_result.set("Waiting for one 8-character HEX ID.")
+        if hasattr(self, "single_hex_var"):
+            self.single_hex_var.set("--")
+            self.single_fc_var.set("--")
+            self.single_cn_var.set("--")
+            self.single_note_var.set("No lookup has run yet.")
         self.reverse_result.set("Waiting for Facility Code and Card Number.")
+        if hasattr(self, "reverse_hex_var"):
+            self.reverse_hex_var.set("--")
+            self.reverse_note_var.set("No reverse lookup has run yet.")
         self.fc_var.set("")
         self.cn_var.set("")
         if hasattr(self, "unconvert_text"):
             self.unconvert_text.delete("1.0", "end")
-            self.unconvert_summary_var.set("No unconvert run yet")
+            self.unconvert_summary_var.set("No Unconvert run yet")
             self.render_unconvert_results()
         self.render_results()
         self.set_status("Workspace cleared.")
@@ -2864,14 +3140,14 @@ class ConverterApp(TkRoot):
         self.add_history("FC/CN to HEX", total, len(self.unconvert_results), len(self.unconvert_invalid), warn_count)
         self.set_status(f"Unconverted {len(self.unconvert_results)} valid pair(s); {len(self.unconvert_invalid)} invalid line(s).")
         if total == 0:
-            messagebox.showinfo("No input", "Add at least one FC/CN pair before unconverting.")
+            messagebox.showinfo("No input", "Add at least one FC/CN pair before running Unconvert.")
 
     def clear_unconvert(self) -> None:
         self.unconvert_text.delete("1.0", "end")
         self.unconvert_results.clear()
         self.unconvert_invalid.clear()
         self.last_unconverted_at = ""
-        self.unconvert_summary_var.set("No unconvert run yet")
+        self.unconvert_summary_var.set("No Unconvert run yet")
         self.render_unconvert_results()
         self.set_status("Unconvert workspace cleared.")
 
@@ -3169,7 +3445,7 @@ class ConverterApp(TkRoot):
         self._dialog_footer_accent(dialog)
         row = tk.Frame(dialog, bg=UI_BG)
         row.pack(fill="x", padx=18, pady=(0, 18))
-        self._button(row, "Close", dialog.destroy, True, icon="icon-clear.png").pack(side="right")
+        self._button(row, "Close", dialog.destroy, True).pack(side="right")
 
     def show_settings(self) -> None:
         dialog = self._new_dialog("Settings")
@@ -3416,11 +3692,35 @@ class ConverterApp(TkRoot):
         self.render_history()
         self.set_status("Conversion history cleared.")
 
-    def convert_single(self) -> None:
+    def handle_single_scan_tab(self, _event: Any | None = None) -> str:
+        self.convert_single(source="scan")
+        return "break"
+
+    def schedule_single_scan_autoconvert(self, event: Any | None = None) -> None:
+        key = getattr(event, "keysym", "")
+        if key in {"Return", "KP_Enter", "Tab", "Shift_L", "Shift_R", "Control_L", "Control_R", "Alt_L", "Alt_R"}:
+            return
+        if self._single_scan_after:
+            self.after_cancel(self._single_scan_after)
+        self._single_scan_after = self.after(260, self.auto_convert_single_if_ready)
+
+    def auto_convert_single_if_ready(self) -> None:
+        self._single_scan_after = None
+        prepared = clean_candidate_line(self.single_var.get())
+        if valid_hex8(prepared["extracted"].strip().upper()):
+            self.convert_single(show_errors=False, source="scan")
+
+    def convert_single(self, show_errors: bool = True, source: str = "manual") -> None:
+        if self._single_scan_after:
+            self.after_cancel(self._single_scan_after)
+            self._single_scan_after = None
         prepared = clean_candidate_line(self.single_var.get())
         hex_value = prepared["extracted"].strip().upper()
         if not valid_hex8(hex_value):
-            messagebox.showerror("Invalid hex", f"Single hex is invalid: {invalid_reason(prepared['original'])}.")
+            reason = invalid_reason(prepared["original"])
+            self.set_status(f"Single lookup needs review: {reason}.", "Needs Review", target_tab=1)
+            if show_errors:
+                messagebox.showerror("Invalid hex", f"Single hex is invalid: {reason}.")
             return
         facility, card = hex_to_fc_cn(hex_value)
         notes = [*prepared["suggestions"], *unusual_warnings(hex_value, facility, card)]
@@ -3432,25 +3732,47 @@ class ConverterApp(TkRoot):
         if notes:
             result_lines.append("NOTE " + " ".join(notes))
         self.single_result.set("\n".join(result_lines))
+        if hasattr(self, "single_hex_var"):
+            self.single_hex_var.set(hex_value)
+            self.single_fc_var.set(str(facility))
+            self.single_cn_var.set(str(card))
+            self.single_note_var.set(" ".join(notes) if notes else "Clean lookup. FC,CN copied to clipboard.")
         self.clipboard_clear()
         self.clipboard_append(f"{facility},{card}")
-        self.set_status("Single ID converted and FC,CN copied.")
+        if hasattr(self, "single_entry"):
+            self.single_entry.focus_set()
+            self.single_entry.selection_range(0, "end")
+        self.set_status("Single scan converted and FC,CN copied." if source == "scan" else "Single ID converted and FC,CN copied.", "Ready", target_tab=1)
 
     def clear_single(self) -> None:
         self.single_var.set("")
         self.single_result.set("Waiting for one 8-character HEX ID.")
-        self.set_status("Single lookup cleared.")
+        if hasattr(self, "single_hex_var"):
+            self.single_hex_var.set("--")
+            self.single_fc_var.set("--")
+            self.single_cn_var.set("--")
+            self.single_note_var.set("No lookup has run yet.")
+        if hasattr(self, "single_entry"):
+            self.single_entry.focus_set()
+        self.set_status("Single lookup cleared.", "Ready", target_tab=1)
 
     def clear_reverse(self) -> None:
         self.fc_var.set("")
         self.cn_var.set("")
         self.reverse_result.set("Waiting for Facility Code and Card Number.")
+        if hasattr(self, "reverse_hex_var"):
+            self.reverse_hex_var.set("--")
+            self.reverse_note_var.set("No reverse lookup has run yet.")
+        if hasattr(self, "fc_entry"):
+            self.fc_entry.focus_set()
+        self.set_status("FC/CN to Hex cleared.", "Ready", target_tab=2)
 
     def convert_reverse(self) -> None:
         try:
             hex_value = fc_cn_to_hex(self.fc_var.get(), self.cn_var.get())
             warnings = unusual_warnings(hex_value, int(self.fc_var.get()), int(self.cn_var.get()))
         except ValueError as exc:
+            self.set_status(f"FC/CN to Hex needs review: {exc}", "Needs Review", target_tab=2)
             messagebox.showerror("Invalid FC/CN", str(exc))
             return
         result_lines = [
@@ -3461,9 +3783,12 @@ class ConverterApp(TkRoot):
         if warnings:
             result_lines.append("NOTE " + " ".join(warnings))
         self.reverse_result.set("\n".join(result_lines))
+        if hasattr(self, "reverse_hex_var"):
+            self.reverse_hex_var.set(hex_value)
+            self.reverse_note_var.set(" ".join(warnings) if warnings else "Clean reverse lookup. HEX copied to clipboard.")
         self.clipboard_clear()
         self.clipboard_append(hex_value)
-        self.set_status("Hex value created and copied.")
+        self.set_status("Hex value created and copied.", "Ready", target_tab=2)
 
     def confirm_paste_cleanup_preview(self, raw_text: str, cleanup: dict[str, Any]) -> str:
         preview = "\n".join(cleanup.get("lines", [])[:60])
@@ -3761,7 +4086,7 @@ class ConverterApp(TkRoot):
         row.pack(fill="x", padx=18, pady=(0, 18))
         self._button(row, "Open File", lambda: self.open_path(path, "file"), True, icon="icon-status.png").pack(side="left", padx=(0, 8))
         self._button(row, "Open Folder", lambda: self.open_path(path.parent, "folder"), icon="icon-folder.png").pack(side="left")
-        self._button(row, "Close", dialog.destroy, icon="icon-clear.png").pack(side="right")
+        self._button(row, "Close", dialog.destroy).pack(side="right")
 
     def complete_export(self, path: Path, export_name: str) -> None:
         self.add_recent_export(path, export_name)
@@ -4092,7 +4417,7 @@ class ConverterApp(TkRoot):
         tk.Label(quick, text="Most work follows these steps.", bg=UI_SURFACE, fg=UI_MUTED, wraplength=220, justify="left").pack(anchor="w", padx=14, pady=(0, 8))
 
         quick_steps = [
-            ("1", "Add IDs", "Paste, import, or drag files onto the Input Queue."),
+            ("1", "Add IDs", "Scan, paste, import, or drag files onto the Input Queue."),
             ("2", "Convert", "Use Convert to create FC/CN results."),
             ("3", "Review", "Check warnings, invalid lines, and duplicate notices."),
             ("4", "Export", "Save Excel, CSV, TXT, or PDF from Export."),
@@ -4143,11 +4468,14 @@ class ConverterApp(TkRoot):
             tk.Label(body, text=body_text, bg=UI_SURFACE, fg=UI_MUTED, wraplength=450, justify="left", font=("Segoe UI", 9)).pack(anchor="w", pady=(5, 0))
 
         add_help_card("Import Options", "Use Import > Browse Files for TXT, CSV, TSV, XLS, XLSX, XLSM, XML, HTML, or HTM files. Batch Converter imports detected IDs. Unconvert Batch imports detected FC/CN pairs. Drag files directly onto a batch input area when you want the fastest import.", "#46d9ff")
-        add_help_card("Batch Converter", "Paste HEX IDs one per line, or paste full employee lines. The app highlights valid rows, warning rows, and invalid rows directly in the queue before you convert.", "#e51b2d")
+        add_help_card("Scanner Input", "Most USB handheld scanners type like a keyboard. Click the Batch Scanner Input field, scan an ID, and use an Enter or Tab scanner suffix. Each new scan is cleaned and placed at the top of the Input Queue.", "#e51b2d")
+        add_help_card("Batch Converter", "Paste HEX IDs one per line, scan IDs, or paste full employee lines. The app highlights valid rows, warning rows, and invalid rows directly in the queue before you convert.", "#e51b2d")
+        add_help_card("Single Lookup", "Single Lookup also works with a scanner. Focus the HEX ID field and scan one value; the app automatically converts it and copies the FC,CN pair.", "#0b66c3")
         add_help_card("Queue Cleanup", "Use Remove Duplicates to keep the first valid matching HEX ID. Use Keep Valid to remove rows that cannot be read as valid 8-character HEX IDs.", "#35d07f")
         add_help_card("Results Review", "Valid rows show HEX, Facility Code, Card Number, status, and Notes / Details. Notes stay blank for clean rows and appear when the app cleaned imported text, found a duplicate, flagged an unusual value, or explains why an input row is invalid.", "#f1b84b")
         add_help_card("Reverse Tools", "Use FC/CN to Hex for one pair. Use Unconvert Batch when you have many FC/CN pairs. Accepted batch examples include 34968,18199, tab-separated values, or FC 34968 CN 18199.", "#35d07f")
         add_help_card("Exports", "Use Export to save Excel, CSV, TXT, or PDF reports from Batch Converter or Unconvert Batch. Export Default uses your saved default report type. After saving, Open File and Open Folder are available from the completion window.", "#8beaff")
+        add_help_card("Status Navigation", "The sidebar status card and the bottom status strip are clickable. If a message needs review, click the status area to jump back to the related workspace.", "#f1b84b")
         add_help_card("Settings", "Use File > Settings to choose the default export type, default export folder, and create a desktop shortcut for the utility.", "#ff6d78")
         add_help_card("Shortcuts", "Ctrl+I imports, Ctrl+R converts, Ctrl+E exports Excel, Ctrl+P exports PDF, Ctrl+F jumps to search, and Ctrl+L clears the workspace. Hover over controls for quick tips.", "#ff6d78")
         self._enable_mousewheel_tree(cards, canvas)
@@ -4155,22 +4483,22 @@ class ConverterApp(TkRoot):
         self._dialog_footer_accent(dialog, padx=16, pady=(0, 8))
         row = tk.Frame(dialog, bg=UI_BG)
         row.pack(fill="x", padx=16, pady=(0, 16))
-        self._button(row, "Close", dialog.destroy, True, icon="icon-clear.png").pack(side="right")
+        self._button(row, "Close", dialog.destroy, True).pack(side="right")
 
     def show_about(self) -> None:
         dialog = self._new_dialog("About")
-        dialog.geometry("720x560")
-        dialog.minsize(660, 520)
+        dialog.geometry("820x720")
+        dialog.minsize(760, 680)
 
         self._dialog_header(
             dialog,
             APP_SHORT_NAME,
-            f"Asset Protection access-control utility for China Grove | Version {APP_VERSION}",
+            f"Professional access-control conversion utility | Version {APP_VERSION}",
             UI_RED,
         )
 
         body = tk.Frame(dialog, bg=UI_BG)
-        body.pack(fill="both", expand=True, padx=18, pady=18)
+        body.pack(fill="both", expand=True, padx=18, pady=14)
         body.grid_columnconfigure(0, weight=1)
         body.grid_columnconfigure(1, weight=1)
 
@@ -4178,39 +4506,69 @@ class ConverterApp(TkRoot):
         intro.grid(row=0, column=0, columnspan=2, sticky="ew", pady=(0, 12))
         tk.Frame(intro, bg=UI_RED, height=3).pack(fill="x")
         intro_body = tk.Frame(intro, bg=UI_SURFACE)
-        intro_body.pack(fill="x", padx=14, pady=12)
-        tk.Label(intro_body, text="Built for Macy's Asset Protection operations", bg=UI_SURFACE, fg=UI_TEXT, font=("Segoe UI", 12, "bold")).pack(anchor="w")
+        intro_body.pack(fill="x", padx=16, pady=14)
+        logo = self._load_icon("macys-ap-icon.png", 58)
+        if logo:
+            tk.Label(intro_body, image=logo, bg=UI_SURFACE).pack(side="left", padx=(0, 14))
+        intro_copy = tk.Frame(intro_body, bg=UI_SURFACE)
+        intro_copy.pack(side="left", fill="x", expand=True)
+        tk.Label(intro_copy, text="Macy's Asset Protection China Grove Hex Converter Utility", bg=UI_SURFACE, fg=UI_TEXT, font=("Segoe UI", 14, "bold")).pack(anchor="w")
         tk.Label(
-            intro_body,
-            text="A focused desktop utility for converting access-control HEX IDs, Facility Codes, and Card Numbers for review, copying, and reporting.",
+            intro_copy,
+            text="Created for Macy's Asset Protection operations in China Grove, North Carolina. It supports batch conversion, scanner-assisted lookup, reverse FC/CN conversion, and professional exports.",
             bg=UI_SURFACE,
             fg=UI_MUTED,
-            wraplength=585,
+            wraplength=620,
             justify="left",
             font=("Segoe UI", 9),
         ).pack(anchor="w", pady=(5, 0))
+        chip_row = tk.Frame(intro_copy, bg=UI_SURFACE)
+        chip_row.pack(anchor="w", pady=(10, 0))
+        for chip_text, chip_color in [("Local desktop utility", UI_BLUE), ("Scanner ready", UI_GREEN_TEXT), ("Version " + APP_VERSION, UI_RED)]:
+            tk.Label(
+                chip_row,
+                text=chip_text,
+                bg=UI_SURFACE_ALT,
+                fg=chip_color,
+                font=("Segoe UI", 8, "bold"),
+                padx=9,
+                pady=4,
+                highlightthickness=1,
+                highlightbackground=UI_BORDER,
+            ).pack(side="left", padx=(0, 6))
 
         def about_card(row_index: int, column: int, title_text: str, value_text: str, accent: str) -> None:
             card = self._card(body, bg=UI_SURFACE, border=UI_BORDER)
             card.grid(row=row_index, column=column, sticky="nsew", padx=(0, 8) if column == 0 else (8, 0), pady=(0, 12))
             tk.Frame(card, bg=accent, height=3).pack(fill="x")
             inner = tk.Frame(card, bg=UI_SURFACE)
-            inner.pack(fill="both", expand=True, padx=12, pady=12)
+            inner.pack(fill="both", expand=True, padx=14, pady=12)
             tk.Label(inner, text=title_text, bg=UI_SURFACE, fg=UI_MUTED, font=("Segoe UI", 8, "bold")).pack(anchor="w")
-            tk.Label(inner, text=value_text, bg=UI_SURFACE, fg=UI_TEXT, wraplength=260, justify="left", font=("Segoe UI", 10, "bold")).pack(anchor="w", pady=(5, 0))
+            tk.Label(inner, text=value_text, bg=UI_SURFACE, fg=UI_TEXT, wraplength=315, justify="left", font=("Segoe UI", 10, "bold")).pack(anchor="w", pady=(5, 0))
 
-        about_card(1, 0, "LOCATION", "China Grove, North Carolina", UI_BLUE)
-        about_card(1, 1, "VERSION", APP_VERSION, UI_WARN_TEXT)
+        about_card(1, 0, "PURPOSE", "Convert access-control HEX IDs to Facility Code/Card Number values, and rebuild HEX IDs from FC/CN when needed.", UI_BLUE)
+        about_card(1, 1, "SCANNER SUPPORT", "Batch Scanner Input and Single Lookup support keyboard-style handheld scanners with Enter or Tab suffixes.", UI_GREEN_TEXT)
+        about_card(2, 0, "LOCATION", "Macy's Asset Protection - China Grove, North Carolina", UI_RED)
+        about_card(2, 1, "VERSION", f"Version {APP_VERSION}. Current test build with scanner and layout polish.", UI_WARN_TEXT)
 
         contact = self._card(body, bg=UI_SURFACE, border=UI_BORDER)
-        contact.grid(row=2, column=0, columnspan=2, sticky="ew", pady=(0, 12))
+        contact.grid(row=3, column=0, columnspan=2, sticky="ew", pady=(0, 12))
         tk.Frame(contact, bg=UI_GREEN_TEXT, height=3).pack(fill="x")
         contact_inner = tk.Frame(contact, bg=UI_SURFACE)
-        contact_inner.pack(fill="x", padx=14, pady=12)
-        tk.Label(contact_inner, text="Contact and Links", bg=UI_SURFACE, fg=UI_TEXT, font=("Segoe UI", 12, "bold")).pack(anchor="w")
+        contact_inner.pack(fill="x", padx=16, pady=14)
+        tk.Label(contact_inner, text="Contact and Project", bg=UI_SURFACE, fg=UI_TEXT, font=("Segoe UI", 12, "bold")).pack(anchor="w")
+        tk.Label(
+            contact_inner,
+            text="For testing notes, project files, and source history, use the GitHub project. For app questions, contact Christopher Schumacher.",
+            bg=UI_SURFACE,
+            fg=UI_MUTED,
+            wraplength=700,
+            justify="left",
+            font=("Segoe UI", 9),
+        ).pack(anchor="w", pady=(4, 8))
         made = tk.Frame(contact_inner, bg=UI_SURFACE)
-        made.pack(anchor="w", pady=(8, 4))
-        tk.Label(made, text="Made by ", bg=UI_SURFACE, fg=UI_MUTED, font=("Segoe UI", 10)).pack(side="left")
+        made.pack(anchor="w", pady=(0, 8))
+        tk.Label(made, text="Made by ", bg=UI_SURFACE, fg=UI_MUTED, font=("Segoe UI", 10, "bold")).pack(side="left")
         self._link_label(
             made,
             "Christopher Schumacher",
@@ -4221,16 +4579,18 @@ class ConverterApp(TkRoot):
             bold=True,
             padx=0,
         ).pack(side="left")
-        tk.Label(made, text=", Asset Protection FLO", bg=UI_SURFACE, fg=UI_MUTED, font=("Segoe UI", 10)).pack(side="left")
+        tk.Label(made, text=" - Asset Protection FLO", bg=UI_SURFACE, fg=UI_MUTED, font=("Segoe UI", 10, "bold")).pack(side="left")
         links = tk.Frame(contact_inner, bg=UI_SURFACE)
-        links.pack(fill="x", pady=(6, 0))
-        self._link_label(links, "Email: christopher.schumacher@macys.com", f"mailto:{CONTACT_EMAIL}", UI_SURFACE, "Open an email draft.", font_size=9, padx=0).pack(anchor="w", pady=(0, 5))
-        self._link_label(links, "GitHub project repository", PROJECT_URL, UI_SURFACE, "Open the GitHub project repository.", font_size=9, padx=0).pack(anchor="w")
+        links.pack(fill="x", pady=(2, 0))
+        email_link = self._link_label(links, "Email Christopher Schumacher", f"mailto:{CONTACT_EMAIL}", UI_SURFACE, "Open an email draft.", font_size=10, bold=True, padx=0)
+        email_link.pack(side="left", padx=(0, 18))
+        github_link = self._link_label(links, "Open GitHub Project", PROJECT_URL, UI_SURFACE, "Open the GitHub project repository.", font_size=10, bold=True, padx=0)
+        github_link.pack(side="left")
 
         self._dialog_footer_accent(dialog)
         row = tk.Frame(dialog, bg=UI_BG)
         row.pack(fill="x", padx=18, pady=(0, 16))
-        self._button(row, "Close", dialog.destroy, True, icon="icon-clear.png").pack(side="right")
+        self._button(row, "Close", dialog.destroy, True).pack(side="right")
 
 
 def main() -> None:

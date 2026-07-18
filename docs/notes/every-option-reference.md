@@ -61,6 +61,11 @@ This page documents the visible options in version `1.1.1`.
 
 ## Batch Converter Buttons
 
+| Option | Action |
+| --- | --- |
+| Scanner Input | Accepts keyboard-style handheld scanner input. New scans are cleaned and placed at the top of the Input Queue. |
+| Input Queue | Accepts scanned, pasted, imported, or dragged-in HEX ID rows. |
+
 | Button | Action |
 | --- | --- |
 | Import | Browse for one or more supported files and add extracted IDs to the queue. |
@@ -101,8 +106,10 @@ This page documents the visible options in version `1.1.1`.
 | Option | Action |
 | --- | --- |
 | HEX ID input | Accepts one 8-character HEX value. |
+| Scanner input behavior | A keyboard-style scanner can submit with Enter or Tab and the app will auto-convert the scan. |
 | Convert | Converts the value and copies the FC,CN pair. |
 | Clear | Clears the field and result. |
+| Focus Scanner | Returns the cursor to the Single Lookup scanner/input field. |
 
 ## FC/CN To Hex
 
@@ -163,5 +170,6 @@ This page documents the visible options in version `1.1.1`.
 | Drag/drop ready | Drag/drop support is available. |
 | Version | Current app version. |
 | Run Summary | Live input count, valid count, invalid count, warning count, and last run time. |
-| App Status | Ready, Needs Review, or Exported state with short status detail. |
+| App Status | Ready, Needs Review, or Exported state with short status detail. Click it to open the related workspace. |
+| Footer status strip | Shows the latest status message. Click it to open the related workspace. |
 | Footer message | Current version and reminder that contact/project links are in Help > About. |

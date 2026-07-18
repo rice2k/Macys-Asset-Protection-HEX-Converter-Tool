@@ -46,7 +46,7 @@ Current EXE:
 
 Current SHA-256:
 
-`90ad52b1d6f5ec66a87cca55290c1af43b5f00897eda5198182aae7b62384cad`
+`b8b8b5de43ee9ac0a21534bb235336ab8398caa8f7d7cd857babd0c7689a7e69`
 
 ## Project Structure
 

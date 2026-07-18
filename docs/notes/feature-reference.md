@@ -23,6 +23,7 @@ Screenshots: [Screenshot Guide](../screenshots/README.md)
 ## Batch Converter Features
 
 - Multi-line Input Queue.
+- Scanner Input field for keyboard-style handheld scanners.
 - File import.
 - Clipboard paste cleanup preview.
 - Drag/drop file import when optional drag/drop support is available.
@@ -45,6 +46,13 @@ Screenshots: [Screenshot Guide](../screenshots/README.md)
 - Copy Pair.
 - Copy Row.
 - Clear Invalid.
+
+## Scanner Features
+
+- Batch Scanner Input accepts handheld scanner input that behaves like keyboard typing.
+- Enter and Tab scanner suffixes submit the scanned value.
+- Each new batch scan is cleaned and placed at the top of the Input Queue.
+- Single Hex Lookup can auto-convert a scanned HEX ID and copy the FC,CN pair.
 
 ## Import Features
 
@@ -146,11 +154,13 @@ Export download and release notes: [Downloads And Releases](downloads-and-releas
 - Light corporate desktop layout.
 - Sidebar workspace navigation.
 - Dropdown menu buttons.
+- Styled dropdown and right-click menus.
 - Scrollbars in text areas and result tables.
 - Full-view startup.
 - Mouse-wheel scrolling.
 - Table hover highlighting.
 - Status strip for Ready / Needs Review / Exported states.
+- Clickable sidebar and bottom status areas that jump to the related workspace.
 
 ## GitHub Visual Assets
 

@@ -34,7 +34,7 @@ Checksum file:
 https://raw.githubusercontent.com/rice2k/Macys-Asset-Protection-HEX-Converter-Tool/main/dist/Macys_AP_China_Grove_Hex_Utility.exe.sha256.txt
 
 Current SHA-256:
-90ad52b1d6f5ec66a87cca55290c1af43b5f00897eda5198182aae7b62384cad
+b8b8b5de43ee9ac0a21534bb235336ab8398caa8f7d7cd857babd0c7689a7e69
 
 Windows may show a SmartScreen warning because the EXE is not code-signed yet.
 For testing, users can choose More info, then Run anyway.
@@ -93,9 +93,11 @@ Main Functions
    - Card Number
    - Status
    - Notes or warnings
+   Includes Scanner Input for keyboard-style handheld scanners.
 
 2. Single Lookup
    Converts one HEX ID quickly and copies the FC,CN pair to the clipboard.
+   Can auto-convert one scanned HEX ID when the scanner sends Enter or Tab.
 
 3. FC/CN to Hex
    Converts one Facility Code and Card Number pair back into an 8-character
@@ -123,11 +125,18 @@ Supported Input
 ---------------
 You can add data to the Input Queue several ways:
 
-1. Paste IDs directly into the Input Queue.
-2. Use Import > Browse Files.
-3. Use Import > Paste Clipboard To Queue.
-4. Drag supported files directly onto the Input Queue box.
-5. Use Sample to load example data.
+1. Scan IDs into the Scanner Input field.
+2. Paste IDs directly into the Input Queue.
+3. Use Import > Browse Files.
+4. Use Import > Paste Clipboard To Queue.
+5. Drag supported files directly onto the Input Queue box.
+6. Use Sample to load example data.
+
+Scanner input:
+- Most USB handheld scanners type like a keyboard.
+- Enter or Tab is the recommended scanner suffix.
+- Batch Scanner Input places each new scan at the top of the Input Queue.
+- Single Lookup can auto-convert one scanned HEX ID and copy the FC,CN pair.
 
 Excel and copied-table cleanup:
 - Numeric spreadsheet cells such as 88984765.0 are cleaned to 88984765.

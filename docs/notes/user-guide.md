@@ -31,7 +31,7 @@ Example:
 
 1. Open the EXE.
 2. Use Batch Converter for most work.
-3. Paste IDs, import files, or drag supported files into the Input Queue.
+3. Scan IDs, paste IDs, import files, or drag supported files into the Input Queue.
 4. Review row colors before converting.
 5. Use Convert.
 6. Review Results and Notes / Details.
@@ -57,6 +57,23 @@ Row colors:
 | Green | Clean valid HEX ID. |
 | Yellow | Valid, but cleaned, duplicate, or unusual. |
 | Red | Invalid and needs review. |
+
+## Scanner Input
+
+Most USB handheld scanners work like keyboard input.
+
+For Batch Converter:
+
+1. Click the Scanner Input field.
+2. Scan one ID.
+3. Use an Enter or Tab scanner suffix when possible.
+4. The app cleans the scanned value and places the newest scan at the top of the Input Queue.
+
+For Single Hex Lookup:
+
+1. Click the HEX ID field.
+2. Scan one ID.
+3. The app converts it automatically and copies the FC,CN pair.
 
 ## Importing Data
 
@@ -127,7 +144,7 @@ More detail: [Every Option Reference](every-option-reference.md)
 
 Use Single Hex Lookup when checking one HEX ID.
 
-The app converts it and copies the FC,CN pair to the clipboard.
+The app converts it and copies the FC,CN pair to the clipboard. It also supports a keyboard-style handheld scanner with Enter or Tab after the scan.
 
 ## FC/CN To Hex
 
@@ -178,6 +195,8 @@ The BlueWave button opens the access-control site in the default browser.
 Help shows a visual guide inside the app.
 
 About shows app purpose, version, GitHub project, and contact/credit information.
+
+The sidebar status card and the bottom status strip are clickable. If a message needs review, click either status area to return to the related workspace.
 
 Project URL:
 

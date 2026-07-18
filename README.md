@@ -49,7 +49,7 @@ Current version: `1.1.1`
 
 Current SHA-256:
 
-`90ad52b1d6f5ec66a87cca55290c1af43b5f00897eda5198182aae7b62384cad`
+`b8b8b5de43ee9ac0a21534bb235336ab8398caa8f7d7cd857babd0c7689a7e69`
 
 Windows may show a SmartScreen warning because the EXE is not code-signed yet. For testing, choose **More info**, then **Run anyway**.
 
@@ -64,6 +64,7 @@ It is designed for the China Grove workflow, but the conversion rule is document
 Access-control data often comes from copied spreadsheet columns, exported tables, plain text, or mixed employee lines. This utility gives one focused place to:
 
 - Extract usable 8-character IDs from messy input.
+- Use keyboard-style handheld scanners for Batch Converter and Single Lookup.
 - Convert HEX values to Facility Code and Card Number.
 - Convert FC/CN pairs back to HEX.
 - Flag invalid, duplicate, cleaned, or unusual rows.
@@ -72,7 +73,7 @@ Access-control data often comes from copied spreadsheet columns, exported tables
 ## 60-Second Workflow
 
 1. Download and open the test EXE.
-2. Paste IDs, import files, or drag supported files into the Input Queue.
+2. Scan IDs, paste IDs, import files, or drag supported files into the Input Queue.
 3. Review green, yellow, and red row highlights.
 4. Use Convert.
 5. Copy rows, FC/CN pairs, or individual values from Results.
@@ -95,6 +96,8 @@ Example:
 ## Main Features
 
 - Batch converts many 8-character HEX IDs into Facility Code and Card Number.
+- Batch Scanner Input places each new handheld scan at the top of the Input Queue.
+- Single Lookup can auto-convert one scanned HEX ID and copy the FC,CN pair.
 - Converts one FC/CN pair or a batch of FC/CN pairs back into HEX.
 - Imports TXT, CSV, TSV, XLS, XLSX, XLSM, XML Spreadsheet, HTML, and copied table data.
 - Cleans Excel-style numeric IDs such as `88984765.0` and split IDs such as `8898-4765`.
@@ -103,6 +106,7 @@ Example:
 - Shows Notes / Details only when a row was cleaned, duplicated, unusual, or invalid.
 - Removes duplicates and keeps only valid rows during queue cleanup.
 - Supports full-row copying, FC/CN copying, HEX copying, and right-click result actions.
+- Makes the sidebar status card and bottom status strip clickable for quick navigation back to the related workspace.
 - Exports Excel, CSV, TXT, and PDF reports.
 - Includes Help, About, Settings, History, Recent Exports, desktop shortcut support, and copyable error reports.
 
@@ -189,7 +193,7 @@ The archived HTML versions are reference material only. The maintained app is th
 
 | Version | Tag | Notes |
 | --- | --- | --- |
-| `1.1.1` | [`v1.1.1`](https://github.com/rice2k/Macys-Asset-Protection-HEX-Converter-Tool/tree/v1.1.1) | Current test build; right-click paste, cleaner imports, input resizing, batch-only exports, and improved Results alignment. |
+| `1.1.1` | [`v1.1.1`](https://github.com/rice2k/Macys-Asset-Protection-HEX-Converter-Tool/tree/v1.1.1) | Current test build; scanner input, clickable status navigation, polished Help/About, cleaner imports, and improved Results alignment. |
 | `1.1.0` | [`v1.1.0`](https://github.com/rice2k/Macys-Asset-Protection-HEX-Converter-Tool/tree/v1.1.0) | Workflow polish, paste cleanup preview, right-click copy menus, recent export cleanup. |
 | `1.0.9` | [`v1.0.9`](https://github.com/rice2k/Macys-Asset-Protection-HEX-Converter-Tool/tree/v1.0.9) | Almost-done baseline before v1.1.x workflow/documentation polish. |
 
