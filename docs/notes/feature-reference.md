@@ -4,7 +4,7 @@
 
 Current maintained app: Windows desktop EXE built from `desktop_app.py`
 
-Current version: `1.1.2`
+Current version: `1.1.3`
 
 Full option map: [Every Option Reference](every-option-reference.md)
 
@@ -41,11 +41,8 @@ Screenshots: [Screenshot Guide](../screenshots/README.md)
 - Header tooltips.
 - Right-click result menu.
 - Copy All.
-- Copy FC.
-- Copy CN.
-- Copy Pair.
-- Copy Row.
 - Clear Invalid.
+- Selected-row copy actions are available from the right-click result menu.
 
 ## Scanner Features
 
@@ -56,6 +53,7 @@ Screenshots: [Screenshot Guide](../screenshots/README.md)
 - F9 focuses Batch Scanner Input.
 - F10 focuses Single Hex Lookup.
 - Single Hex Lookup can auto-convert a scanned HEX ID and copy the FC,CN pair.
+- Single Hex Lookup result numbers can be clicked to copy one value.
 
 ## Import Features
 
@@ -97,6 +95,7 @@ FC/CN to HEX:
 - Accepts whole numbers.
 - Requires 0 to 65535.
 - Builds 8-character uppercase HEX.
+- The generated HEX output number can be clicked to copy it again.
 - Warns on unusual values.
 
 ## Status And Notes

@@ -1,6 +1,6 @@
 # Every Option Reference
 
-This page documents the visible options in version `1.1.2`.
+This page documents the visible options in version `1.1.3`.
 
 ## Top Toolbar
 
@@ -85,10 +85,6 @@ This page documents the visible options in version `1.1.2`.
 | Status | Filters results by All, Valid, Warning, or Invalid. |
 | Copy All | Copies all valid FC,CN pairs. |
 | Clear Invalid | Removes invalid rows from the review table. |
-| Copy FC | Copies the selected row's Facility Code. |
-| Copy CN | Copies the selected row's Card Number. |
-| Copy Pair | Copies the selected row as `FC,CN`. |
-| Copy Row | Copies the full selected result row. |
 
 ## Results Right-Click Menu
 
@@ -112,6 +108,7 @@ This page documents the visible options in version `1.1.2`.
 | Convert | Converts the value and copies the FC,CN pair. |
 | Clear | Clears the field and result. |
 | Focus Scanner | Returns the cursor to the Single Lookup scanner/input field. |
+| Click result numbers | Copies the clicked HEX ID, Facility Code, or Card Number value. |
 
 ## FC/CN To Hex
 
@@ -121,6 +118,7 @@ This page documents the visible options in version `1.1.2`.
 | Card Number input | Accepts a whole number from 0 to 65535. |
 | Convert | Builds one 8-character HEX value. |
 | Clear | Clears the fields and result. |
+| Click HEX output | Copies the generated HEX ID value. |
 
 ## Unconvert Batch
 

@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.3
+
+- Added click-to-copy behavior for Single Lookup result numbers and FC/CN to Hex output.
+- Simplified the Batch Converter Results toolbar to Copy All and Clear Invalid while keeping selected-row copy actions in the right-click menu.
+- Reworked the sidebar into a cleaner Current Area card plus a rotating Quick Tip card.
+- Improved History table alignment so text and numeric counts line up with their headers.
+- Updated in-app Help for click-to-copy results and the new sidebar tip behavior.
+
 ## 1.1.2
 
 - Fixed the footer and sidebar status logic so a completed run with zero invalid rows no longer shows Needs Review just because the status sentence contains the word invalid.

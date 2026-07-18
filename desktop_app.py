@@ -3,6 +3,7 @@ from __future__ import annotations
 import csv
 import json
 import os
+import random
 import re
 import subprocess
 import sys
@@ -48,7 +49,7 @@ PROJECT_URL = "https://github.com/rice2k/Macys-Asset-Protection-HEX-Converter-To
 CONTACT_EMAIL = "christopher.schumacher@macys.com"
 APP_DISPLAY_NAME = "Macy's Asset Protection - China Grove Hex Converter Utility"
 APP_SHORT_NAME = "Macy's AP China Grove Hex Utility"
-APP_VERSION = "1.1.2"
+APP_VERSION = "1.1.3"
 APP_STATE_DIR = Path(os.environ.get("APPDATA", str(Path.home()))) / "AP_Access_Control_Converter"
 SETTINGS_FILE = APP_STATE_DIR / "settings.json"
 EXPORT_TYPE_CHOICES = ["Excel Workbook (.xlsx)", "CSV Report (.csv)", "TXT Report (.txt)", "PDF Report (.pdf)"]
@@ -65,6 +66,7 @@ UI_RED = "#e51b2d"
 UI_RED_DARK = "#b91525"
 UI_RED_SOFT = "#fff1f2"
 UI_BLUE = "#0b66c3"
+UI_BLUE_SOFT = "#eef6ff"
 UI_GREEN_SOFT = "#ecfdf3"
 UI_GREEN_TEXT = "#166534"
 UI_WARN_SOFT = "#fff7df"
@@ -874,9 +876,12 @@ class ConverterApp(TkRoot):
         self.sort_reverse = False
         self.active_tab_index = 0
         self.status_target_tab = 0
+        self.sidebar_focus_tab = 0
         self.batch_scan_count = 0
         self._batch_scan_after: str | None = None
         self._single_scan_after: str | None = None
+        self._sidebar_tip_after: str | None = None
+        self._last_sidebar_tip = ""
         self.last_single_auto_value = ""
         self.logo_photo: ImageTk.PhotoImage | None = None
         self.app_icon_photo: ImageTk.PhotoImage | None = None
@@ -888,6 +893,7 @@ class ConverterApp(TkRoot):
         self._setup_styles()
         self._build_shell()
         self._setup_shortcuts()
+        self._rotate_sidebar_tip()
         self.render_results()
         self.render_unconvert_results()
         self.after(50, self._start_full_view)
@@ -1667,15 +1673,168 @@ class ConverterApp(TkRoot):
             ToolTip(label, tooltip)
         return label
 
-    def _nav_section(self, parent: tk.Widget, text: str) -> None:
-        tk.Label(
+    def _copy_value_from_var(self, variable: tk.StringVar, label: str, target_tab: int) -> bool:
+        value = variable.get().strip()
+        if not value or value == "--":
+            self.set_status(f"No {label} value to copy yet.", "Needs Review", target_tab=target_tab)
+            return False
+        self.clipboard_clear()
+        self.clipboard_append(value)
+        self.set_status(f"Copied {label}.", "Ready", target_tab=target_tab)
+        return True
+
+    def _flash_label(self, label: tk.Label, flash_bg: str = UI_GREEN_SOFT, duration: int = 180) -> None:
+        try:
+            original_bg = str(label.cget("background"))
+            label.configure(bg=flash_bg)
+            label.after(duration, lambda: label.configure(bg=original_bg))
+        except tk.TclError:
+            return
+
+    def _clickable_value_label(
+        self,
+        parent: tk.Widget,
+        variable: tk.StringVar,
+        accent: str,
+        label: str,
+        target_tab: int,
+        font_size: int = 13,
+    ) -> tk.Label:
+        hover = UI_RED if accent != UI_RED else UI_BLUE
+        value_label = tk.Label(
             parent,
+            textvariable=variable,
+            bg=UI_SURFACE_ALT,
+            fg=accent,
+            font=("Cascadia Mono", font_size, "bold"),
+            cursor="hand2",
+        )
+        normal_font = ("Cascadia Mono", font_size, "bold")
+        hover_font = ("Cascadia Mono", font_size, "bold underline")
+
+        def copy_clicked(_event: Any) -> str:
+            if self._copy_value_from_var(variable, label, target_tab):
+                self._flash_label(value_label)
+            return "break"
+
+        value_label.bind("<Button-1>", copy_clicked)
+        value_label.bind("<Enter>", lambda _event: value_label.configure(fg=hover, font=hover_font))
+        value_label.bind("<Leave>", lambda _event: value_label.configure(fg=accent, font=normal_font))
+        ToolTip(value_label, f"Click the {label} number to copy it.")
+        return value_label
+
+    def _sidebar_tip_options(self) -> list[str]:
+        return [
+            "F9 Batch Scan\nFocus scanner input.",
+            "F10 Single Lookup\nFocus one-ID lookup.",
+            "Ctrl+I Import\nBrowse or paste IDs.",
+            "Ctrl+R Convert\nRun the active batch.",
+            "Ctrl+F Search\nFind result rows.",
+            "Click Results\nCopy one exact value.",
+            "Right-Click Rows\nOpen copy tools.",
+            "Drag Files\nDrop files on input.",
+            "Keep Valid\nRemove invalid rows.",
+            "Export Default\nUse saved settings.",
+        ]
+
+    def _rotate_sidebar_tip(self) -> None:
+        if not hasattr(self, "sidebar_tip_var"):
+            return
+        tips = self._sidebar_tip_options()
+        choices = [tip for tip in tips if tip != self._last_sidebar_tip] or tips
+        tip = random.choice(choices)
+        self._last_sidebar_tip = tip
+        self.sidebar_tip_var.set(tip)
+        accent, _soft = self._tab_theme(getattr(self, "sidebar_focus_tab", getattr(self, "active_tab_index", 0)))
+        if hasattr(self, "sidebar_tip_bar"):
+            self.sidebar_tip_bar.configure(bg=accent)
+        if hasattr(self, "sidebar_tip_label"):
+            self.sidebar_tip_label.configure(fg=accent)
+        self._sidebar_tip_after = self.after(15000, self._rotate_sidebar_tip)
+
+    def _tab_theme(self, index: int, state: str = "Ready") -> tuple[str, str]:
+        if state == "Needs Review":
+            return UI_WARN_TEXT, UI_WARN_SOFT
+        if state == "Exported":
+            return UI_BLUE, UI_BLUE_SOFT
+        themes = {
+            0: (UI_RED, UI_RED_SOFT),
+            1: (UI_BLUE, UI_BLUE_SOFT),
+            2: (UI_WARN_TEXT, UI_WARN_SOFT),
+            3: (UI_WARN_TEXT, UI_WARN_SOFT),
+            4: (UI_GREEN_TEXT, UI_GREEN_SOFT),
+        }
+        return themes.get(max(0, min(4, index)), (UI_RED, UI_RED_SOFT))
+
+    def _section_theme(self, section: str) -> tuple[str, str]:
+        normalized = section.strip().lower()
+        if normalized == "reverse":
+            return UI_WARN_TEXT, UI_WARN_SOFT
+        if normalized == "review":
+            return UI_GREEN_TEXT, UI_GREEN_SOFT
+        return UI_RED, UI_RED_SOFT
+
+    def _apply_widget_bg(self, widgets: list[tk.Widget], color: str) -> None:
+        for widget in widgets:
+            try:
+                widget.configure(bg=color)
+            except tk.TclError:
+                continue
+
+    def _workspace_focus_text(self, index: int, state: str = "Ready") -> str:
+        labels = ["Batch Converter", "Single Lookup", "FC/CN to Hex", "Unconvert Batch", "History"]
+        workspace = labels[max(0, min(4, index))]
+        if state == "Needs Review":
+            return f"Needs Review\nOpen {workspace}."
+        if state == "Exported":
+            return "Export Ready\nUse Recent Exports."
+        focus = {
+            0: "Batch Converter\nScan, convert, export.",
+            1: "Single Lookup\nClick values to copy.",
+            2: "FC/CN to Hex\nClick HEX to copy.",
+            3: "Unconvert Batch\nBuild HEX from FC/CN.",
+            4: "History\nReview local runs.",
+        }
+        return focus.get(index, workspace)
+
+    def update_sidebar_focus(self, index: int, state: str = "Ready") -> None:
+        self.sidebar_focus_tab = max(0, min(4, index))
+        if hasattr(self, "nav_status"):
+            self.nav_status.set(self._workspace_focus_text(self.sidebar_focus_tab, state))
+        accent, soft = self._tab_theme(self.sidebar_focus_tab, state)
+        if hasattr(self, "work_focus_bar"):
+            self.work_focus_bar.configure(bg=accent)
+        if hasattr(self, "nav_status_label"):
+            self.nav_status_label.configure(fg=accent)
+        if hasattr(self, "focus_card_widgets"):
+            self._apply_widget_bg(self.focus_card_widgets, soft)
+        if hasattr(self, "guide_card_widgets"):
+            self._apply_widget_bg(self.guide_card_widgets, soft)
+        if hasattr(self, "sidebar_tip_bar"):
+            self.sidebar_tip_bar.configure(bg=accent)
+        if hasattr(self, "sidebar_tip_label"):
+            self.sidebar_tip_label.configure(fg=accent)
+
+    def open_sidebar_focus_target(self, _event: Any | None = None) -> str:
+        target = max(0, min(4, int(getattr(self, "sidebar_focus_tab", getattr(self, "active_tab_index", 0)))))
+        self.select_tab(target)
+        return "break"
+
+    def _nav_section(self, parent: tk.Widget, text: str) -> None:
+        accent, soft = self._section_theme(text)
+        section = tk.Frame(parent, bg=soft, highlightthickness=1, highlightbackground=UI_BORDER)
+        section.pack(fill="x", padx=10, pady=(14, 6))
+        tk.Frame(section, bg=accent, width=4).pack(side="left", fill="y")
+        tk.Label(
+            section,
             text=text.upper(),
-            bg=UI_SURFACE,
-            fg=UI_MUTED,
+            bg=soft,
+            fg=accent,
             font=("Segoe UI", 8, "bold"),
             anchor="w",
-        ).pack(fill="x", padx=14, pady=(14, 6))
+            padx=9,
+            pady=5,
+        ).pack(fill="x")
 
     def _nav_button(
         self,
@@ -1684,6 +1843,8 @@ class ConverterApp(TkRoot):
         index: int,
         image: ImageTk.PhotoImage | None = None,
         tooltip: str | None = None,
+        accent: str = UI_RED,
+        active_bg: str = UI_RED_SOFT,
     ) -> tk.Button:
         button = tk.Button(
             parent,
@@ -1694,8 +1855,8 @@ class ConverterApp(TkRoot):
             anchor="w",
             bg=UI_SURFACE,
             fg=UI_TEXT,
-            activebackground=UI_RED_SOFT,
-            activeforeground=UI_RED,
+            activebackground=active_bg,
+            activeforeground=accent,
             relief="flat",
             bd=0,
             highlightthickness=1,
@@ -1705,8 +1866,8 @@ class ConverterApp(TkRoot):
             pady=11,
             cursor="hand2",
         )
-        button.bind("<Enter>", lambda _event: button.configure(bg=UI_SURFACE_ALT) if button.cget("background") != UI_RED_SOFT else None)
-        button.bind("<Leave>", lambda _event: button.configure(bg=UI_SURFACE) if button.cget("background") != UI_RED_SOFT else None)
+        button.bind("<Enter>", lambda _event: button.configure(bg=active_bg))
+        button.bind("<Leave>", lambda _event: button.configure(bg=active_bg if getattr(self, "active_tab_index", -1) == index else UI_SURFACE))
         if tooltip:
             ToolTip(button, tooltip)
         return button
@@ -1728,21 +1889,23 @@ class ConverterApp(TkRoot):
         chips: list[tuple[str, str]] | None = None,
         accent: str = UI_RED,
     ) -> tk.Frame:
+        _accent, soft = self._tab_theme({UI_RED: 0, UI_BLUE: 1, UI_WARN_TEXT: 2, UI_GREEN_TEXT: 4}.get(accent, 0))
         header = self._panel(parent)
+        header.configure(bg=soft, highlightbackground=accent)
         header.pack(fill="x", pady=(0, 12))
         tk.Frame(header, bg=accent, width=5).pack(side="left", fill="y")
-        copy = tk.Frame(header, bg=UI_SURFACE)
+        copy = tk.Frame(header, bg=soft)
         copy.pack(side="left", fill="both", expand=True, padx=16, pady=14)
-        tk.Label(copy, text=title, bg=UI_SURFACE, fg=UI_TEXT, font=("Segoe UI", 18, "bold")).pack(anchor="w")
-        tk.Label(copy, text=subtitle, bg=UI_SURFACE, fg=UI_MUTED, font=("Segoe UI", 10)).pack(anchor="w", pady=(3, 0))
+        tk.Label(copy, text=title, bg=soft, fg=UI_TEXT, font=("Segoe UI", 18, "bold")).pack(anchor="w")
+        tk.Label(copy, text=subtitle, bg=soft, fg=UI_MUTED, font=("Segoe UI", 10)).pack(anchor="w", pady=(3, 0))
         if chips:
-            chip_row = tk.Frame(header, bg=UI_SURFACE)
+            chip_row = tk.Frame(header, bg=soft)
             chip_row.pack(side="right", padx=16, pady=14)
             for text, color in chips:
                 tk.Label(
                     chip_row,
                     text=text,
-                    bg=UI_SURFACE_ALT,
+                    bg=UI_SURFACE,
                     fg=color,
                     font=("Segoe UI", 9, "bold"),
                     padx=10,
@@ -1779,7 +1942,6 @@ class ConverterApp(TkRoot):
         toolbar = tk.Frame(self, bg=UI_SURFACE_ALT, height=50, highlightthickness=1, highlightbackground=UI_BORDER)
         toolbar.pack(fill="x")
         toolbar.pack_propagate(False)
-        tk.Label(toolbar, text="Commands", bg=UI_SURFACE_ALT, fg=UI_RED, font=("Segoe UI", 9, "bold")).pack(side="left", padx=(16, 10))
         self._menu_button(toolbar, "File", [
             ("Settings", self.show_settings),
             ("Default Export Folder", self.choose_export_folder),
@@ -1787,7 +1949,7 @@ class ConverterApp(TkRoot):
             ("Create Desktop Shortcut", self.create_desktop_shortcut),
             None,
             ("Exit", self.destroy),
-        ], icon="icon-folder.png", tooltip="Open settings, export folder tools, or create a desktop shortcut.").pack(side="left", padx=(0, 8), pady=8)
+        ], icon="icon-folder.png", tooltip="Open settings, export folder tools, or create a desktop shortcut.").pack(side="left", padx=(14, 8), pady=8)
         self._menu_button(toolbar, "Import", [
             ("Browse Files", self.import_file),
             ("Paste Clipboard To Queue", self.paste_clipboard_to_queue),
@@ -1827,11 +1989,18 @@ class ConverterApp(TkRoot):
 
         nav = self._panel(body)
         nav.grid(row=0, column=0, sticky="ns", padx=(0, 14))
-        nav.configure(width=220, bg=UI_SURFACE)
+        nav.configure(width=244, bg=UI_SURFACE)
         nav.grid_propagate(False)
-        tk.Label(nav, text="Workspace", bg=UI_SURFACE, fg=UI_TEXT, font=("Segoe UI", 11, "bold")).pack(anchor="w", padx=14, pady=(14, 2))
-        tk.Label(nav, text="Choose one work area", bg=UI_SURFACE, fg=UI_MUTED, font=("Segoe UI", 8)).pack(anchor="w", padx=14, pady=(0, 4))
+        workspace_intro = tk.Frame(nav, bg=UI_SURFACE)
+        workspace_intro.pack(fill="x", padx=10, pady=(12, 8))
+        workspace_badge = tk.Label(workspace_intro, text="AP", bg=UI_RED, fg="#ffffff", font=("Segoe UI", 9, "bold"), width=4, pady=5)
+        workspace_badge.pack(side="left", padx=(0, 9))
+        workspace_copy = tk.Frame(workspace_intro, bg=UI_SURFACE)
+        workspace_copy.pack(side="left", fill="x", expand=True)
+        tk.Label(workspace_copy, text="Workspace Menu", bg=UI_SURFACE, fg=UI_TEXT, font=("Segoe UI", 11, "bold")).pack(anchor="w")
+        tk.Label(workspace_copy, text="Select a task below", bg=UI_SURFACE, fg=UI_MUTED, font=("Segoe UI", 8)).pack(anchor="w", pady=(1, 0))
         self.nav_buttons: list[tk.Button] = []
+        self.nav_button_themes: list[tuple[str, str]] = []
         nav_specs = [
             ("Convert", "Batch Converter", 0, "nav-batch.png"),
             ("Convert", "Single Lookup", 1, "nav-single.png"),
@@ -1851,39 +2020,86 @@ class ConverterApp(TkRoot):
             if section != last_section:
                 self._nav_section(nav, section)
                 last_section = section
-            button = self._nav_button(nav, label, index, self._load_nav_icon(icon_name), nav_tips.get(label))
+            accent, soft = self._tab_theme(index)
+            button = self._nav_button(nav, label, index, self._load_nav_icon(icon_name), nav_tips.get(label), accent, soft)
             self.nav_buttons.append(button)
+            self.nav_button_themes.append((accent, soft))
             button.pack(fill="x", padx=10, pady=(0, 8))
         tk.Frame(nav, bg=UI_BORDER, height=1).pack(fill="x", padx=12, pady=(8, 10))
-        self.nav_status = tk.StringVar(value="Scan, paste, import, or choose a workspace.")
-        status_card = self._card(nav, bg=UI_SURFACE_ALT, border=UI_BORDER)
-        status_card.pack(fill="x", padx=10, pady=(0, 10))
-        status_card.configure(height=118)
+        self.nav_status = tk.StringVar(value="Batch Converter\nScan, import, convert, export.")
+        status_card = self._card(nav, bg=UI_SURFACE, border=UI_BORDER)
+        status_card.pack(fill="x", padx=10, pady=(0, 8))
+        status_card.configure(height=96)
         status_card.pack_propagate(False)
-        tk.Frame(status_card, bg=UI_RED, height=3).pack(fill="x")
-        status_head = tk.Frame(status_card, bg=UI_SURFACE_ALT)
+        self.work_focus_bar = tk.Frame(status_card, bg=UI_RED, height=3)
+        self.work_focus_bar.pack(fill="x")
+        status_head = tk.Frame(status_card, bg=UI_SURFACE)
         status_head.pack(fill="x", padx=10, pady=(9, 4))
         status_icon = self._load_icon("icon-status.png", 18)
         if status_icon:
-            tk.Label(status_head, image=status_icon, bg=UI_SURFACE_ALT).pack(side="left", padx=(0, 6))
-        tk.Label(status_head, text="APP STATUS", bg=UI_SURFACE_ALT, fg=UI_MUTED, font=("Segoe UI", 8, "bold")).pack(side="left")
+            self.focus_icon_label = tk.Label(status_head, image=status_icon, bg=UI_SURFACE)
+            self.focus_icon_label.pack(side="left", padx=(0, 6))
+        else:
+            self.focus_icon_label = None
+        self.focus_heading_label = tk.Label(status_head, text="CURRENT AREA", bg=UI_SURFACE, fg=UI_MUTED, font=("Segoe UI", 8, "bold"))
+        self.focus_heading_label.pack(side="left")
+        self.focus_value_frame = tk.Frame(status_card, bg=UI_RED_SOFT)
+        self.focus_value_frame.pack(fill="x", padx=10, pady=(0, 9))
         self.nav_status_label = tk.Label(
-            status_card,
+            self.focus_value_frame,
             textvariable=self.nav_status,
-            bg=UI_SURFACE_ALT,
+            bg=UI_RED_SOFT,
             fg=UI_BLUE,
-            wraplength=178,
+            wraplength=198,
             justify="left",
             anchor="w",
-            width=24,
-            height=5,
+            height=2,
             font=("Segoe UI", 8, "bold"),
+            padx=8,
+            pady=5,
         )
-        self.nav_status_label.pack(fill="x", padx=10, pady=(0, 10))
-        for widget in (status_card, status_head, self.nav_status_label):
+        self.nav_status_label.pack(fill="x")
+        self.focus_card_widgets = [self.focus_value_frame, self.nav_status_label]
+        for widget in (status_card, status_head, self.focus_value_frame, self.nav_status_label):
             widget.configure(cursor="hand2")
-            widget.bind("<Button-1>", self.open_status_target, add="+")
-        ToolTip(status_card, "Shows the latest action or result. Click to open the related workspace.")
+            widget.bind("<Button-1>", self.open_sidebar_focus_target, add="+")
+        ToolTip(status_card, "Shows the current work focus. Click to open that workspace.")
+
+        self.sidebar_tip_var = tk.StringVar(value="F9 Batch Scan\nFocus scanner input.")
+        tip_card = self._card(nav, bg=UI_SURFACE, border=UI_BORDER)
+        tip_card.pack(fill="x", padx=10, pady=(0, 10))
+        tip_card.configure(height=106)
+        tip_card.pack_propagate(False)
+        self.sidebar_tip_bar = tk.Frame(tip_card, bg=UI_BLUE, height=3)
+        self.sidebar_tip_bar.pack(fill="x")
+        tip_head = tk.Frame(tip_card, bg=UI_SURFACE)
+        tip_head.pack(fill="x", padx=10, pady=(9, 4))
+        tip_icon = self._load_icon("icon-help.png", 18)
+        if tip_icon:
+            self.guide_icon_label = tk.Label(tip_head, image=tip_icon, bg=UI_SURFACE)
+            self.guide_icon_label.pack(side="left", padx=(0, 6))
+        else:
+            self.guide_icon_label = None
+        self.guide_heading_label = tk.Label(tip_head, text="QUICK TIP", bg=UI_SURFACE, fg=UI_MUTED, font=("Segoe UI", 8, "bold"))
+        self.guide_heading_label.pack(side="left")
+        self.guide_value_frame = tk.Frame(tip_card, bg=UI_RED_SOFT)
+        self.guide_value_frame.pack(fill="x", padx=10, pady=(0, 9))
+        self.sidebar_tip_label = tk.Label(
+            self.guide_value_frame,
+            textvariable=self.sidebar_tip_var,
+            bg=UI_RED_SOFT,
+            fg=UI_TEXT,
+            wraplength=198,
+            justify="left",
+            anchor="w",
+            height=2,
+            font=("Segoe UI", 8),
+            padx=8,
+            pady=5,
+        )
+        self.sidebar_tip_label.pack(fill="x")
+        self.guide_card_widgets = [self.guide_value_frame, self.sidebar_tip_label]
+        ToolTip(tip_card, "Shows a new shortcut or usage note about every 15 seconds.")
 
         content = tk.Frame(body, bg=UI_BG)
         content.grid(row=0, column=1, sticky="nsew")
@@ -1956,25 +2172,26 @@ class ConverterApp(TkRoot):
 
     def _build_batch_tab(self) -> None:
         workspace_header = self._panel(self.batch_tab)
+        workspace_header.configure(bg=UI_RED_SOFT, highlightbackground=UI_RED)
         workspace_header.pack(fill="x", pady=(0, 12))
         tk.Frame(workspace_header, bg=UI_RED, width=5).pack(side="left", fill="y")
-        header_copy = tk.Frame(workspace_header, bg=UI_SURFACE)
+        header_copy = tk.Frame(workspace_header, bg=UI_RED_SOFT)
         header_copy.pack(side="left", fill="both", expand=True, padx=16, pady=14)
-        tk.Label(header_copy, text="Batch Converter", bg=UI_SURFACE, fg=UI_TEXT, font=("Segoe UI", 18, "bold")).pack(anchor="w")
+        tk.Label(header_copy, text="Batch Converter", bg=UI_RED_SOFT, fg=UI_TEXT, font=("Segoe UI", 18, "bold")).pack(anchor="w")
         tk.Label(
             header_copy,
             text="Import, clean, convert, review, and export access-control IDs from one workspace.",
-            bg=UI_SURFACE,
+            bg=UI_RED_SOFT,
             fg=UI_MUTED,
             font=("Segoe UI", 10),
         ).pack(anchor="w", pady=(3, 0))
-        header_tools = tk.Frame(workspace_header, bg=UI_SURFACE)
+        header_tools = tk.Frame(workspace_header, bg=UI_RED_SOFT)
         header_tools.pack(side="right", padx=16, pady=14)
         for text, color in [("Drag/drop ready", UI_BLUE), (f"Version {APP_VERSION}", UI_RED)]:
             chip = tk.Label(
                 header_tools,
                 text=text,
-                bg=UI_SURFACE_ALT,
+                bg=UI_SURFACE,
                 fg=color,
                 font=("Segoe UI", 9, "bold"),
                 padx=10,
@@ -2183,11 +2400,7 @@ class ConverterApp(TkRoot):
         copy_row = tk.Frame(header, bg="#10141b")
         copy_row.pack(side="right")
         self._button(copy_row, "Copy All", self.copy_all_pairs, icon="icon-copy.png", tooltip="Copy all valid FC,CN pairs to the clipboard.").pack(side="left", padx=(0, 6))
-        self._button(copy_row, "Clear Invalid", self.clear_invalid_rows, icon="icon-clear.png", tooltip="Remove invalid rows from the review table.").pack(side="left", padx=(0, 6))
-        self._button(copy_row, "Copy FC", lambda: self.copy_selected("fc"), icon="icon-copy.png", tooltip="Copy the selected row's Facility Code.").pack(side="left", padx=(0, 6))
-        self._button(copy_row, "Copy CN", lambda: self.copy_selected("cn"), icon="icon-copy.png", tooltip="Copy the selected row's Card Number.").pack(side="left", padx=(0, 6))
-        self._button(copy_row, "Copy Pair", lambda: self.copy_selected("pair"), icon="icon-copy.png", tooltip="Copy the selected row as FC,CN.").pack(side="left", padx=(0, 6))
-        self._button(copy_row, "Copy Row", lambda: self.copy_selected("row"), icon="icon-copy.png", tooltip="Copy the full selected result row.").pack(side="left")
+        self._button(copy_row, "Clear Invalid", self.clear_invalid_rows, icon="icon-clear.png", tooltip="Remove invalid rows from the review table.").pack(side="left")
 
         filter_row = tk.Frame(results_panel, bg="#10141b")
         filter_row.pack(fill="x", padx=12, pady=(0, 8))
@@ -2370,7 +2583,7 @@ class ConverterApp(TkRoot):
             copy = tk.Frame(item, bg=UI_SURFACE_ALT)
             copy.pack(side="left", fill="x", expand=True, padx=10, pady=8)
             tk.Label(copy, text=label_text.upper(), bg=UI_SURFACE_ALT, fg=UI_MUTED, font=("Segoe UI", 8, "bold")).pack(anchor="w")
-            tk.Label(copy, textvariable=variable, bg=UI_SURFACE_ALT, fg=accent, font=("Cascadia Mono", 13, "bold")).pack(anchor="w", pady=(2, 0))
+            self._clickable_value_label(copy, variable, accent, label_text, 1).pack(anchor="w", pady=(2, 0))
 
         result_row("Hex ID", self.single_hex_var, UI_BLUE)
         result_row("Facility Code", self.single_fc_var, UI_GREEN_TEXT)
@@ -2468,7 +2681,7 @@ class ConverterApp(TkRoot):
         hex_copy = tk.Frame(hex_card, bg=UI_SURFACE_ALT)
         hex_copy.pack(side="left", fill="x", expand=True, padx=10, pady=10)
         tk.Label(hex_copy, text="HEX ID", bg=UI_SURFACE_ALT, fg=UI_MUTED, font=("Segoe UI", 8, "bold")).pack(anchor="w")
-        tk.Label(hex_copy, textvariable=self.reverse_hex_var, bg=UI_SURFACE_ALT, fg=UI_WARN_TEXT, font=("Cascadia Mono", 16, "bold")).pack(anchor="w", pady=(2, 0))
+        self._clickable_value_label(hex_copy, self.reverse_hex_var, UI_WARN_TEXT, "HEX ID", 2, font_size=16).pack(anchor="w", pady=(2, 0))
         tk.Label(result_panel, textvariable=self.reverse_note_var, bg="#10141b", fg=UI_WARN_TEXT, wraplength=290, justify="left", font=("Segoe UI", 9, "bold")).pack(anchor="w", padx=12, pady=(2, 12))
 
     def _build_unconvert_tab(self) -> None:
@@ -2656,17 +2869,20 @@ class ConverterApp(TkRoot):
         table_frame.columnconfigure(0, weight=1)
         columns = ("Date/Time", "Action", "Input", "Valid", "Invalid", "Warnings")
         self.history_tree = ttk.Treeview(table_frame, columns=columns, show="headings")
+        history_anchors = {"Date/Time": "w", "Action": "w", "Input": "center", "Valid": "center", "Invalid": "center", "Warnings": "center"}
         for col in columns:
-            self.history_tree.heading(col, text=col)
-        widths = {"Date/Time": 190, "Action": 160, "Input": 90, "Valid": 90, "Invalid": 90, "Warnings": 110}
+            self.history_tree.heading(col, text=col, anchor=history_anchors[col])
+        widths = {"Date/Time": 230, "Action": 220, "Input": 90, "Valid": 90, "Invalid": 90, "Warnings": 110}
         for col, width in widths.items():
-            self.history_tree.column(col, width=width, minwidth=70, stretch=col in {"Date/Time", "Action"})
+            self.history_tree.column(col, width=width, minwidth=70, anchor=history_anchors[col], stretch=col in {"Date/Time", "Action"})
         history_scroll_y = ttk.Scrollbar(table_frame, orient="vertical", command=self.history_tree.yview, style="Dark.Vertical.TScrollbar")
         history_scroll_x = ttk.Scrollbar(table_frame, orient="horizontal", command=self.history_tree.xview, style="Dark.Horizontal.TScrollbar")
         self.history_tree.configure(yscrollcommand=history_scroll_y.set, xscrollcommand=history_scroll_x.set)
         self.history_tree.grid(row=0, column=0, sticky="nsew")
         history_scroll_y.grid(row=0, column=1, sticky="ns")
         history_scroll_x.grid(row=1, column=0, sticky="ew")
+        self.history_tree.tag_configure("history_even", background="#ffffff", foreground=UI_TEXT)
+        self.history_tree.tag_configure("history_odd", background="#f8fafc", foreground=UI_TEXT)
         self.history_tree.tag_configure("invalid", background=UI_BAD_SOFT, foreground=UI_BAD_TEXT)
         self.history_tree.tag_configure("warning", background=UI_WARN_SOFT, foreground=UI_WARN_TEXT)
         self.history_tree.tag_configure("empty", foreground=UI_MUTED)
@@ -2693,21 +2909,14 @@ class ConverterApp(TkRoot):
 
     def select_tab(self, index: int) -> None:
         labels = ["Batch Converter", "Single Hex Lookup", "FC/CN to Hex", "Unconvert Batch", "History"]
-        tab_status = {
-            0: "Batch: import IDs, convert, review, export.",
-            1: "Single: check one HEX ID.",
-            2: "Reverse: FC/CN to HEX.",
-            3: "Unconvert: import or paste FC/CN pairs.",
-            4: "History: recent local activity.",
-        }
         self.active_tab_index = index
         self.tab_frames[index].tkraise()
         self.mode_var.set(labels[index])
-        if hasattr(self, "nav_status"):
-            self.nav_status.set(tab_status.get(index, labels[index]))
+        self.update_sidebar_focus(index)
         for i, button in enumerate(self.nav_buttons):
+            accent, soft = self.nav_button_themes[i] if i < len(self.nav_button_themes) else self._tab_theme(i)
             if i == index:
-                button.configure(bg=UI_RED_SOFT, fg=UI_RED, highlightbackground=UI_RED)
+                button.configure(bg=soft, fg=accent, highlightbackground=accent)
             else:
                 button.configure(bg=UI_SURFACE, fg=UI_TEXT, highlightbackground=UI_BORDER)
         if index == 4:
@@ -2736,11 +2945,11 @@ class ConverterApp(TkRoot):
         else:
             self.status_target_tab = self._infer_status_target_tab(message)
         self.status_var.set(message)
-        if hasattr(self, "nav_status"):
-            self.nav_status.set(self._compact_status(message))
+        label = self._status_state_from_message(message, state)
+        focus_target = self.status_target_tab if label == "Needs Review" else getattr(self, "active_tab_index", 0)
+        self.update_sidebar_focus(focus_target, label)
         if not hasattr(self, "status_state_var"):
             return
-        label = self._status_state_from_message(message, state)
         self.status_state_var.set(label.upper())
         bg, fg = self._status_state_colors(label)
         self.status_state_chip.configure(bg=bg, fg=fg, highlightbackground=fg if label != "Ready" else UI_BORDER)
@@ -2799,33 +3008,6 @@ class ConverterApp(TkRoot):
             self.busy_label.pack_forget()
         self.configure(cursor="")
         self.update_idletasks()
-
-    def _compact_status(self, message: str) -> str:
-        text = re.sub(r"\s+", " ", str(message or "")).strip()
-        converted = re.match(r"Converted (\d+) valid line\(s\); (\d+) invalid line\(s\)(?:; (\d+) warning\(s\))?\.", text)
-        if converted:
-            warning_text = ""
-            if converted.group(3) and int(converted.group(3)) > 0:
-                warning_count = int(converted.group(3))
-                warning_text = f" / {warning_count} warn"
-            return f"{converted.group(1)} valid / {converted.group(2)} invalid{warning_text}"
-        unconverted = re.match(r"Unconverted (\d+) valid pair\(s\); (\d+) invalid line\(s\)(?:; (\d+) warning\(s\))?\.", text)
-        if unconverted:
-            warning_text = ""
-            if unconverted.group(3) and int(unconverted.group(3)) > 0:
-                warning_count = int(unconverted.group(3))
-                warning_text = f" / {warning_count} warn"
-            return f"{unconverted.group(1)} valid / {unconverted.group(2)} invalid{warning_text}"
-        kept = re.match(r"Kept (\d+) valid row\(s\); removed (\d+) invalid row\(s\)\.", text)
-        if kept:
-            return f"{kept.group(1)} valid / {kept.group(2)} removed"
-        if text in {"Single ID converted and FC,CN copied.", "Single scan converted and FC,CN copied."}:
-            return "Single ID converted"
-        if text == "Hex value created and copied.":
-            return "HEX value copied"
-        if len(text) <= 56:
-            return text
-        return f"{text[:53]}..."
 
     def _status_state_from_message(self, message: str, state: str | None = None) -> str:
         if state in {"Ready", "Needs Review", "Exported"}:
@@ -3743,10 +3925,10 @@ class ConverterApp(TkRoot):
                     self.history_empty_frame.pack_forget()
                 elif not self.history_empty_frame.winfo_ismapped():
                     self.history_empty_frame.pack(fill="x", padx=12, pady=(0, 8), before=self.history_table_frame)
-            for item in history:
+            for row_index, item in enumerate(history):
                 invalid_count = int(item.get("invalid", 0) or 0)
                 warning_count = int(item.get("warnings", 0) or 0)
-                tags: tuple[str, ...] = ()
+                tags: tuple[str, ...] = ("history_even",) if row_index % 2 == 0 else ("history_odd",)
                 if invalid_count:
                     tags = ("invalid",)
                 elif warning_count:
@@ -4566,12 +4748,12 @@ class ConverterApp(TkRoot):
         add_help_card("Import Options", "Use Import > Browse Files for TXT, CSV, TSV, XLS, XLSX, XLSM, XML, HTML, or HTM files. Batch Converter imports detected IDs. Unconvert Batch imports detected FC/CN pairs. Drag files directly onto a batch input area when you want the fastest import.", "#46d9ff")
         add_help_card("Scanner Input", "Most USB handheld scanners type like a keyboard. Click the Batch Scanner Input field or press F9, scan an ID, and use an Enter or Tab scanner suffix. Each new scan is cleaned, counted, and placed at the top of the Input Queue.", "#e51b2d")
         add_help_card("Batch Converter", "Paste HEX IDs one per line, scan IDs, or paste full employee lines. The app highlights valid rows, warning rows, and invalid rows directly in the queue before you convert.", "#e51b2d")
-        add_help_card("Single Lookup", "Single Lookup also works with a scanner. Press F10 or focus the HEX ID field and scan one value; the app automatically converts it and copies the FC,CN pair.", "#0b66c3")
+        add_help_card("Single Lookup", "Single Lookup also works with a scanner. Press F10 or focus the HEX ID field and scan one value; the app automatically converts it and copies the FC,CN pair. Click the HEX ID, Facility Code, or Card Number result to copy that one value.", "#0b66c3")
         add_help_card("Queue Cleanup", "Use Remove Duplicates to keep the first valid matching HEX ID. Use Keep Valid to remove rows that cannot be read as valid 8-character HEX IDs.", "#35d07f")
         add_help_card("Results Review", "Valid rows show HEX, Facility Code, Card Number, status, and Notes / Details. Notes stay blank for clean rows and appear when the app cleaned imported text, found a duplicate, flagged an unusual value, or explains why an input row is invalid.", "#f1b84b")
-        add_help_card("Reverse Tools", "Use FC/CN to Hex for one pair. Use Unconvert Batch when you have many FC/CN pairs. Accepted batch examples include 34968,18199, tab-separated values, or FC 34968 CN 18199.", "#35d07f")
+        add_help_card("Reverse Tools", "Use FC/CN to Hex for one pair. Click the HEX output number to copy it again after conversion. Use Unconvert Batch when you have many FC/CN pairs. Accepted batch examples include 34968,18199, tab-separated values, or FC 34968 CN 18199.", "#35d07f")
         add_help_card("Exports", "Use Export to save Excel, CSV, TXT, or PDF reports from Batch Converter or Unconvert Batch. Export Default uses your saved default report type. After saving, Open File and Open Folder are available from the completion window.", "#8beaff")
-        add_help_card("Status Navigation", "The sidebar status card and the bottom status strip are clickable. If a message needs review, click the status area to jump back to the related workspace.", "#f1b84b")
+        add_help_card("Status Navigation", "The bottom status strip stays clickable for review messages. The sidebar Current Area box shows the active work area, and the Quick Tip box rotates useful shortcuts with short explanations every 15 seconds.", "#f1b84b")
         add_help_card("Settings", "Use File > Settings to choose the default export type, default export folder, and create a desktop shortcut for the utility.", "#ff6d78")
         add_help_card("Shortcuts", "F9 focuses Batch Scanner Input, F10 focuses Single Lookup, Ctrl+I imports, Ctrl+R converts, Ctrl+E exports Excel, Ctrl+P exports PDF, Ctrl+F jumps to search, and Ctrl+L clears the workspace.", "#ff6d78")
         self._enable_mousewheel_tree(cards, canvas)
