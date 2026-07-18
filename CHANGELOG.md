@@ -3,6 +3,7 @@
 ## 1.1.1
 
 - Added Batch Scanner Input so keyboard-style handheld scanners can place each new scan at the top of the Input Queue.
+- Added a Batch scanner session count plus F9/F10 shortcuts for quickly focusing Batch Scanner Input or Single Lookup.
 - Added scanner-ready Single Lookup behavior so a scanned HEX ID can auto-convert and copy the FC,CN pair.
 - Redesigned Single Lookup, FC/CN to Hex, Help, and About for cleaner spacing, clearer result cards, and more professional formatting.
 - Made the sidebar status card and bottom status strip clickable so Needs Review messages can jump back to the related workspace.

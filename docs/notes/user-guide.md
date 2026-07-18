@@ -67,13 +67,17 @@ For Batch Converter:
 1. Click the Scanner Input field.
 2. Scan one ID.
 3. Use an Enter or Tab scanner suffix when possible.
-4. The app cleans the scanned value and places the newest scan at the top of the Input Queue.
+4. The app cleans the scanned value, updates the session scan count, and places the newest scan at the top of the Input Queue.
+
+Shortcut: press F9 to focus Batch Scanner Input.
 
 For Single Hex Lookup:
 
 1. Click the HEX ID field.
 2. Scan one ID.
 3. The app converts it automatically and copies the FC,CN pair.
+
+Shortcut: press F10 to focus Single Hex Lookup.
 
 ## Importing Data
 

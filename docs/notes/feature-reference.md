@@ -52,6 +52,9 @@ Screenshots: [Screenshot Guide](../screenshots/README.md)
 - Batch Scanner Input accepts handheld scanner input that behaves like keyboard typing.
 - Enter and Tab scanner suffixes submit the scanned value.
 - Each new batch scan is cleaned and placed at the top of the Input Queue.
+- The scanner strip tracks the current session scan count.
+- F9 focuses Batch Scanner Input.
+- F10 focuses Single Hex Lookup.
 - Single Hex Lookup can auto-convert a scanned HEX ID and copy the FC,CN pair.
 
 ## Import Features

@@ -8,6 +8,7 @@
 - Updates CSV, Excel, PDF, and TXT report headers to use Notes / Details consistently.
 - Adds right-click paste/cut/copy/select/clear menus to input and lookup fields.
 - Adds Batch Scanner Input for keyboard-style handheld scanners with Enter or Tab suffixes.
+- Adds a Batch scanner session count plus F9/F10 scanner focus shortcuts.
 - Adds scanner-ready Single Lookup auto-conversion for one scanned HEX ID.
 - Redesigns Single Lookup, FC/CN to Hex, Help, and About for cleaner layout and clearer result cards.
 - Makes the sidebar and bottom status areas clickable so Needs Review messages can jump to the related workspace.

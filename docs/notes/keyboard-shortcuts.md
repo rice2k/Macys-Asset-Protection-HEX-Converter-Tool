@@ -11,6 +11,8 @@
 | `Ctrl+P` | Export PDF report. |
 | `Ctrl+F` | Jump to Results search. |
 | `Ctrl+L` | Clear workspace. |
+| `F9` | Focus Batch Scanner Input. |
+| `F10` | Focus Single Lookup. |
 
 ## Mouse Actions
 
@@ -60,6 +62,8 @@ Import menu:
 - Browse Files
 - Paste Clipboard To Queue
 - Load Sample IDs
+- Focus Batch Scanner (F9)
+- Focus Single Lookup (F10)
 
 Export menu:
 

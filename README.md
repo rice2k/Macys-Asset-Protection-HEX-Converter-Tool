@@ -49,7 +49,7 @@ Current version: `1.1.1`
 
 Current SHA-256:
 
-`b8b8b5de43ee9ac0a21534bb235336ab8398caa8f7d7cd857babd0c7689a7e69`
+`c59785d64bae67432ef893c08e67ac87dd32c1e6dbd231f46236351cb52ba216`
 
 Windows may show a SmartScreen warning because the EXE is not code-signed yet. For testing, choose **More info**, then **Run anyway**.
 
@@ -96,7 +96,8 @@ Example:
 ## Main Features
 
 - Batch converts many 8-character HEX IDs into Facility Code and Card Number.
-- Batch Scanner Input places each new handheld scan at the top of the Input Queue.
+- Batch Scanner Input places each new handheld scan at the top of the Input Queue and tracks the scan count for the session.
+- F9 focuses Batch Scanner Input, and F10 focuses Single Lookup.
 - Single Lookup can auto-convert one scanned HEX ID and copy the FC,CN pair.
 - Converts one FC/CN pair or a batch of FC/CN pairs back into HEX.
 - Imports TXT, CSV, TSV, XLS, XLSX, XLSM, XML Spreadsheet, HTML, and copied table data.

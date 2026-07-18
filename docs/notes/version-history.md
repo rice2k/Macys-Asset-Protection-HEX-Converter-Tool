@@ -10,7 +10,7 @@ Current test EXE:
 
 Current checksum:
 
-`b8b8b5de43ee9ac0a21534bb235336ab8398caa8f7d7cd857babd0c7689a7e69`
+`c59785d64bae67432ef893c08e67ac87dd32c1e6dbd231f46236351cb52ba216`
 
 Related pages:
 

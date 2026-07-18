@@ -29,6 +29,8 @@ This page documents the visible options in version `1.1.1`.
 | Browse Files | Imports supported files from the computer. |
 | Paste Clipboard To Queue | Reads copied text/table data and offers cleanup when needed. |
 | Load Sample IDs | Loads numeric sample IDs into the Input Queue. |
+| Focus Batch Scanner (F9) | Opens Batch Converter and focuses Scanner Input. |
+| Focus Single Lookup (F10) | Opens Single Lookup and focuses the HEX ID input. |
 
 ## Export Menu
 
@@ -63,7 +65,7 @@ This page documents the visible options in version `1.1.1`.
 
 | Option | Action |
 | --- | --- |
-| Scanner Input | Accepts keyboard-style handheld scanner input. New scans are cleaned and placed at the top of the Input Queue. |
+| Scanner Input | Accepts keyboard-style handheld scanner input. New scans are cleaned, counted, and placed at the top of the Input Queue. F9 focuses this field. |
 | Input Queue | Accepts scanned, pasted, imported, or dragged-in HEX ID rows. |
 
 | Button | Action |
@@ -106,7 +108,7 @@ This page documents the visible options in version `1.1.1`.
 | Option | Action |
 | --- | --- |
 | HEX ID input | Accepts one 8-character HEX value. |
-| Scanner input behavior | A keyboard-style scanner can submit with Enter or Tab and the app will auto-convert the scan. |
+| Scanner input behavior | A keyboard-style scanner can submit with Enter or Tab and the app will auto-convert the scan. F10 focuses this field. |
 | Convert | Converts the value and copies the FC,CN pair. |
 | Clear | Clears the field and result. |
 | Focus Scanner | Returns the cursor to the Single Lookup scanner/input field. |

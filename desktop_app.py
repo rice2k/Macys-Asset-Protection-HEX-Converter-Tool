@@ -1080,6 +1080,8 @@ class ConverterApp(TkRoot):
         self.bind_all("<Control-p>", lambda _event: self.export_pdf())
         self.bind_all("<Control-l>", lambda _event: self.clear_workspace())
         self.bind_all("<Control-f>", lambda _event: self.focus_search())
+        self.bind_all("<F9>", self.focus_batch_scanner)
+        self.bind_all("<F10>", self.focus_single_lookup)
 
     def focus_search(self) -> None:
         self.select_tab(0)
@@ -1087,6 +1089,30 @@ class ConverterApp(TkRoot):
             self.search_var.set("")
             self.search_entry.focus_set()
         self.set_status("Search is ready.")
+
+    def focus_batch_scanner(self, _event: Any | None = None) -> str:
+        self.select_tab(0)
+
+        def focus() -> None:
+            if hasattr(self, "batch_scan_entry"):
+                self.batch_scan_entry.focus_set()
+                self.batch_scan_entry.selection_range(0, "end")
+                self.set_status("Batch Scanner Input is ready. Scan an ID or press Enter after typing.", "Ready", target_tab=0)
+
+        self.after(80, focus)
+        return "break"
+
+    def focus_single_lookup(self, _event: Any | None = None) -> str:
+        self.select_tab(1)
+
+        def focus() -> None:
+            if hasattr(self, "single_entry"):
+                self.single_entry.focus_set()
+                self.single_entry.selection_range(0, "end")
+                self.set_status("Single Lookup scanner field is ready. Scan one HEX ID.", "Ready", target_tab=1)
+
+        self.after(80, focus)
+        return "break"
 
     def _menu_options(self) -> dict[str, Any]:
         return {
@@ -1116,6 +1142,9 @@ class ConverterApp(TkRoot):
         import_menu.add_command(label="Browse Files", command=self.import_file)
         import_menu.add_command(label="Paste Clipboard To Queue", command=self.paste_clipboard_to_queue)
         import_menu.add_command(label="Load Sample IDs", command=self.load_sample)
+        import_menu.add_separator()
+        import_menu.add_command(label="Focus Batch Scanner (F9)", command=self.focus_batch_scanner)
+        import_menu.add_command(label="Focus Single Lookup (F10)", command=self.focus_single_lookup)
         menubar.add_cascade(label="Import", menu=import_menu)
 
         file_menu = self._styled_menu(menubar)
@@ -1762,6 +1791,9 @@ class ConverterApp(TkRoot):
             ("Browse Files", self.import_file),
             ("Paste Clipboard To Queue", self.paste_clipboard_to_queue),
             ("Load Sample IDs", self.load_sample),
+            None,
+            ("Focus Batch Scanner (F9)", self.focus_batch_scanner),
+            ("Focus Single Lookup (F10)", self.focus_single_lookup),
         ], icon="icon-import.png", tooltip="Import files, paste clipboard text, or drag files onto the Input Queue box.").pack(side="left", padx=(0, 8), pady=8)
         self._menu_button(toolbar, "Export", [
             ("Export Default", self.export_default),
@@ -1822,7 +1854,7 @@ class ConverterApp(TkRoot):
             self.nav_buttons.append(button)
             button.pack(fill="x", padx=10, pady=(0, 8))
         tk.Frame(nav, bg=UI_BORDER, height=1).pack(fill="x", padx=12, pady=(8, 10))
-        self.nav_status = tk.StringVar(value="Paste IDs, import files, or choose a workspace.")
+        self.nav_status = tk.StringVar(value="Scan, paste, import, or choose a workspace.")
         status_card = self._card(nav, bg=UI_SURFACE_ALT, border=UI_BORDER)
         status_card.pack(fill="x", padx=10, pady=(0, 10))
         status_card.configure(height=118)
@@ -1876,7 +1908,7 @@ class ConverterApp(TkRoot):
         footer = tk.Frame(self, bg=UI_HEADER, height=34, highlightthickness=1, highlightbackground=UI_BORDER)
         footer.pack(side="bottom", fill="x")
         footer.pack_propagate(False)
-        self.status_var = tk.StringVar(value="Paste IDs, import files, or choose a workspace.")
+        self.status_var = tk.StringVar(value="Scan, paste, import, or choose a workspace.")
         self.status_state_var = tk.StringVar(value="READY")
         self.status_state_chip = tk.Label(
             footer,
@@ -2000,7 +2032,33 @@ class ConverterApp(TkRoot):
         tk.Frame(scan_panel, bg=UI_RED, width=4).pack(side="left", fill="y")
         scan_copy = tk.Frame(scan_panel, bg=UI_SURFACE_ALT)
         scan_copy.pack(side="left", fill="x", expand=True, padx=10, pady=8)
-        tk.Label(scan_copy, text="Scanner Input", bg=UI_SURFACE_ALT, fg=UI_TEXT, font=("Segoe UI", 10, "bold")).pack(anchor="w")
+        scan_title_row = tk.Frame(scan_copy, bg=UI_SURFACE_ALT)
+        scan_title_row.pack(fill="x")
+        tk.Label(scan_title_row, text="Scanner Input", bg=UI_SURFACE_ALT, fg=UI_TEXT, font=("Segoe UI", 10, "bold")).pack(side="left")
+        self.batch_scan_count = 0
+        self.batch_scan_count_var = tk.StringVar(value="0 scans this session")
+        tk.Label(
+            scan_title_row,
+            textvariable=self.batch_scan_count_var,
+            bg="#eef6ff",
+            fg=UI_BLUE,
+            font=("Segoe UI", 8, "bold"),
+            padx=8,
+            pady=3,
+            highlightthickness=1,
+            highlightbackground=UI_BORDER,
+        ).pack(side="left", padx=(10, 0))
+        tk.Label(
+            scan_title_row,
+            text="F9 focuses scanner",
+            bg=UI_SURFACE,
+            fg=UI_GREEN_TEXT,
+            font=("Segoe UI", 8, "bold"),
+            padx=8,
+            pady=3,
+            highlightthickness=1,
+            highlightbackground=UI_BORDER,
+        ).pack(side="left", padx=(6, 0))
         tk.Label(
             scan_copy,
             text="Focus here, scan an ID, and press Enter/Tab from the scanner. New scans go to the top of the queue.",
@@ -2845,6 +2903,10 @@ class ConverterApp(TkRoot):
             self.set_status("Scanner input needs review: no clean 8-character ID found.", "Needs Review", target_tab=0)
             return "break"
         self.prepend_text_to_queue("\n".join(cleanup["lines"]))
+        if hasattr(self, "batch_scan_count_var"):
+            self.batch_scan_count += len(cleanup["lines"])
+            scan_label = "scan" if self.batch_scan_count == 1 else "scans"
+            self.batch_scan_count_var.set(f"{self.batch_scan_count} {scan_label} this session")
         self.batch_scan_var.set("")
         if hasattr(self, "batch_scan_entry"):
             self.batch_scan_entry.focus_set()
@@ -3098,6 +3160,9 @@ class ConverterApp(TkRoot):
         self.time_var.set("No run yet")
         if hasattr(self, "batch_scan_var"):
             self.batch_scan_var.set("")
+        if hasattr(self, "batch_scan_count_var"):
+            self.batch_scan_count = 0
+            self.batch_scan_count_var.set("0 scans this session")
         self.single_var.set("")
         self.single_result.set("Waiting for one 8-character HEX ID.")
         if hasattr(self, "single_hex_var"):
@@ -4468,16 +4533,16 @@ class ConverterApp(TkRoot):
             tk.Label(body, text=body_text, bg=UI_SURFACE, fg=UI_MUTED, wraplength=450, justify="left", font=("Segoe UI", 9)).pack(anchor="w", pady=(5, 0))
 
         add_help_card("Import Options", "Use Import > Browse Files for TXT, CSV, TSV, XLS, XLSX, XLSM, XML, HTML, or HTM files. Batch Converter imports detected IDs. Unconvert Batch imports detected FC/CN pairs. Drag files directly onto a batch input area when you want the fastest import.", "#46d9ff")
-        add_help_card("Scanner Input", "Most USB handheld scanners type like a keyboard. Click the Batch Scanner Input field, scan an ID, and use an Enter or Tab scanner suffix. Each new scan is cleaned and placed at the top of the Input Queue.", "#e51b2d")
+        add_help_card("Scanner Input", "Most USB handheld scanners type like a keyboard. Click the Batch Scanner Input field or press F9, scan an ID, and use an Enter or Tab scanner suffix. Each new scan is cleaned, counted, and placed at the top of the Input Queue.", "#e51b2d")
         add_help_card("Batch Converter", "Paste HEX IDs one per line, scan IDs, or paste full employee lines. The app highlights valid rows, warning rows, and invalid rows directly in the queue before you convert.", "#e51b2d")
-        add_help_card("Single Lookup", "Single Lookup also works with a scanner. Focus the HEX ID field and scan one value; the app automatically converts it and copies the FC,CN pair.", "#0b66c3")
+        add_help_card("Single Lookup", "Single Lookup also works with a scanner. Press F10 or focus the HEX ID field and scan one value; the app automatically converts it and copies the FC,CN pair.", "#0b66c3")
         add_help_card("Queue Cleanup", "Use Remove Duplicates to keep the first valid matching HEX ID. Use Keep Valid to remove rows that cannot be read as valid 8-character HEX IDs.", "#35d07f")
         add_help_card("Results Review", "Valid rows show HEX, Facility Code, Card Number, status, and Notes / Details. Notes stay blank for clean rows and appear when the app cleaned imported text, found a duplicate, flagged an unusual value, or explains why an input row is invalid.", "#f1b84b")
         add_help_card("Reverse Tools", "Use FC/CN to Hex for one pair. Use Unconvert Batch when you have many FC/CN pairs. Accepted batch examples include 34968,18199, tab-separated values, or FC 34968 CN 18199.", "#35d07f")
         add_help_card("Exports", "Use Export to save Excel, CSV, TXT, or PDF reports from Batch Converter or Unconvert Batch. Export Default uses your saved default report type. After saving, Open File and Open Folder are available from the completion window.", "#8beaff")
         add_help_card("Status Navigation", "The sidebar status card and the bottom status strip are clickable. If a message needs review, click the status area to jump back to the related workspace.", "#f1b84b")
         add_help_card("Settings", "Use File > Settings to choose the default export type, default export folder, and create a desktop shortcut for the utility.", "#ff6d78")
-        add_help_card("Shortcuts", "Ctrl+I imports, Ctrl+R converts, Ctrl+E exports Excel, Ctrl+P exports PDF, Ctrl+F jumps to search, and Ctrl+L clears the workspace. Hover over controls for quick tips.", "#ff6d78")
+        add_help_card("Shortcuts", "F9 focuses Batch Scanner Input, F10 focuses Single Lookup, Ctrl+I imports, Ctrl+R converts, Ctrl+E exports Excel, Ctrl+P exports PDF, Ctrl+F jumps to search, and Ctrl+L clears the workspace.", "#ff6d78")
         self._enable_mousewheel_tree(cards, canvas)
 
         self._dialog_footer_accent(dialog, padx=16, pady=(0, 8))

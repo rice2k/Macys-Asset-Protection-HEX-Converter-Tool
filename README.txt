@@ -34,7 +34,7 @@ Checksum file:
 https://raw.githubusercontent.com/rice2k/Macys-Asset-Protection-HEX-Converter-Tool/main/dist/Macys_AP_China_Grove_Hex_Utility.exe.sha256.txt
 
 Current SHA-256:
-b8b8b5de43ee9ac0a21534bb235336ab8398caa8f7d7cd857babd0c7689a7e69
+c59785d64bae67432ef893c08e67ac87dd32c1e6dbd231f46236351cb52ba216
 
 Windows may show a SmartScreen warning because the EXE is not code-signed yet.
 For testing, users can choose More info, then Run anyway.
@@ -135,7 +135,10 @@ You can add data to the Input Queue several ways:
 Scanner input:
 - Most USB handheld scanners type like a keyboard.
 - Enter or Tab is the recommended scanner suffix.
-- Batch Scanner Input places each new scan at the top of the Input Queue.
+- Batch Scanner Input places each new scan at the top of the Input Queue
+  and tracks the scan count for the session.
+- F9 focuses Batch Scanner Input.
+- F10 focuses Single Lookup.
 - Single Lookup can auto-convert one scanned HEX ID and copy the FC,CN pair.
 
 Excel and copied-table cleanup:
