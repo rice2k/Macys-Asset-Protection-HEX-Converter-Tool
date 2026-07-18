@@ -34,7 +34,7 @@ Checksum file:
 https://raw.githubusercontent.com/rice2k/Macys-Asset-Protection-HEX-Converter-Tool/main/dist/Macys_AP_China_Grove_Hex_Utility.exe.sha256.txt
 
 Current SHA-256:
-15F7DA4D211292EC21002E760655EFEFBB3628F86A6EA9E9A10E8C04B46F3815
+90ad52b1d6f5ec66a87cca55290c1af43b5f00897eda5198182aae7b62384cad
 
 Windows may show a SmartScreen warning because the EXE is not code-signed yet.
 For testing, users can choose More info, then Run anyway.

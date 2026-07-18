@@ -10,7 +10,7 @@ Current test EXE:
 
 Current checksum:
 
-`15F7DA4D211292EC21002E760655EFEFBB3628F86A6EA9E9A10E8C04B46F3815`
+`90ad52b1d6f5ec66a87cca55290c1af43b5f00897eda5198182aae7b62384cad`
 
 Related pages:
 
@@ -22,7 +22,7 @@ Related pages:
 
 | Version | Tag | Archive Branch | Summary |
 | --- | --- | --- | --- |
-| `1.1.1` | [`v1.1.1`](https://github.com/rice2k/Macys-Asset-Protection-HEX-Converter-Tool/tree/v1.1.1) | `archive/v1.1.1` | Current test build. Aligns Results and Notes / Details output. |
+| `1.1.1` | [`v1.1.1`](https://github.com/rice2k/Macys-Asset-Protection-HEX-Converter-Tool/tree/v1.1.1) | `archive/v1.1.1` | Current test build. Adds right-click paste, cleaner imports, input resizing, batch-only exports, and improved Results alignment. |
 | `1.1.0` | [`v1.1.0`](https://github.com/rice2k/Macys-Asset-Protection-HEX-Converter-Tool/tree/v1.1.0) | `archive/v1.1.0` | Paste cleanup preview, full-row copy, right-click menus, clear recent exports, release-note scaffolding. |
 | `1.0.9` | [`v1.0.9`](https://github.com/rice2k/Macys-Asset-Protection-HEX-Converter-Tool/tree/v1.0.9) | `archive/v1.0.9` | Almost-done baseline before v1.1.x polish. |
 | `1.0.8` | [`v1.0.8`](https://github.com/rice2k/Macys-Asset-Protection-HEX-Converter-Tool/tree/v1.0.8) | `archive/v1.0.8` | Stabilized workspace layout, shorter inputs, numeric-only samples. |

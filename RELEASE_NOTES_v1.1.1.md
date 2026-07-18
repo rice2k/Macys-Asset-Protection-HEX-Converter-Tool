@@ -6,6 +6,11 @@
 - Shows the table header as Notes / Details and aligns that header with the actual notes text.
 - Adds clearer wording explaining that Notes / Details appears only when a row was cleaned, duplicated, unusual, or invalid.
 - Updates CSV, Excel, PDF, and TXT report headers to use Notes / Details consistently.
+- Adds right-click paste/cut/copy/select/clear menus to input and lookup fields.
+- Adds drag-to-resize handles for the Batch and Unconvert input boxes.
+- Cleans imports so Batch pulls detected 8-character IDs and Unconvert pulls detected FC/CN pairs.
+- Limits export actions to Batch Converter and Unconvert Batch, including Unconvert report export support.
+- Keeps the GitHub project and Christopher Schumacher contact links on the About page only.
 
 ## Verification
 

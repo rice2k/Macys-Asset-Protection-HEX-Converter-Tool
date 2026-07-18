@@ -12,7 +12,7 @@ Checksum file:
 
 Current SHA-256:
 
-`15F7DA4D211292EC21002E760655EFEFBB3628F86A6EA9E9A10E8C04B46F3815`
+`90ad52b1d6f5ec66a87cca55290c1af43b5f00897eda5198182aae7b62384cad`
 
 ## Important URLs
 
@@ -36,7 +36,7 @@ Get-FileHash .\Macys_AP_China_Grove_Hex_Utility.exe -Algorithm SHA256
 The hash should match:
 
 ```text
-15F7DA4D211292EC21002E760655EFEFBB3628F86A6EA9E9A10E8C04B46F3815
+90ad52b1d6f5ec66a87cca55290c1af43b5f00897eda5198182aae7b62384cad
 ```
 
 If the hash does not match, delete the downloaded EXE and download it again from the repository link above.

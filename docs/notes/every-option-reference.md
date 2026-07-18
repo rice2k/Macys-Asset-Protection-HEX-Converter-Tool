@@ -164,4 +164,4 @@ This page documents the visible options in version `1.1.1`.
 | Version | Current app version. |
 | Run Summary | Live input count, valid count, invalid count, warning count, and last run time. |
 | App Status | Ready, Needs Review, or Exported state with short status detail. |
-| Footer links | Christopher Schumacher contact link and GitHub Project link. |
+| Footer message | Current version and reminder that contact/project links are in Help > About. |

@@ -2,6 +2,12 @@
 
 ## 1.1.1
 
+- Added right-click edit menus for Batch Converter, Unconvert Batch, search, Single Lookup, FC, CN, and Settings input fields.
+- Added drag-to-resize handles for the Batch and Unconvert input boxes so long pasted data is easier to review.
+- Tightened import cleanup so Batch imports only detected 8-character numeric IDs and Unconvert imports only detected FC/CN pairs.
+- Scoped exports to the two batch workspaces and added Unconvert Batch report export support.
+- Kept GitHub and Christopher Schumacher contact links on the About page only, with cleaner Help/footer wording.
+- Rebuilt the Windows EXE and checksum after the input, import, export, and layout polish.
 - Improved Results and Unconvert Results column alignment so headers and row values line up more clearly.
 - Renamed the table display header to Notes / Details and left-aligned it with the note text.
 - Added in-app Help and README wording explaining where Notes / Details messages come from.

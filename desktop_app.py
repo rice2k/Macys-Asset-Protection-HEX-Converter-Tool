@@ -584,13 +584,20 @@ def clean_id_lines_from_text(text: str) -> dict[str, Any]:
     except Exception:
         structured_lines = []
 
-    candidate_lines = structured_lines or raw_lines
     clean_ids: list[str] = []
-    for line in candidate_lines:
+    for line in structured_lines or raw_lines:
         prepared = clean_candidate_line(line)
         hex_value = prepared["extracted"].strip().upper()
         if valid_hex8(hex_value):
             clean_ids.append(hex_value)
+    if structured_lines:
+        seen_clean = set(clean_ids)
+        for line in raw_lines:
+            prepared = clean_candidate_line(line)
+            hex_value = prepared["extracted"].strip().upper()
+            if valid_hex8(hex_value) and hex_value not in seen_clean:
+                clean_ids.append(hex_value)
+                seen_clean.add(hex_value)
 
     if not clean_ids:
         pattern = r"\b(?:\d{8}\.0+|\d{4}[\s-]+\d{4}|[0-9A-Fa-f]{8})\b"
@@ -614,13 +621,66 @@ def clean_id_lines_from_text(text: str) -> dict[str, Any]:
     }
 
 
+def extract_id_lines_from_tables(tables: list[list[list[str]]], source_label: str) -> dict[str, Any]:
+    lines: list[str] = []
+    for rows in tables:
+        for row in rows:
+            text = " ".join(cell_text(cell) for cell in row if cell_text(cell))
+            if text:
+                lines.append(text)
+    cleaned = clean_id_lines_from_text("\n".join(lines))
+    count = len(cleaned["lines"])
+    return {
+        "lines": cleaned["lines"],
+        "found_rows": count,
+        "strategy": "detected IDs",
+        "message": f"Imported {count} detected ID row(s) from {source_label}." if count else f"No clean 8-character IDs were detected in {source_label}.",
+    }
+
+
 def import_result_queue_lines(result: dict[str, Any]) -> list[str]:
     lines = [str(line) for line in result.get("lines", [])]
-    if result.get("found_rows"):
-        cleaned = clean_id_lines_from_text("\n".join(lines))
-        if cleaned["lines"]:
-            return cleaned["lines"]
-    return lines
+    cleaned = clean_id_lines_from_text("\n".join(lines))
+    return cleaned["lines"]
+
+
+def clean_fc_cn_lines_from_text(text: str) -> dict[str, Any]:
+    normalized = str(text or "").replace("\r\n", "\n").replace("\r", "\n")
+    raw_lines = [line.strip() for line in normalized.split("\n") if line.strip()]
+    pairs: list[str] = []
+    for line in raw_lines:
+        try:
+            facility, card = parse_fc_cn_line(line)
+            fc_cn_to_hex(facility, card)
+        except ValueError:
+            continue
+        pairs.append(f"{facility},{card}")
+    raw_normalized = "\n".join(raw_lines)
+    cleaned_normalized = "\n".join(pairs)
+    return {
+        "lines": pairs,
+        "raw_line_count": len(raw_lines),
+        "cleaned_count": len(pairs),
+        "changed": bool(pairs) and cleaned_normalized != raw_normalized,
+        "message": f"Found {len(pairs)} FC/CN pair(s) from {len(raw_lines)} line(s).",
+    }
+
+
+def extract_fc_cn_lines_from_tables(tables: list[list[list[str]]], source_label: str) -> dict[str, Any]:
+    lines: list[str] = []
+    for rows in tables:
+        for row in rows:
+            text = " ".join(cell_text(cell) for cell in row if cell_text(cell))
+            if text:
+                lines.append(text)
+    cleaned = clean_fc_cn_lines_from_text("\n".join(lines))
+    count = len(cleaned["lines"])
+    return {
+        "lines": cleaned["lines"],
+        "found_rows": count,
+        "strategy": "detected FC/CN pairs",
+        "message": f"Imported {count} FC/CN pair(s) from {source_label}." if count else f"No FC/CN pairs were detected in {source_label}.",
+    }
 
 
 class SimpleTableParser(HTMLParser):
@@ -733,24 +793,62 @@ def parse_xls(path: Path) -> list[list[list[str]]]:
 def import_structured_file(path: Path) -> dict[str, Any]:
     lower = path.name.lower()
     if lower.endswith((".xlsx", ".xlsm")):
-        return extract_name_id_lines_from_tables(parse_xlsx(path), path.name)
+        tables = parse_xlsx(path)
+        result = extract_name_id_lines_from_tables(tables, path.name)
+        return result if result["found_rows"] else extract_id_lines_from_tables(tables, path.name)
     if lower.endswith(".xls"):
-        return extract_name_id_lines_from_tables(parse_xls(path), path.name)
+        tables = parse_xls(path)
+        result = extract_name_id_lines_from_tables(tables, path.name)
+        return result if result["found_rows"] else extract_id_lines_from_tables(tables, path.name)
 
     text = path.read_text(encoding="utf-8-sig", errors="replace")
     if lower.endswith(".xml") or "<Workbook" in text:
-        return extract_name_id_lines_from_tables(parse_spreadsheet_xml(text), path.name)
+        tables = parse_spreadsheet_xml(text)
+        result = extract_name_id_lines_from_tables(tables, path.name)
+        return result if result["found_rows"] else extract_id_lines_from_tables(tables, path.name)
     if lower.endswith((".html", ".htm")) or re.search(r"<table[\s>]", text, re.I):
-        return extract_name_id_lines_from_tables(parse_html_tables(text), path.name)
+        tables = parse_html_tables(text)
+        result = extract_name_id_lines_from_tables(tables, path.name)
+        return result if result["found_rows"] else extract_id_lines_from_tables(tables, path.name)
     if lower.endswith((".txt", ".csv", ".tsv")):
+        cleaned = clean_id_lines_from_text(text)
+        if cleaned["lines"]:
+            return {
+                "lines": cleaned["lines"],
+                "found_rows": len(cleaned["lines"]),
+                "strategy": "detected IDs",
+                "message": f"Imported {len(cleaned['lines'])} detected ID row(s) from {path.name}.",
+            }
         structured = extract_name_id_lines_from_tables([parse_delimited_text(text)], path.name)
         if structured["found_rows"]:
             return structured
         return {
-            "lines": [line for line in text.replace("\r\n", "\n").split("\n") if line.strip()],
+            "lines": [],
             "found_rows": 0,
-            "strategy": "raw text",
-            "message": f"Imported raw text from {path.name}.",
+            "strategy": "detected IDs",
+            "message": f"No clean 8-character IDs were detected in {path.name}.",
+        }
+    raise ValueError("Unsupported file type.")
+
+
+def import_unconvert_file(path: Path) -> dict[str, Any]:
+    lower = path.name.lower()
+    if lower.endswith((".xlsx", ".xlsm")):
+        return extract_fc_cn_lines_from_tables(parse_xlsx(path), path.name)
+    if lower.endswith(".xls"):
+        return extract_fc_cn_lines_from_tables(parse_xls(path), path.name)
+    text = path.read_text(encoding="utf-8-sig", errors="replace")
+    if lower.endswith(".xml") or "<Workbook" in text:
+        return extract_fc_cn_lines_from_tables(parse_spreadsheet_xml(text), path.name)
+    if lower.endswith((".html", ".htm")) or re.search(r"<table[\s>]", text, re.I):
+        return extract_fc_cn_lines_from_tables(parse_html_tables(text), path.name)
+    if lower.endswith((".txt", ".csv", ".tsv")):
+        cleaned = clean_fc_cn_lines_from_text(text)
+        return {
+            "lines": cleaned["lines"],
+            "found_rows": len(cleaned["lines"]),
+            "strategy": "detected FC/CN pairs",
+            "message": f"Imported {len(cleaned['lines'])} FC/CN pair(s) from {path.name}." if cleaned["lines"] else f"No FC/CN pairs were detected in {path.name}.",
         }
     raise ValueError("Unsupported file type.")
 
@@ -768,11 +866,13 @@ class ConverterApp(TkRoot):
         self.unconvert_results: list[UnconvertRow] = []
         self.unconvert_invalid: list[InvalidRow] = []
         self.last_converted_at = ""
+        self.last_unconverted_at = ""
         self.last_error_report = ""
         self.row_lookup: dict[str, ConvertedRow | InvalidRow] = {}
         self.unconvert_row_lookup: dict[str, UnconvertRow | InvalidRow] = {}
         self.sort_column = "Line"
         self.sort_reverse = False
+        self.active_tab_index = 0
         self.logo_photo: ImageTk.PhotoImage | None = None
         self.app_icon_photo: ImageTk.PhotoImage | None = None
         self.header_accent_photo: ImageTk.PhotoImage | None = None
@@ -1364,6 +1464,130 @@ class ConverterApp(TkRoot):
                 menu.add_command(label=label, command=command)
         return menu
 
+    def _mark_edit_widget_changed(self, widget: tk.Widget) -> None:
+        if hasattr(self, "multi_text") and widget is self.multi_text:
+            self.multi_text.edit_modified(True)
+            self.handle_batch_input_changed()
+        elif hasattr(self, "unconvert_text") and widget is self.unconvert_text:
+            self.unconvert_text.edit_modified(True)
+            self.handle_unconvert_input_changed()
+
+    def _paste_raw_into_widget(self, widget: tk.Widget) -> None:
+        try:
+            widget.event_generate("<<Paste>>")
+            self.after(25, lambda: self._mark_edit_widget_changed(widget))
+        except tk.TclError:
+            pass
+
+    def _cut_from_widget(self, widget: tk.Widget) -> None:
+        try:
+            widget.event_generate("<<Cut>>")
+            self.after(25, lambda: self._mark_edit_widget_changed(widget))
+        except tk.TclError:
+            pass
+
+    def _copy_from_widget(self, widget: tk.Widget) -> None:
+        try:
+            widget.event_generate("<<Copy>>")
+        except tk.TclError:
+            pass
+
+    def _select_all_in_widget(self, widget: tk.Widget) -> None:
+        try:
+            if widget.winfo_class() == "Text":
+                widget.tag_add("sel", "1.0", "end-1c")  # type: ignore[attr-defined]
+                widget.mark_set("insert", "1.0")  # type: ignore[attr-defined]
+            else:
+                widget.selection_range(0, "end")  # type: ignore[attr-defined]
+                widget.icursor("end")  # type: ignore[attr-defined]
+            widget.focus_set()
+        except tk.TclError:
+            pass
+
+    def _clear_edit_widget(self, widget: tk.Widget) -> None:
+        try:
+            if widget.winfo_class() == "Text":
+                widget.delete("1.0", "end")  # type: ignore[attr-defined]
+            else:
+                widget.delete(0, "end")  # type: ignore[attr-defined]
+            self._mark_edit_widget_changed(widget)
+        except tk.TclError:
+            pass
+
+    def _enable_edit_context_menu(
+        self,
+        widget: tk.Widget,
+        clean_paste_command: Any | None = None,
+        clean_label: str = "Paste Clean Values",
+    ) -> None:
+        items: list[tuple[str, Any] | None] = []
+        if clean_paste_command:
+            items.extend(
+                [
+                    (clean_label, clean_paste_command),
+                    ("Paste Raw Text", lambda: self._paste_raw_into_widget(widget)),
+                ]
+            )
+        else:
+            items.append(("Paste", lambda: self._paste_raw_into_widget(widget)))
+        items.extend(
+            [
+                None,
+                ("Cut", lambda: self._cut_from_widget(widget)),
+                ("Copy", lambda: self._copy_from_widget(widget)),
+                ("Select All", lambda: self._select_all_in_widget(widget)),
+                None,
+                ("Clear", lambda: self._clear_edit_widget(widget)),
+            ]
+        )
+        menu = self._context_menu(items)
+
+        def show_menu(event: Any) -> str:
+            widget.focus_set()
+            try:
+                menu.tk_popup(event.x_root, event.y_root)
+            finally:
+                menu.grab_release()
+            return "break"
+
+        widget.bind("<Button-3>", show_menu, add="+")
+
+    def _add_text_resize_handle(
+        self,
+        parent: tk.Widget,
+        text_widget: tk.Text,
+        label: str,
+        min_height: int = 3,
+        max_height: int = 18,
+    ) -> None:
+        handle = tk.Frame(parent, bg="#18202c", height=20, cursor="sb_v_double_arrow")
+        handle.pack(fill="x", padx=12, pady=(4, 0))
+        handle.pack_propagate(False)
+        tk.Label(
+            handle,
+            text=label,
+            bg="#18202c",
+            fg="#a8b2c2",
+            font=("Segoe UI", 8, "bold"),
+            cursor="sb_v_double_arrow",
+        ).pack(expand=True)
+        state: dict[str, int] = {"start_y": 0, "start_height": int(text_widget.cget("height"))}
+
+        def start_drag(event: Any) -> None:
+            state["start_y"] = int(event.y_root)
+            state["start_height"] = int(text_widget.cget("height"))
+
+        def drag(event: Any) -> None:
+            delta = int((int(event.y_root) - state["start_y"]) / 18)
+            height = max(min_height, min(max_height, state["start_height"] + delta))
+            text_widget.configure(height=height)
+
+        handle.bind("<ButtonPress-1>", start_drag)
+        handle.bind("<B1-Motion>", drag)
+        for child in handle.winfo_children():
+            child.bind("<ButtonPress-1>", start_drag)
+            child.bind("<B1-Motion>", drag)
+
     def _show_tree_context_menu(self, event: Any, tree: ttk.Treeview, menu: tk.Menu) -> str:
         item_id = tree.identify_row(event.y)
         if not item_id:
@@ -1544,7 +1768,7 @@ class ConverterApp(TkRoot):
         ], icon="icon-excel.png", tooltip="Save the current conversion results as a report. Settings controls the default export type.").pack(side="left", padx=(0, 8), pady=8)
         self._menu_button(toolbar, "Help", [
             ("How To Use", self.show_help),
-            ("About This Utility", self.show_about),
+            ("About", self.show_about),
             None,
             ("Copy Last Error Report", self.copy_error_report),
         ], icon="icon-help.png", tooltip="Open usage help, app details, and support links.").pack(side="right", padx=(0, 16), pady=8)
@@ -1671,22 +1895,14 @@ class ConverterApp(TkRoot):
         )
         self.footer_status_label = tk.Label(footer, textvariable=self.status_var, bg=UI_HEADER, fg=UI_MUTED, anchor="w")
         self.footer_status_label.pack(side="left", fill="x", expand=True)
-        github = self._link_label(footer, "GitHub Project", PROJECT_URL, UI_HEADER, "Open the GitHub project repository.")
-        github.pack(side="right")
-        credit = tk.Frame(footer, bg=UI_HEADER)
-        credit.pack(side="right", padx=(8, 4))
-        tk.Label(credit, text="Made by ", bg=UI_HEADER, fg=UI_MUTED).pack(side="left")
-        self._link_label(
-            credit,
-            "Christopher Schumacher",
-            f"mailto:{CONTACT_EMAIL}",
-            UI_HEADER,
-            "Email Christopher Schumacher at Macy's.",
-            font_size=9,
-            bold=True,
-            padx=0,
-        ).pack(side="left")
-        tk.Label(credit, text=", Asset Protection FLO", bg=UI_HEADER, fg=UI_MUTED).pack(side="left")
+        tk.Label(
+            footer,
+            text=f"Version {APP_VERSION} | Contact and project links are in Help > About",
+            bg=UI_HEADER,
+            fg=UI_MUTED,
+            font=("Segoe UI", 8),
+            anchor="e",
+        ).pack(side="right", padx=(12, 12))
         body.pack_forget()
         body.pack(fill="both", expand=True, padx=16, pady=16)
         self._apply_corporate_skin(self)
@@ -1797,8 +2013,10 @@ class ConverterApp(TkRoot):
         self.multi_text.insert("1.0", "")
         self.multi_text.bind("<<Modified>>", self.handle_batch_input_changed)
         self._enable_mousewheel(self.multi_text, self.multi_text, self.multi_text)
+        self._enable_edit_context_menu(self.multi_text, lambda: self.paste_clipboard_to_queue(clean_only=True), "Paste Clean IDs")
         self._enable_drop_target(self.multi_text)
         self._enable_drop_target(multi_frame)
+        self._add_text_resize_handle(input_panel, self.multi_text, "Drag to resize Input Queue")
         btns = tk.Frame(input_panel, bg="#10141b")
         btns.pack(fill="x", padx=12, pady=8)
         batch_actions = [
@@ -1881,6 +2099,7 @@ class ConverterApp(TkRoot):
             font=("Segoe UI", 10),
         )
         self.search_entry.pack(side="left", fill="x", expand=True, ipady=7, padx=(0, 8))
+        self._enable_edit_context_menu(self.search_entry)
         self.search_var.trace_add("write", lambda *_args: self.render_results())
         tk.Label(filter_row, text="Status", bg="#10141b", fg="#a8b2c2", font=("Segoe UI", 9, "bold")).pack(side="left", padx=(0, 8))
         self.status_filter_var = tk.StringVar(value="All")
@@ -1898,7 +2117,7 @@ class ConverterApp(TkRoot):
         empty_copy = tk.Frame(self.results_empty_frame, bg=UI_SURFACE_ALT)
         empty_copy.pack(side="left", fill="both", expand=True, padx=(0, 12), pady=14)
         tk.Label(empty_copy, text="Ready for results", bg=UI_SURFACE_ALT, fg=UI_TEXT, font=("Segoe UI", 12, "bold")).pack(anchor="w")
-        tk.Label(empty_copy, text="Paste or import access-control IDs, then use Convert All. Valid, warning, and invalid rows will appear here.", bg=UI_SURFACE_ALT, fg=UI_MUTED, wraplength=720, justify="left", font=("Segoe UI", 9)).pack(anchor="w", pady=(5, 0))
+        tk.Label(empty_copy, text="Paste or import access-control IDs, then use Convert. Valid, warning, and invalid rows will appear here.", bg=UI_SURFACE_ALT, fg=UI_MUTED, wraplength=720, justify="left", font=("Segoe UI", 9)).pack(anchor="w", pady=(5, 0))
 
         table_frame = tk.Frame(results_panel, bg="#10141b")
         self.results_table_frame = table_frame
@@ -1979,6 +2198,7 @@ class ConverterApp(TkRoot):
         )
         entry.pack(anchor="w", padx=12, ipady=9)
         entry.bind("<Return>", lambda _event: self.convert_single())
+        self._enable_edit_context_menu(entry)
         row = tk.Frame(panel, bg="#10141b")
         row.pack(fill="x", padx=12, pady=12)
         self._button(row, "Convert", self.convert_single, True, icon="icon-convert.png", tooltip="Convert one HEX ID and copy the FC,CN pair.").pack(side="left", padx=(0, 8))
@@ -2005,7 +2225,7 @@ class ConverterApp(TkRoot):
         self.cn_var = tk.StringVar()
         for label, var in [("Facility Code", self.fc_var), ("Card Number", self.cn_var)]:
             tk.Label(panel, text=label, bg="#10141b", fg="#a8b2c2").pack(anchor="w", padx=12, pady=(8, 4))
-            tk.Entry(
+            entry = tk.Entry(
                 panel,
                 textvariable=var,
                 bg=UI_INPUT,
@@ -2017,7 +2237,9 @@ class ConverterApp(TkRoot):
                 highlightcolor=UI_RED,
                 font=("Cascadia Mono", 12),
                 width=14,
-            ).pack(anchor="w", padx=12, ipady=9)
+            )
+            entry.pack(anchor="w", padx=12, ipady=9)
+            self._enable_edit_context_menu(entry)
         row = tk.Frame(panel, bg="#10141b")
         row.pack(fill="x", padx=12, pady=12)
         self._button(row, "Convert", self.convert_reverse, True, icon="icon-convert.png", tooltip="Build one 8-character HEX ID from FC and CN.").pack(side="left", padx=(0, 8))
@@ -2071,6 +2293,10 @@ class ConverterApp(TkRoot):
         unconvert_scroll_x.grid(row=1, column=0, sticky="ew")
         self.unconvert_text.bind("<<Modified>>", self.handle_unconvert_input_changed)
         self._enable_mousewheel(self.unconvert_text, self.unconvert_text, self.unconvert_text)
+        self._enable_edit_context_menu(self.unconvert_text, self.paste_clipboard_to_unconvert, "Paste FC/CN Pairs")
+        self._enable_drop_target(self.unconvert_text)
+        self._enable_drop_target(unconvert_input_frame)
+        self._add_text_resize_handle(input_panel, self.unconvert_text, "Drag to resize FC/CN input")
         row = tk.Frame(input_panel, bg="#10141b")
         row.pack(fill="x", padx=12, pady=12)
         unconvert_actions = [
@@ -2108,7 +2334,7 @@ class ConverterApp(TkRoot):
         empty_copy = tk.Frame(self.unconvert_empty_frame, bg=UI_SURFACE_ALT)
         empty_copy.pack(side="left", fill="both", expand=True, padx=(0, 12), pady=14)
         tk.Label(empty_copy, text="Ready to rebuild HEX IDs", bg=UI_SURFACE_ALT, fg=UI_TEXT, font=("Segoe UI", 12, "bold")).pack(anchor="w")
-        tk.Label(empty_copy, text="Paste FC/CN pairs, run Unconvert All, then copy returned HEX IDs from the review area.", bg=UI_SURFACE_ALT, fg=UI_MUTED, wraplength=720, justify="left", font=("Segoe UI", 9)).pack(anchor="w", pady=(5, 0))
+        tk.Label(empty_copy, text="Paste FC/CN pairs, run Unconvert, then copy returned HEX IDs from the review area.", bg=UI_SURFACE_ALT, fg=UI_MUTED, wraplength=720, justify="left", font=("Segoe UI", 9)).pack(anchor="w", pady=(5, 0))
 
         table_frame = tk.Frame(results_panel, bg="#10141b")
         self.unconvert_table_frame = table_frame
@@ -2246,8 +2472,18 @@ class ConverterApp(TkRoot):
 
     def select_tab(self, index: int) -> None:
         labels = ["Batch Converter", "Single Hex Lookup", "FC/CN to Hex", "Unconvert Batch", "History"]
+        tab_status = {
+            0: "Batch: import IDs, convert, review, export.",
+            1: "Single: check one HEX ID.",
+            2: "Reverse: build one HEX from FC/CN.",
+            3: "Unconvert: import or paste FC/CN pairs.",
+            4: "History: recent local activity.",
+        }
+        self.active_tab_index = index
         self.tab_frames[index].tkraise()
         self.mode_var.set(labels[index])
+        if hasattr(self, "nav_status"):
+            self.nav_status.set(tab_status.get(index, labels[index]))
         for i, button in enumerate(self.nav_buttons):
             if i == index:
                 button.configure(bg=UI_RED_SOFT, fg=UI_RED, highlightbackground=UI_RED)
@@ -2335,19 +2571,22 @@ class ConverterApp(TkRoot):
             return
 
     def handle_drag_enter(self, event: Any) -> str | None:
-        if hasattr(self, "multi_text"):
-            self.multi_text.configure(bg="#eef6ff")
-        self.set_status("Drop supported files onto the Input Queue to import them.")
+        target = self.unconvert_text if getattr(self, "active_tab_index", 0) == 3 and hasattr(self, "unconvert_text") else self.multi_text if hasattr(self, "multi_text") else None
+        if target is not None:
+            target.configure(bg="#eef6ff")
+        self.set_status("Drop supported files onto this batch input area to import them.")
         return getattr(event, "action", None)
 
     def handle_drag_leave(self, event: Any) -> str | None:
-        if hasattr(self, "multi_text"):
-            self.multi_text.configure(bg=UI_INPUT)
+        for name in ("multi_text", "unconvert_text"):
+            if hasattr(self, name):
+                getattr(self, name).configure(bg=UI_INPUT)
         return getattr(event, "action", None)
 
     def handle_file_drop(self, event: Any) -> str | None:
-        if hasattr(self, "multi_text"):
-            self.multi_text.configure(bg=UI_INPUT)
+        for name in ("multi_text", "unconvert_text"):
+            if hasattr(self, name):
+                getattr(self, name).configure(bg=UI_INPUT)
         try:
             paths = [Path(item) for item in self.tk.splitlist(event.data)]
         except Exception:
@@ -2365,7 +2604,23 @@ class ConverterApp(TkRoot):
         self.multi_text.edit_modified(True)
         self.handle_batch_input_changed()
 
-    def paste_clipboard_to_queue(self) -> None:
+    def append_text_to_unconvert(self, text: str) -> None:
+        incoming = text.strip()
+        if not incoming:
+            return
+        current = self.unconvert_text.get("1.0", "end").strip()
+        self.unconvert_text.delete("1.0", "end")
+        self.unconvert_text.insert("1.0", f"{current}\n{incoming}".strip() if current else incoming)
+        self.unconvert_text.edit_modified(True)
+        self.handle_unconvert_input_changed()
+
+    def paste_clipboard_to_queue(self, clean_only: bool = False) -> None:
+        if getattr(self, "active_tab_index", 0) == 3:
+            self.paste_clipboard_to_unconvert()
+            return
+        if getattr(self, "active_tab_index", 0) not in {0, 3}:
+            messagebox.showinfo("Batch import only", "Import and paste are available on Batch Converter and Unconvert Batch.")
+            return
         try:
             text = self.clipboard_get()
         except tk.TclError:
@@ -2375,6 +2630,14 @@ class ConverterApp(TkRoot):
             messagebox.showinfo("Clipboard empty", "There is no text on the clipboard to paste.")
             return
         cleanup = clean_id_lines_from_text(text)
+        if clean_only:
+            if cleanup["lines"]:
+                self.append_text_to_queue("\n".join(cleanup["lines"]))
+                self.set_status(f"Added {len(cleanup['lines'])} clean ID row(s) from clipboard.")
+                return
+            messagebox.showinfo("No IDs found", "No clean 8-character IDs were detected on the clipboard.")
+            self.set_status("Clipboard did not contain clean IDs.", "Needs Review")
+            return
         if cleanup["changed"] and cleanup["lines"]:
             action = self.confirm_paste_cleanup_preview(text, cleanup)
             if action == "cancel":
@@ -2386,6 +2649,25 @@ class ConverterApp(TkRoot):
                 return
         self.append_text_to_queue(text)
         self.set_status("Clipboard text added to the Input Queue.")
+
+    def paste_clipboard_to_unconvert(self) -> None:
+        if getattr(self, "active_tab_index", 0) not in {3}:
+            self.select_tab(3)
+        try:
+            text = self.clipboard_get()
+        except tk.TclError:
+            messagebox.showinfo("Clipboard empty", "There is no text on the clipboard to paste.")
+            return
+        if not text.strip():
+            messagebox.showinfo("Clipboard empty", "There is no text on the clipboard to paste.")
+            return
+        cleanup = clean_fc_cn_lines_from_text(text)
+        if cleanup["lines"]:
+            self.append_text_to_unconvert("\n".join(cleanup["lines"]))
+            self.set_status(f"Added {len(cleanup['lines'])} FC/CN pair(s) from clipboard.")
+            return
+        messagebox.showinfo("No FC/CN pairs found", "No Facility Code/Card Number pairs were detected on the clipboard.")
+        self.set_status("Clipboard did not contain FC/CN pairs.", "Needs Review")
 
     def _count_nonempty_text_lines(self, widget: tk.Text) -> int:
         text = widget.get("1.0", "end").strip()
@@ -2416,7 +2698,7 @@ class ConverterApp(TkRoot):
             return
         if self.results or self.invalid:
             self.time_var.set(f"{queued} line(s) in queue")
-            self.notice_var.set("Input changed. Run Convert All to refresh results.")
+            self.notice_var.set("Input changed. Run Convert to refresh results.")
         else:
             self.time_var.set(f"{queued} line(s) queued")
             self.notice_var.set("")
@@ -2545,6 +2827,7 @@ class ConverterApp(TkRoot):
         self.unconvert_results.clear()
         self.unconvert_invalid.clear()
         self.last_converted_at = ""
+        self.last_unconverted_at = ""
         self.notice_var.set("")
         self.time_var.set("No run yet")
         self.single_var.set("")
@@ -2574,6 +2857,7 @@ class ConverterApp(TkRoot):
     def convert_unconvert_batch(self) -> None:
         converted_at = datetime.now().strftime("%m/%d/%Y %I:%M:%S %p")
         self.unconvert_results, self.unconvert_invalid = unconvert_lines(self.unconvert_text.get("1.0", "end"), converted_at)
+        self.last_unconverted_at = converted_at
         self.render_unconvert_results()
         total = len(self.unconvert_results) + len(self.unconvert_invalid)
         warn_count = sum(len(row.warnings) for row in self.unconvert_results)
@@ -2586,6 +2870,7 @@ class ConverterApp(TkRoot):
         self.unconvert_text.delete("1.0", "end")
         self.unconvert_results.clear()
         self.unconvert_invalid.clear()
+        self.last_unconverted_at = ""
         self.unconvert_summary_var.set("No unconvert run yet")
         self.render_unconvert_results()
         self.set_status("Unconvert workspace cleared.")
@@ -2959,6 +3244,7 @@ class ConverterApp(TkRoot):
         folder_row.pack(fill="x")
         folder_entry = tk.Entry(folder_row, textvariable=folder_var, bg=UI_INPUT, fg=UI_TEXT, insertbackground=UI_RED, relief="flat", highlightthickness=1, highlightbackground=UI_BORDER, font=("Segoe UI", 10))
         folder_entry.pack(side="left", fill="x", expand=True, ipady=8)
+        self._enable_edit_context_menu(folder_entry)
 
         def browse_folder() -> None:
             folder = filedialog.askdirectory(title="Choose default export folder", initialdir=folder_var.get() or self.default_export_dir())
@@ -3218,10 +3504,12 @@ class ConverterApp(TkRoot):
         self.wait_window(dialog)
         return choice.get()
 
-    def confirm_import_preview(self, path: Path, result: dict[str, Any]) -> bool:
-        preview = "\n".join(import_result_queue_lines(result)[:30])
+    def confirm_import_preview(self, path: Path, result: dict[str, Any], queue_lines: list[str] | None = None, value_label: str = "IDs") -> bool:
+        lines = queue_lines if queue_lines is not None else import_result_queue_lines(result)
+        preview = "\n".join(lines[:30])
         if not preview:
-            return messagebox.askyesno("Import preview", f"{result.get('message', '')}\n\nNo rows were extracted. Continue?")
+            messagebox.showinfo("Import preview", f"{result.get('message', '')}\n\nNo {value_label} were detected, so nothing was added.")
+            return False
         dialog = self._new_dialog("Import Preview", "#10141b")
         dialog.geometry("680x420")
         approved = tk.BooleanVar(value=False)
@@ -3255,6 +3543,7 @@ class ConverterApp(TkRoot):
         if not files:
             messagebox.showinfo("No files", "Drop or choose one or more supported files.")
             return
+        unconvert_mode = getattr(self, "active_tab_index", 0) == 3
         self.set_busy(f"Importing {len(files)} file(s)...")
         all_lines: list[str] = []
         imported = 0
@@ -3264,24 +3553,27 @@ class ConverterApp(TkRoot):
             for path in files:
                 self.set_busy(f"Reading {path.name}...")
                 try:
-                    result = import_structured_file(path)
+                    result = import_unconvert_file(path) if unconvert_mode else import_structured_file(path)
                 except Exception as exc:
                     errors.append(f"{path.name}: {exc}")
                     continue
+                lines = [str(line) for line in result.get("lines", [])] if unconvert_mode else import_result_queue_lines(result)
                 if preview and len(files) == 1:
                     self.clear_busy()
-                    if not self.confirm_import_preview(path, result):
+                    if not self.confirm_import_preview(path, result, lines, "FC/CN pairs" if unconvert_mode else "IDs"):
                         self.set_status("Import canceled.")
                         return
                     self.set_busy("Adding import to queue...")
-                lines = import_result_queue_lines(result)
                 if lines:
                     all_lines.extend(lines)
                     imported += 1
                 messages.append(f"{path.name}: {result.get('message', '')}")
                 self.add_recent_file(path)
             if all_lines:
-                self.append_text_to_queue("\n".join(all_lines))
+                if unconvert_mode:
+                    self.append_text_to_unconvert("\n".join(all_lines))
+                else:
+                    self.append_text_to_queue("\n".join(all_lines))
             if errors:
                 self.record_error_report("Import failed for one or more files", errors)
                 messagebox.showwarning(
@@ -3292,7 +3584,8 @@ class ConverterApp(TkRoot):
                 self.notice_var.set(messages[0])
                 self.set_status(messages[0], "Needs Review" if errors else "Ready")
             else:
-                status = f"Imported {len(all_lines)} row(s) from {imported} file(s)."
+                item_label = "FC/CN pair(s)" if unconvert_mode else "ID row(s)"
+                status = f"Imported {len(all_lines)} {item_label} from {imported} file(s)."
                 if errors:
                     status += f" {len(errors)} file(s) failed."
                 self.notice_var.set(status)
@@ -3301,9 +3594,12 @@ class ConverterApp(TkRoot):
             self.clear_busy()
 
     def import_file(self, path: Path | None = None) -> None:
+        if getattr(self, "active_tab_index", 0) not in {0, 3}:
+            messagebox.showinfo("Batch import only", "Import is available on Batch Converter and Unconvert Batch.")
+            return
         if path is None:
             path_texts = filedialog.askopenfilenames(
-                title="Import access control data",
+                title="Import FC/CN pairs" if getattr(self, "active_tab_index", 0) == 3 else "Import access control data",
                 filetypes=[
                     ("Supported files", "*.txt *.csv *.tsv *.xlsx *.xlsm *.xls *.xml *.html *.htm"),
                     ("Excel files", "*.xlsx *.xlsm *.xls"),
@@ -3319,8 +3615,76 @@ class ConverterApp(TkRoot):
             return
         self.import_paths_to_queue([path], preview=True)
 
+    def _exporting_unconvert(self) -> bool:
+        return getattr(self, "active_tab_index", 0) == 3
+
+    def _export_workspace_name(self) -> str:
+        return "Unconvert Batch" if self._exporting_unconvert() else "Batch Converter"
+
+    def _export_report_title(self) -> str:
+        return "Unconvert Report" if self._exporting_unconvert() else "Conversion Report"
+
+    def _export_file_stem(self) -> str:
+        return "Macys_AP_China_Grove_Unconvert_Report" if self._exporting_unconvert() else "Macys_AP_China_Grove_Hex_Utility"
+
+    def _export_last_run(self) -> str:
+        return self.last_unconverted_at if self._exporting_unconvert() else self.last_converted_at
+
+    def _export_counts(self) -> tuple[int, int, int]:
+        if self._exporting_unconvert():
+            return (
+                len(self.unconvert_results),
+                len(self.unconvert_invalid),
+                sum(len(row.warnings) for row in self.unconvert_results),
+            )
+        return (
+            len(self.results),
+            len(self.invalid),
+            sum(len(row.warnings) for row in self.results),
+        )
+
+    def _ensure_export_ready(self) -> bool:
+        if getattr(self, "active_tab_index", 0) not in {0, 3}:
+            messagebox.showinfo("Batch export only", "Export is available from Batch Converter or Unconvert Batch.")
+            return False
+        if self._exporting_unconvert():
+            if not self.unconvert_results and not self.unconvert_invalid:
+                messagebox.showinfo("No report", "Run Unconvert Batch before exporting.")
+                return False
+            return True
+        if not self.results and not self.invalid:
+            messagebox.showinfo("No report", "Run a Batch Converter conversion before exporting.")
+            return False
+        return True
+
     def _export_records(self) -> list[dict[str, Any]]:
         records: list[dict[str, Any]] = []
+        if self._exporting_unconvert():
+            for item in self.unconvert_results:
+                records.append(
+                    {
+                        "line": item.line,
+                        "hex": item.hex_value,
+                        "facility": item.facility,
+                        "card": item.card,
+                        "status": "Warning" if item.warnings else "Valid",
+                        "notes": " | ".join(item.warnings),
+                        "converted_at": item.converted_at,
+                    }
+                )
+            for item in self.unconvert_invalid:
+                records.append(
+                    {
+                        "line": item.line,
+                        "hex": item.raw,
+                        "facility": "",
+                        "card": "",
+                        "status": "Invalid",
+                        "notes": item.reason,
+                        "converted_at": item.converted_at,
+                    }
+                )
+            return sorted(records, key=lambda row: row["line"])
         for item in self.results:
             records.append(
                 {
@@ -3373,10 +3737,11 @@ class ConverterApp(TkRoot):
         inner.pack(fill="both", expand=True, padx=14, pady=14)
         tk.Label(inner, text=path.name, bg=UI_SURFACE, fg=UI_TEXT, font=("Segoe UI", 12, "bold"), anchor="w").pack(fill="x")
         tk.Label(inner, text=str(path), bg=UI_SURFACE, fg=UI_MUTED, font=("Segoe UI", 9), anchor="w", justify="left", wraplength=560).pack(fill="x", pady=(5, 12))
+        valid_count, invalid_count, warning_count = self._export_counts()
         detail = (
-            f"Version {APP_VERSION} | "
-            f"{len(self.results)} valid | {len(self.invalid)} invalid | "
-            f"{sum(len(row.warnings) for row in self.results)} warning(s)"
+            f"{self._export_workspace_name()} | Version {APP_VERSION} | "
+            f"{valid_count} valid | {invalid_count} invalid | "
+            f"{warning_count} warning(s)"
         )
         tk.Label(
             inner,
@@ -3418,15 +3783,14 @@ class ConverterApp(TkRoot):
         )
 
     def export_excel(self) -> None:
-        if not self.results and not self.invalid:
-            messagebox.showinfo("No report", "Run a conversion before exporting.")
+        if not self._ensure_export_ready():
             return
         stamp = datetime.now().strftime("%Y-%m-%d")
         path_text = filedialog.asksaveasfilename(
             title="Save Excel report",
             defaultextension=".xlsx",
             initialdir=self.default_export_dir(),
-            initialfile=f"Macys_AP_China_Grove_Hex_Utility_{stamp}.xlsx",
+            initialfile=f"{self._export_file_stem()}_{stamp}.xlsx",
             filetypes=[("Excel Workbook", "*.xlsx")],
         )
         if not path_text:
@@ -3440,15 +3804,14 @@ class ConverterApp(TkRoot):
         self.complete_export(path, "Excel Workbook")
 
     def export_csv(self) -> None:
-        if not self.results and not self.invalid:
-            messagebox.showinfo("No report", "Run a conversion before exporting.")
+        if not self._ensure_export_ready():
             return
         stamp = datetime.now().strftime("%Y-%m-%d")
         path_text = filedialog.asksaveasfilename(
             title="Save CSV report",
             defaultextension=".csv",
             initialdir=self.default_export_dir(),
-            initialfile=f"Macys_AP_China_Grove_Hex_Utility_{stamp}.csv",
+            initialfile=f"{self._export_file_stem()}_{stamp}.csv",
             filetypes=[("CSV Report", "*.csv")],
         )
         if not path_text:
@@ -3469,15 +3832,14 @@ class ConverterApp(TkRoot):
                 writer.writerow([row["line"], row["hex"], row["facility"], row["card"], row["status"], row["notes"], row["converted_at"], APP_VERSION])
 
     def export_pdf(self) -> None:
-        if not self.results and not self.invalid:
-            messagebox.showinfo("No report", "Run a conversion before exporting.")
+        if not self._ensure_export_ready():
             return
         stamp = datetime.now().strftime("%Y-%m-%d")
         path_text = filedialog.asksaveasfilename(
             title="Save PDF report",
             defaultextension=".pdf",
             initialdir=self.default_export_dir(),
-            initialfile=f"Macys_AP_China_Grove_Hex_Utility_{stamp}.pdf",
+            initialfile=f"{self._export_file_stem()}_{stamp}.pdf",
             filetypes=[("PDF Report", "*.pdf")],
         )
         if not path_text:
@@ -3501,16 +3863,17 @@ class ConverterApp(TkRoot):
         subtitle_style = ParagraphStyle("APSubtitle", parent=styles["Normal"], textColor=colors.HexColor("#323B49"), fontSize=9, leading=12)
         cell_style = ParagraphStyle("APCell", parent=styles["BodyText"], fontSize=7, leading=9)
         story = [
-            Paragraph(f"{APP_SHORT_NAME} Conversion Report", title_style),
-            Paragraph("Macy's Asset Protection - China Grove access-control conversion report", subtitle_style),
+            Paragraph(f"{APP_SHORT_NAME} {self._export_report_title()}", title_style),
+            Paragraph(f"Macy's Asset Protection - China Grove | {self._export_workspace_name()} report", subtitle_style),
             Spacer(1, 12),
         ]
+        valid_count, invalid_count, warning_count = self._export_counts()
 
         summary_data = [
-            ["Generated", datetime.now().strftime("%m/%d/%Y %I:%M:%S %p"), "Last Conversion", self.last_converted_at or "No run timestamp"],
+            ["Generated", datetime.now().strftime("%m/%d/%Y %I:%M:%S %p"), "Last Run", self._export_last_run() or "No run timestamp"],
             ["App Version", APP_VERSION, "Utility", APP_SHORT_NAME],
-            ["Valid", str(len(self.results)), "Invalid", str(len(self.invalid))],
-            ["Warnings", str(sum(len(row.warnings) for row in self.results)), "Total Input", str(len(self.results) + len(self.invalid))],
+            ["Valid", str(valid_count), "Invalid", str(invalid_count)],
+            ["Warnings", str(warning_count), "Total Input", str(valid_count + invalid_count)],
         ]
         summary = Table(summary_data, colWidths=[80, 210, 90, 210])
         summary.setStyle(TableStyle([
@@ -3581,26 +3944,27 @@ class ConverterApp(TkRoot):
         summary.column_dimensions["D"].width = 28
         summary.merge_cells("A1:D1")
         title = summary["A1"]
-        title.value = f"{APP_SHORT_NAME} Conversion Report"
+        title.value = f"{APP_SHORT_NAME} {self._export_report_title()}"
         title.font = Font(bold=True, size=16, color="FFFFFF")
         title.alignment = Alignment(horizontal="center")
         title.fill = red_fill
 
         summary.merge_cells("A2:D2")
         subtitle = summary["A2"]
-        subtitle.value = "Macy's Asset Protection - China Grove"
+        subtitle.value = f"Macy's Asset Protection - China Grove | {self._export_workspace_name()}"
         subtitle.font = Font(bold=True, color="FFFFFF")
         subtitle.alignment = Alignment(horizontal="center")
         subtitle.fill = dark_fill
 
+        valid_count, invalid_count, warning_count = self._export_counts()
         meta = [
             ("Generated", datetime.now().strftime("%m/%d/%Y %I:%M:%S %p")),
             ("App Version", APP_VERSION),
-            ("Last Conversion", self.last_converted_at),
-            ("Total Input Lines", len(self.results) + len(self.invalid)),
-            ("Valid Lines", len(self.results)),
-            ("Invalid Lines", len(self.invalid)),
-            ("Warnings", sum(len(row.warnings) for row in self.results)),
+            ("Last Run", self._export_last_run()),
+            ("Total Input Lines", valid_count + invalid_count),
+            ("Valid Lines", valid_count),
+            ("Invalid Lines", invalid_count),
+            ("Warnings", warning_count),
             ("Note", "Facility Code = high 16 bits; Card Number = low 16 bits"),
         ]
         row_index = 4
@@ -3661,15 +4025,14 @@ class ConverterApp(TkRoot):
         wb.save(path)
 
     def export_txt(self) -> None:
-        if not self.results and not self.invalid:
-            messagebox.showinfo("No report", "Run a conversion before exporting.")
+        if not self._ensure_export_ready():
             return
         stamp = datetime.now().strftime("%Y-%m-%d")
         path_text = filedialog.asksaveasfilename(
             title="Save TXT report",
             defaultextension=".txt",
             initialdir=self.default_export_dir(),
-            initialfile=f"Macys_AP_China_Grove_Hex_Utility_{stamp}.txt",
+            initialfile=f"{self._export_file_stem()}_{stamp}.txt",
             filetypes=[("Text Report", "*.txt")],
         )
         if not path_text:
@@ -3684,16 +4047,17 @@ class ConverterApp(TkRoot):
 
     def _build_text_report(self) -> str:
         records = self._export_records()
+        valid_count, invalid_count, warning_count = self._export_counts()
         lines = [
-            f"{APP_SHORT_NAME} Conversion Report",
-            "Macy's Asset Protection - China Grove",
+            f"{APP_SHORT_NAME} {self._export_report_title()}",
+            f"Macy's Asset Protection - China Grove | {self._export_workspace_name()}",
             "=" * 88,
             f"Generated       : {datetime.now().strftime('%m/%d/%Y %I:%M:%S %p')}",
             f"App Version     : {APP_VERSION}",
-            f"Last Conversion : {self.last_converted_at or 'No run timestamp'}",
-            f"Valid Records   : {len(self.results)}",
-            f"Invalid Lines   : {len(self.invalid)}",
-            f"Warnings        : {sum(len(row.warnings) for row in self.results)}",
+            f"Last Run        : {self._export_last_run() or 'No run timestamp'}",
+            f"Valid Records   : {valid_count}",
+            f"Invalid Lines   : {invalid_count}",
+            f"Warnings        : {warning_count}",
             "",
             "Facility Code = high 16 bits; Card Number = low 16 bits",
             "=" * 88,
@@ -3729,7 +4093,7 @@ class ConverterApp(TkRoot):
 
         quick_steps = [
             ("1", "Add IDs", "Paste, import, or drag files onto the Input Queue."),
-            ("2", "Convert", "Use Convert All to create FC/CN results."),
+            ("2", "Convert", "Use Convert to create FC/CN results."),
             ("3", "Review", "Check warnings, invalid lines, and duplicate notices."),
             ("4", "Export", "Save Excel, CSV, TXT, or PDF from Export."),
         ]
@@ -3745,8 +4109,15 @@ class ConverterApp(TkRoot):
         contact = self._card(quick, bg=UI_RED_SOFT, border=UI_BORDER)
         contact.pack(fill="x", padx=14, pady=(4, 8), side="bottom")
         tk.Label(contact, text="Need help?", bg=UI_RED_SOFT, fg=UI_TEXT, font=("Segoe UI", 10, "bold")).pack(anchor="w", padx=10, pady=(7, 1))
-        self._link_label(contact, "Email Christopher Schumacher", f"mailto:{CONTACT_EMAIL}", UI_RED_SOFT, "Open an email draft.", font_size=9, bold=True, padx=10).pack(anchor="w", pady=(0, 4))
-        self._link_label(contact, "GitHub project", PROJECT_URL, UI_RED_SOFT, "Open the GitHub project repository.", font_size=9, padx=10).pack(anchor="w", pady=(0, 7))
+        tk.Label(
+            contact,
+            text="Open Help > About for contact, version, and project details.",
+            bg=UI_RED_SOFT,
+            fg=UI_MUTED,
+            wraplength=210,
+            justify="left",
+            font=("Segoe UI", 9),
+        ).pack(anchor="w", padx=10, pady=(0, 7))
 
         scroll_shell = tk.Frame(content, bg=UI_BG)
         scroll_shell.pack(side="left", fill="both", expand=True)
@@ -3771,12 +4142,12 @@ class ConverterApp(TkRoot):
             tk.Label(body, text=title_text, bg=UI_SURFACE, fg=UI_TEXT, font=("Segoe UI", 12, "bold")).pack(anchor="w")
             tk.Label(body, text=body_text, bg=UI_SURFACE, fg=UI_MUTED, wraplength=450, justify="left", font=("Segoe UI", 9)).pack(anchor="w", pady=(5, 0))
 
-        add_help_card("Import Options", "Use Import > Browse Files for TXT, CSV, TSV, XLS, XLSX, XLSM, XML, HTML, or HTM files. Use Paste Clipboard To Queue for copied lines. Drag files directly onto the Input Queue when you want the fastest import.", "#46d9ff")
+        add_help_card("Import Options", "Use Import > Browse Files for TXT, CSV, TSV, XLS, XLSX, XLSM, XML, HTML, or HTM files. Batch Converter imports detected IDs. Unconvert Batch imports detected FC/CN pairs. Drag files directly onto a batch input area when you want the fastest import.", "#46d9ff")
         add_help_card("Batch Converter", "Paste HEX IDs one per line, or paste full employee lines. The app highlights valid rows, warning rows, and invalid rows directly in the queue before you convert.", "#e51b2d")
         add_help_card("Queue Cleanup", "Use Remove Duplicates to keep the first valid matching HEX ID. Use Keep Valid to remove rows that cannot be read as valid 8-character HEX IDs.", "#35d07f")
         add_help_card("Results Review", "Valid rows show HEX, Facility Code, Card Number, status, and Notes / Details. Notes stay blank for clean rows and appear when the app cleaned imported text, found a duplicate, flagged an unusual value, or explains why an input row is invalid.", "#f1b84b")
         add_help_card("Reverse Tools", "Use FC/CN to Hex for one pair. Use Unconvert Batch when you have many FC/CN pairs. Accepted batch examples include 34968,18199, tab-separated values, or FC 34968 CN 18199.", "#35d07f")
-        add_help_card("Exports", "Use Export to save Excel, CSV, TXT, or PDF reports. Export Default uses your saved default report type. After saving, Open File and Open Folder are available from the completion window.", "#8beaff")
+        add_help_card("Exports", "Use Export to save Excel, CSV, TXT, or PDF reports from Batch Converter or Unconvert Batch. Export Default uses your saved default report type. After saving, Open File and Open Folder are available from the completion window.", "#8beaff")
         add_help_card("Settings", "Use File > Settings to choose the default export type, default export folder, and create a desktop shortcut for the utility.", "#ff6d78")
         add_help_card("Shortcuts", "Ctrl+I imports, Ctrl+R converts, Ctrl+E exports Excel, Ctrl+P exports PDF, Ctrl+F jumps to search, and Ctrl+L clears the workspace. Hover over controls for quick tips.", "#ff6d78")
         self._enable_mousewheel_tree(cards, canvas)
