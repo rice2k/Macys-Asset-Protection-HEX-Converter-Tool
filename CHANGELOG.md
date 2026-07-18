@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.5
+
+- Fixed the Windows download packaging so the EXE runs by itself without a missing `_internal\\python313.dll` folder.
+- Restored the PyInstaller spec to true one-file mode with bundled binaries and app assets.
+- Verified the EXE from a clean folder to catch missing DLL/support-file issues before release.
+
 ## 1.1.4
 
 - Refined the top dropdown buttons with cleaner caret styling.
