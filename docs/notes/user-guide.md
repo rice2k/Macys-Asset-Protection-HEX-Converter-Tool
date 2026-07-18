@@ -67,7 +67,7 @@ For Batch Converter:
 1. Click the Scanner Input field.
 2. Scan one ID.
 3. Use an Enter or Tab scanner suffix when possible.
-4. The app cleans the scanned value, updates the session scan count, and places the newest scan at the top of the Input Queue.
+4. The app cleans the scanned value as a numeric 8-character ID, updates the session scan count, and places the newest scan at the top of the Input Queue.
 
 Shortcut: press F9 to focus Batch Scanner Input.
 
@@ -94,7 +94,7 @@ Supported file types:
 - XML Spreadsheet
 - HTML / HTM table files
 
-The app can detect employee-style columns such as Candidate Name and Colleague #, then place clean numeric IDs into the queue.
+The app can detect employee-style columns such as Candidate Name and Colleague #, then place clean numeric 8-character IDs into the queue.
 
 ## Clipboard Cleanup
 

@@ -10,7 +10,7 @@ Useful links:
 
 ## The EXE Download Shows A Windows Warning
 
-Reason: the EXE is not code-signed yet.
+Reason: the test EXE is intentionally unsigned for easy sharing.
 
 For testing:
 

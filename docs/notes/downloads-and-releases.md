@@ -12,7 +12,7 @@ Checksum file:
 
 Current SHA-256:
 
-`2c540f1af57b646adf83e45fa1d4f450900055a0e011c25289f045cb5fa57c5f`
+`6fe892d69486ac7adacfe5d3496ac451fafb5bcd2cfe3f83a5f9eed1f6947383`
 
 ## Important URLs
 
@@ -36,26 +36,27 @@ Get-FileHash .\Macys_AP_China_Grove_Hex_Utility.exe -Algorithm SHA256
 The hash should match:
 
 ```text
-2c540f1af57b646adf83e45fa1d4f450900055a0e011c25289f045cb5fa57c5f
+6fe892d69486ac7adacfe5d3496ac451fafb5bcd2cfe3f83a5f9eed1f6947383
 ```
 
 If the hash does not match, delete the downloaded EXE and download it again from the repository link above.
 
 ## Windows SmartScreen
 
-Windows may show a SmartScreen warning because the test EXE is not code-signed yet.
+Windows may show a SmartScreen warning because this test EXE is intentionally unsigned for easy sharing.
 
 For testing:
 
 1. Choose More info.
 2. Choose Run anyway.
 
-Future improvement: code signing would make Windows trust the EXE more.
+The current test release stays unsigned so users can download and try it without a signing workflow.
 
 ## Release Notes
 
 Release-note files are kept in the repository root:
 
+- `RELEASE_NOTES_v1.1.6.md`
 - `RELEASE_NOTES_v1.1.5.md`
 - `RELEASE_NOTES_v1.1.4.md`
 - `RELEASE_NOTES_v1.1.3.md`

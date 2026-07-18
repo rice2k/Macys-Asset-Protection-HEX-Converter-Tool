@@ -26,6 +26,8 @@ def main() -> None:
     assert valid_hex8("88984717")
     assert not valid_hex8("8898471Z")
     assert clean_candidate_line("Active Christopher Benson, 88984765")["extracted"] == "88984765"
+    assert clean_id_lines_from_text("deadbeef", numeric_only=True)["lines"] == []
+    assert clean_id_lines_from_text("deadbeef")["lines"] == ["DEADBEEF"]
     clipboard = clean_id_lines_from_text("Candidate Name\tColleague #\nChris Test\t88984765.0\nJordan Test\t8898-4130")
     assert clipboard["lines"] == ["88984765", "88984130"]
     assert clean_fc_cn_lines_from_text("FC 34968 CN 18199\nbad line")["lines"] == ["34968,18199"]

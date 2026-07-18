@@ -49,7 +49,7 @@ PROJECT_URL = "https://github.com/rice2k/Macys-Asset-Protection-HEX-Converter-To
 CONTACT_EMAIL = "christopher.schumacher@macys.com"
 APP_DISPLAY_NAME = "Macy's Asset Protection - China Grove Hex Converter Utility"
 APP_SHORT_NAME = "Macy's AP China Grove Hex Utility"
-APP_VERSION = "1.1.5"
+APP_VERSION = "1.1.6"
 APP_STATE_DIR = Path(os.environ.get("APPDATA", str(Path.home()))) / "AP_Access_Control_Converter"
 SETTINGS_FILE = APP_STATE_DIR / "settings.json"
 EXPORT_TYPE_CHOICES = ["Excel Workbook (.xlsx)", "CSV Report (.csv)", "TXT Report (.txt)", "PDF Report (.pdf)"]
@@ -572,11 +572,16 @@ def parse_delimited_text(text: str) -> list[list[str]]:
     return [[cell_text(cell) for cell in row] for row in csv.reader(lines, delimiter=delimiter)]
 
 
-def clean_id_lines_from_text(text: str) -> dict[str, Any]:
+def clean_id_lines_from_text(text: str, numeric_only: bool = False) -> dict[str, Any]:
     normalized = str(text or "").replace("\r\n", "\n").replace("\r", "\n")
     raw_lines = [line.strip() for line in normalized.split("\n") if line.strip()]
     structured_lines: list[str] = []
     structured = False
+
+    def keep_id(hex_value: str) -> bool:
+        clean = hex_value.strip().upper()
+        return valid_hex8(clean) and (not numeric_only or clean.isdigit())
+
     try:
         rows = parse_delimited_text(normalized)
         if any(len(row) > 1 for row in rows):
@@ -591,23 +596,23 @@ def clean_id_lines_from_text(text: str) -> dict[str, Any]:
     for line in structured_lines or raw_lines:
         prepared = clean_candidate_line(line)
         hex_value = prepared["extracted"].strip().upper()
-        if valid_hex8(hex_value):
+        if keep_id(hex_value):
             clean_ids.append(hex_value)
     if structured_lines:
         seen_clean = set(clean_ids)
         for line in raw_lines:
             prepared = clean_candidate_line(line)
             hex_value = prepared["extracted"].strip().upper()
-            if valid_hex8(hex_value) and hex_value not in seen_clean:
+            if keep_id(hex_value) and hex_value not in seen_clean:
                 clean_ids.append(hex_value)
                 seen_clean.add(hex_value)
 
     if not clean_ids:
-        pattern = r"\b(?:\d{8}\.0+|\d{4}[\s-]+\d{4}|[0-9A-Fa-f]{8})\b"
+        pattern = r"\b(?:\d{8}\.0+|\d{4}[\s-]+\d{4}|\d{8})\b" if numeric_only else r"\b(?:\d{8}\.0+|\d{4}[\s-]+\d{4}|[0-9A-Fa-f]{8})\b"
         for match in re.finditer(pattern, normalized):
             prepared = clean_candidate_line(match.group(0))
             hex_value = prepared["extracted"].strip().upper()
-            if valid_hex8(hex_value):
+            if keep_id(hex_value):
                 clean_ids.append(hex_value)
 
     raw_normalized = "\n".join(raw_lines)
@@ -620,7 +625,7 @@ def clean_id_lines_from_text(text: str) -> dict[str, Any]:
         "cleaned_count": len(clean_ids),
         "structured": structured,
         "changed": changed,
-        "message": f"Found {len(clean_ids)} clean ID row(s) from {len(raw_lines)} pasted line(s).",
+        "message": f"Found {len(clean_ids)} clean numeric ID row(s) from {len(raw_lines)} pasted line(s)." if numeric_only else f"Found {len(clean_ids)} clean ID row(s) from {len(raw_lines)} pasted line(s).",
     }
 
 
@@ -631,19 +636,19 @@ def extract_id_lines_from_tables(tables: list[list[list[str]]], source_label: st
             text = " ".join(cell_text(cell) for cell in row if cell_text(cell))
             if text:
                 lines.append(text)
-    cleaned = clean_id_lines_from_text("\n".join(lines))
+    cleaned = clean_id_lines_from_text("\n".join(lines), numeric_only=True)
     count = len(cleaned["lines"])
     return {
         "lines": cleaned["lines"],
         "found_rows": count,
         "strategy": "detected IDs",
-        "message": f"Imported {count} detected ID row(s) from {source_label}." if count else f"No clean 8-character IDs were detected in {source_label}.",
+        "message": f"Imported {count} detected numeric ID row(s) from {source_label}." if count else f"No clean numeric 8-character IDs were detected in {source_label}.",
     }
 
 
 def import_result_queue_lines(result: dict[str, Any]) -> list[str]:
     lines = [str(line) for line in result.get("lines", [])]
-    cleaned = clean_id_lines_from_text("\n".join(lines))
+    cleaned = clean_id_lines_from_text("\n".join(lines), numeric_only=True)
     return cleaned["lines"]
 
 
@@ -814,13 +819,13 @@ def import_structured_file(path: Path) -> dict[str, Any]:
         result = extract_name_id_lines_from_tables(tables, path.name)
         return result if result["found_rows"] else extract_id_lines_from_tables(tables, path.name)
     if lower.endswith((".txt", ".csv", ".tsv")):
-        cleaned = clean_id_lines_from_text(text)
+        cleaned = clean_id_lines_from_text(text, numeric_only=True)
         if cleaned["lines"]:
             return {
                 "lines": cleaned["lines"],
                 "found_rows": len(cleaned["lines"]),
-                "strategy": "detected IDs",
-                "message": f"Imported {len(cleaned['lines'])} detected ID row(s) from {path.name}.",
+                "strategy": "detected numeric IDs",
+                "message": f"Imported {len(cleaned['lines'])} detected numeric ID row(s) from {path.name}.",
             }
         structured = extract_name_id_lines_from_tables([parse_delimited_text(text)], path.name)
         if structured["found_rows"]:
@@ -1255,7 +1260,7 @@ class ConverterApp(TkRoot):
         hover = "#eef2f6"
         button = tk.Menubutton(
             parent,
-            text=f"{text} ▾",
+            text=f"{text} v",
             image=icon_photo,
             compound="left" if icon_photo else "none",
             bg=bg,
@@ -1727,33 +1732,36 @@ class ConverterApp(TkRoot):
         ToolTip(value_label, f"Click the {label} number to copy it.")
         return value_label
 
-    def _sidebar_tip_options(self) -> list[str]:
+    def _sidebar_tip_options(self) -> list[tuple[str, str]]:
         return [
-            "F9 Batch Scan\nFocus scanner input.",
-            "F10 Single Lookup\nFocus one-ID lookup.",
-            "Ctrl+I Import\nBrowse or paste IDs.",
-            "Ctrl+R Convert\nRun the active batch.",
-            "Ctrl+F Search\nFind result rows.",
-            "Click Results\nCopy one exact value.",
-            "Right-Click Rows\nOpen copy tools.",
-            "Drag Files\nDrop files on input.",
-            "Keep Valid\nRemove invalid rows.",
-            "Export Default\nUse saved settings.",
+            ("F9 Batch Scan", "Focus scanner input. New scans go to the top."),
+            ("F10 Single Lookup", "Jump to one-ID lookup and auto-copy FC/CN."),
+            ("Ctrl+I Import", "Browse for Excel, CSV, TXT, XML, or HTML data files."),
+            ("Ctrl+R Convert", "Run the active batch after checking row colors."),
+            ("Ctrl+F Search", "Move to Results search after a long run."),
+            ("Click Results", "Click exact output values in lookup cards to copy them."),
+            ("Right-Click Rows", "Open copy options for results or unconvert rows."),
+            ("Drag Files", "Drop supported files onto a batch input area to import them."),
+            ("Keep Valid", "Clean the queue down to rows the app can convert."),
+            ("Export Default", "Use the report type saved in Settings."),
         ]
 
     def _rotate_sidebar_tip(self) -> None:
-        if not hasattr(self, "sidebar_tip_var"):
+        if not hasattr(self, "sidebar_tip_title_var"):
             return
         tips = self._sidebar_tip_options()
-        choices = [tip for tip in tips if tip != self._last_sidebar_tip] or tips
-        tip = random.choice(choices)
-        self._last_sidebar_tip = tip
-        self.sidebar_tip_var.set(tip)
+        choices = [tip for tip in tips if "|".join(tip) != self._last_sidebar_tip] or tips
+        title, body = random.choice(choices)
+        self._last_sidebar_tip = f"{title}|{body}"
+        self.sidebar_tip_title_var.set(title)
+        self.sidebar_tip_body_var.set(body)
         accent, _soft = self._tab_theme(getattr(self, "sidebar_focus_tab", getattr(self, "active_tab_index", 0)))
         if hasattr(self, "sidebar_tip_bar"):
             self.sidebar_tip_bar.configure(bg=accent)
-        if hasattr(self, "sidebar_tip_label"):
-            self.sidebar_tip_label.configure(fg=accent)
+        if hasattr(self, "sidebar_tip_title_label"):
+            self.sidebar_tip_title_label.configure(fg=accent)
+        if hasattr(self, "sidebar_tip_body_label"):
+            self.sidebar_tip_body_label.configure(fg=UI_TEXT)
         self._sidebar_tip_after = self.after(15000, self._rotate_sidebar_tip)
 
     def _tab_theme(self, index: int, state: str = "Ready") -> tuple[str, str]:
@@ -1816,8 +1824,10 @@ class ConverterApp(TkRoot):
             self._apply_widget_bg(self.guide_card_widgets, soft)
         if hasattr(self, "sidebar_tip_bar"):
             self.sidebar_tip_bar.configure(bg=accent)
-        if hasattr(self, "sidebar_tip_label"):
-            self.sidebar_tip_label.configure(fg=accent)
+        if hasattr(self, "sidebar_tip_title_label"):
+            self.sidebar_tip_title_label.configure(fg=accent)
+        if hasattr(self, "sidebar_tip_body_label"):
+            self.sidebar_tip_body_label.configure(fg=UI_TEXT)
 
     def open_sidebar_focus_target(self, _event: Any | None = None) -> str:
         target = max(0, min(4, int(getattr(self, "sidebar_focus_tab", getattr(self, "active_tab_index", 0)))))
@@ -1931,17 +1941,27 @@ class ConverterApp(TkRoot):
             tk.Label(header, image=self.logo_photo, bg=UI_HEADER).pack(side="left", padx=(18, 12))
 
         title_box = tk.Frame(header, bg=UI_HEADER)
-        title_box.pack(side="left")
+        title_box.pack(side="left", fill="x", expand=True)
         tk.Label(title_box, text=APP_SHORT_NAME, bg=UI_HEADER, fg=UI_TEXT, font=("Segoe UI", 14, "bold")).pack(anchor="w")
         tk.Label(title_box, text="Asset Protection access-control workstation", bg=UI_HEADER, fg=UI_MUTED, font=("Segoe UI", 9)).pack(anchor="w")
 
-        self.mode_var = tk.StringVar(value="Batch Converter")
+        identity = tk.Frame(header, bg=UI_SURFACE_ALT, highlightthickness=1, highlightbackground=UI_BORDER)
+        identity.configure(width=292, height=50)
+        identity.pack(side="right", padx=(12, 18), pady=10)
+        identity.pack_propagate(False)
+        tk.Frame(identity, bg=UI_RED, width=4).pack(side="left", fill="y")
+        badge = tk.Label(identity, text="AP", bg=UI_RED, fg="#ffffff", font=("Segoe UI", 9, "bold"), width=5)
+        badge.pack(side="left", fill="y")
+        identity_copy = tk.Frame(identity, bg=UI_SURFACE_ALT)
+        identity_copy.pack(side="left", fill="both", expand=True, padx=10, pady=6)
+        tk.Label(identity_copy, text="CHINA GROVE", bg=UI_SURFACE_ALT, fg=UI_TEXT, font=("Segoe UI", 9, "bold")).pack(anchor="w")
+        tk.Label(identity_copy, text=f"HEX CONVERTER | v{APP_VERSION}", bg=UI_SURFACE_ALT, fg=UI_MUTED, font=("Segoe UI", 8)).pack(anchor="w", pady=(1, 0))
+        accent_lines = tk.Frame(identity, bg=UI_SURFACE_ALT)
+        accent_lines.pack(side="right", padx=(0, 10), pady=12)
+        tk.Frame(accent_lines, bg=UI_RED, width=54, height=3).pack(anchor="e", pady=(0, 5))
+        tk.Frame(accent_lines, bg=UI_BLUE, width=74, height=3).pack(anchor="e")
 
-        accent_path = asset_path("ap-window-accent.png")
-        if accent_path.exists():
-            accent_image = Image.open(accent_path).resize((470, 58), Image.LANCZOS)
-            self.header_accent_photo = ImageTk.PhotoImage(accent_image)
-            tk.Label(header, image=self.header_accent_photo, bg=UI_HEADER).pack(side="right", padx=(0, 18))
+        self.mode_var = tk.StringVar(value="Batch Converter")
 
         toolbar = tk.Frame(self, bg=UI_SURFACE_ALT, height=50, highlightthickness=1, highlightbackground=UI_BORDER)
         toolbar.pack(fill="x")
@@ -2045,7 +2065,7 @@ class ConverterApp(TkRoot):
             self.focus_icon_label.pack(side="left", padx=(0, 6))
         else:
             self.focus_icon_label = None
-        self.focus_heading_label = tk.Label(status_head, text="CURRENT AREA", bg=UI_SURFACE, fg=UI_MUTED, font=("Segoe UI", 8, "bold"))
+        self.focus_heading_label = tk.Label(status_head, text="WORKSPACE STATUS", bg=UI_SURFACE, fg=UI_MUTED, font=("Segoe UI", 8, "bold"))
         self.focus_heading_label.pack(side="left")
         self.focus_value_frame = self._info_strip(status_card, UI_RED_SOFT)
         self.focus_value_frame.pack(fill="x", padx=10, pady=(0, 9))
@@ -2054,7 +2074,7 @@ class ConverterApp(TkRoot):
             textvariable=self.nav_status,
             bg=UI_RED_SOFT,
             fg=UI_BLUE,
-            wraplength=194,
+            wraplength=166,
             justify="left",
             anchor="w",
             height=2,
@@ -2069,10 +2089,11 @@ class ConverterApp(TkRoot):
             widget.bind("<Button-1>", self.open_sidebar_focus_target, add="+")
         ToolTip(status_card, "Shows the current work focus. Click to open that workspace.")
 
-        self.sidebar_tip_var = tk.StringVar(value="F9 Batch Scan\nFocus scanner input.")
+        self.sidebar_tip_title_var = tk.StringVar(value="F9 Batch Scan")
+        self.sidebar_tip_body_var = tk.StringVar(value="Focus scanner input so the next scan lands at the top of the queue.")
         tip_card = self._card(nav, bg=UI_SURFACE, border=UI_BORDER)
         tip_card.pack(fill="x", padx=10, pady=(0, 10))
-        tip_card.configure(height=106)
+        tip_card.configure(height=132)
         tip_card.pack_propagate(False)
         self.sidebar_tip_bar = tk.Frame(tip_card, bg=UI_BLUE, height=3)
         self.sidebar_tip_bar.pack(fill="x")
@@ -2084,25 +2105,37 @@ class ConverterApp(TkRoot):
             self.guide_icon_label.pack(side="left", padx=(0, 6))
         else:
             self.guide_icon_label = None
-        self.guide_heading_label = tk.Label(tip_head, text="QUICK TIP", bg=UI_SURFACE, fg=UI_MUTED, font=("Segoe UI", 8, "bold"))
+        self.guide_heading_label = tk.Label(tip_head, text="FIELD GUIDE", bg=UI_SURFACE, fg=UI_MUTED, font=("Segoe UI", 8, "bold"))
         self.guide_heading_label.pack(side="left")
         self.guide_value_frame = self._info_strip(tip_card, UI_RED_SOFT)
         self.guide_value_frame.pack(fill="x", padx=10, pady=(0, 9))
-        self.sidebar_tip_label = tk.Label(
+        self.sidebar_tip_title_label = tk.Label(
             self.guide_value_frame,
-            textvariable=self.sidebar_tip_var,
+            textvariable=self.sidebar_tip_title_var,
+            bg=UI_RED_SOFT,
+            fg=UI_RED,
+            wraplength=166,
+            justify="left",
+            anchor="w",
+            font=("Segoe UI", 8, "bold"),
+            padx=8,
+            pady=3,
+        )
+        self.sidebar_tip_title_label.pack(fill="x")
+        self.sidebar_tip_body_label = tk.Label(
+            self.guide_value_frame,
+            textvariable=self.sidebar_tip_body_var,
             bg=UI_RED_SOFT,
             fg=UI_TEXT,
             wraplength=194,
             justify="left",
-            anchor="w",
-            height=2,
+            anchor="nw",
             font=("Segoe UI", 8),
             padx=8,
-            pady=5,
+            pady=3,
         )
-        self.sidebar_tip_label.pack(fill="x")
-        self.guide_card_widgets = [self.guide_value_frame, self.sidebar_tip_label]
+        self.sidebar_tip_body_label.pack(fill="both", expand=True)
+        self.guide_card_widgets = [self.guide_value_frame, self.sidebar_tip_title_label, self.sidebar_tip_body_label]
         ToolTip(tip_card, "Shows a new shortcut or usage note about every 15 seconds.")
 
         content = tk.Frame(body, bg=UI_BG)
@@ -2170,8 +2203,6 @@ class ConverterApp(TkRoot):
             font=("Segoe UI", 8),
             anchor="e",
         ).pack(side="right", padx=(12, 12))
-        body.pack_forget()
-        body.pack(fill="both", expand=True, padx=16, pady=16)
         self._apply_corporate_skin(self)
 
     def _build_batch_tab(self) -> None:
@@ -3101,7 +3132,7 @@ class ConverterApp(TkRoot):
             self.after_cancel(self._batch_scan_after)
             self._batch_scan_after = None
         text = self.batch_scan_var.get() if hasattr(self, "batch_scan_var") else ""
-        cleanup = clean_id_lines_from_text(text)
+        cleanup = clean_id_lines_from_text(text, numeric_only=True)
         if not cleanup["lines"]:
             self.set_status("Scanner input needs review: no clean 8-character ID found.", "Needs Review", target_tab=0)
             return "break"
@@ -3131,7 +3162,7 @@ class ConverterApp(TkRoot):
         text = self.batch_scan_var.get().strip() if hasattr(self, "batch_scan_var") else ""
         if not text:
             return
-        cleanup = clean_id_lines_from_text(text)
+        cleanup = clean_id_lines_from_text(text, numeric_only=True)
         if cleanup["lines"]:
             self.handle_batch_scan_submit()
 
@@ -3160,7 +3191,7 @@ class ConverterApp(TkRoot):
         if not text.strip():
             messagebox.showinfo("Clipboard empty", "There is no text on the clipboard to paste.")
             return
-        cleanup = clean_id_lines_from_text(text)
+        cleanup = clean_id_lines_from_text(text, numeric_only=True)
         if clean_only:
             if cleanup["lines"]:
                 self.append_text_to_queue("\n".join(cleanup["lines"]))
@@ -4757,7 +4788,7 @@ class ConverterApp(TkRoot):
         add_help_card("Results Review", "Valid rows show HEX, Facility Code, Card Number, status, and Notes / Details. Notes stay blank for clean rows and appear when the app cleaned imported text, found a duplicate, flagged an unusual value, or explains why an input row is invalid.", "#f1b84b")
         add_help_card("Reverse Tools", "Use FC/CN to Hex for one pair. Click the HEX output number to copy it again after conversion. Use Unconvert Batch when you have many FC/CN pairs. Accepted batch examples include 34968,18199, tab-separated values, or FC 34968 CN 18199.", "#35d07f")
         add_help_card("Exports", "Use Export to save Excel, CSV, TXT, or PDF reports from Batch Converter or Unconvert Batch. Export Default uses your saved default report type. After saving, Open File and Open Folder are available from the completion window.", "#8beaff")
-        add_help_card("Status Navigation", "The bottom status strip stays clickable for review messages. The sidebar Current Area box shows the active work area, and the Quick Tip box rotates useful shortcuts with short explanations every 15 seconds.", "#f1b84b")
+        add_help_card("Status Navigation", "The bottom status strip stays clickable for review messages. The sidebar Workspace Status box shows the active work area, and the Field Guide box rotates useful shortcuts with short explanations every 15 seconds.", "#f1b84b")
         add_help_card("Settings", "Use File > Settings to choose the default export type, default export folder, and create a desktop shortcut for the utility.", "#ff6d78")
         add_help_card("Shortcuts", "F9 focuses Batch Scanner Input, F10 focuses Single Lookup, Ctrl+I imports, Ctrl+R converts, Ctrl+E exports Excel, Ctrl+P exports PDF, Ctrl+F jumps to search, and Ctrl+L clears the workspace.", "#ff6d78")
         self._enable_mousewheel_tree(cards, canvas)
@@ -4881,6 +4912,8 @@ def main() -> None:
         assert fc_cn_to_hex(34968, 18199) == "88984717"
         assert clean_candidate_line("Active Christopher Benson, 88984765")["extracted"] == "88984765"
         assert clean_candidate_line("Excel cell 88984765.0")["extracted"] == "88984765"
+        assert clean_id_lines_from_text("deadbeef", numeric_only=True)["lines"] == []
+        assert clean_id_lines_from_text("deadbeef")["lines"] == ["DEADBEEF"]
         assert extract_eight_digit_id(88984765.0) == "88984765"
         assert extract_eight_digit_id("Badge 8898-4765") == "88984765"
         cleaned_clipboard = clean_id_lines_from_text("Candidate Name\tColleague #\nChris Test\t88984765.0\nJordan Test\t8898-4130")

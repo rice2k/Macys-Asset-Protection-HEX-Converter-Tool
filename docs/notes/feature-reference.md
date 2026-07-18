@@ -4,7 +4,7 @@
 
 Current maintained app: Windows desktop EXE built from `desktop_app.py`
 
-Current version: `1.1.5`
+Current version: `1.1.6`
 
 Full option map: [Every Option Reference](every-option-reference.md)
 
@@ -48,7 +48,7 @@ Screenshots: [Screenshot Guide](../screenshots/README.md)
 
 - Batch Scanner Input accepts handheld scanner input that behaves like keyboard typing.
 - Enter and Tab scanner suffixes submit the scanned value.
-- Each new batch scan is cleaned and placed at the top of the Input Queue.
+- Each new batch scan is cleaned for numeric 8-character IDs and placed at the top of the Input Queue.
 - The scanner strip tracks the current session scan count.
 - F9 focuses Batch Scanner Input.
 - F10 focuses Single Hex Lookup.
@@ -76,6 +76,7 @@ Cleanup behavior:
 - Joins `8898-4765` into `88984765`.
 - Joins `8898 4765` into `88984765`.
 - Extracts an ID from full employee-style text.
+- Import, scanner, and cleaned clipboard paths keep numeric 8-character IDs only.
 - Detects likely Candidate Name and Colleague # columns.
 - Deduplicates imported employee-ID rows.
 

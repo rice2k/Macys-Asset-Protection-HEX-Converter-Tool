@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.6
+
+- Replaced the long header banner with a cleaner China Grove identity badge that fits the application frame better.
+- Cleaned the top dropdown buttons so they use a simple readable caret.
+- Reworked the sidebar helper card into a Field Guide title plus short description to avoid cramped text.
+- Changed import, scanner, and cleaned clipboard intake to pull numeric 8-character IDs only, while manual conversion still supports typed HEX IDs.
+- Added self-test and smoke-test coverage for numeric-only import cleanup.
+
 ## 1.1.5
 
 - Fixed the Windows download packaging so the EXE runs by itself without a missing `_internal\\python313.dll` folder.

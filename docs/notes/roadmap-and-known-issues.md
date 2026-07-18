@@ -2,7 +2,7 @@
 
 ## Current Status
 
-Current app version: `1.1.5`
+Current app version: `1.1.6`
 
 Current status: test EXE is available from the repository.
 
@@ -12,11 +12,11 @@ Direct download:
 
 ## Known Issues
 
-No app-breaking issue is currently documented for version `1.1.5`.
+No app-breaking issue is currently documented for version `1.1.6`.
 
 Known limitations:
 
-- The EXE is not code-signed yet, so Windows may show SmartScreen warnings.
+- The EXE is intentionally unsigned for easy test sharing, so Windows may show SmartScreen warnings.
 - Automated GitHub release builds are not currently running.
 - Drag/drop depends on optional Windows/Tkinter drag/drop support.
 - The app is a local helper utility and does not replace official access-control records.
@@ -36,7 +36,7 @@ Known limitations:
 
 ## Functional Improvements To Consider
 
-1. Add signed EXE support when a trusted certificate is available.
+1. Keep unsigned test releases simple unless a trusted certificate becomes required later.
 2. Add manual GitHub Releases for each stable version.
 3. Add downloadable sample input files.
 4. Add downloadable sample reports.
