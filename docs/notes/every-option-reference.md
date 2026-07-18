@@ -1,6 +1,6 @@
 # Every Option Reference
 
-This page documents the visible options in version `1.1.3`.
+This page documents the visible options in version `1.1.4`.
 
 ## Top Toolbar
 

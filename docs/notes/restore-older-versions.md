@@ -14,6 +14,7 @@ The project keeps Git tags and archive branches so older states can be reviewed 
 
 | Version | Tag URL | Archive Branch |
 | --- | --- | --- |
+| `1.1.4` | <https://github.com/rice2k/Macys-Asset-Protection-HEX-Converter-Tool/tree/v1.1.4> | `archive/v1.1.4` |
 | `1.1.3` | <https://github.com/rice2k/Macys-Asset-Protection-HEX-Converter-Tool/tree/v1.1.3> | `archive/v1.1.3` |
 | `1.1.2` | <https://github.com/rice2k/Macys-Asset-Protection-HEX-Converter-Tool/tree/v1.1.2> | `archive/v1.1.2` |
 | `1.1.1` | <https://github.com/rice2k/Macys-Asset-Protection-HEX-Converter-Tool/tree/v1.1.1> | `archive/v1.1.1` |

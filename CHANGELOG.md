@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.4
+
+- Refined the top dropdown buttons with cleaner caret styling.
+- Added a softer sidebar strip style for Current Area and Quick Tip.
+- Kept the workspace navigation color-coded by Convert, Reverse, and Review sections.
+- Updated the package spec to keep the build reliable without compression.
+
 ## 1.1.3
 
 - Added click-to-copy behavior for Single Lookup result numbers and FC/CN to Hex output.

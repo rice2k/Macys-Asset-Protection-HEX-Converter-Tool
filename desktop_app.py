@@ -49,7 +49,7 @@ PROJECT_URL = "https://github.com/rice2k/Macys-Asset-Protection-HEX-Converter-To
 CONTACT_EMAIL = "christopher.schumacher@macys.com"
 APP_DISPLAY_NAME = "Macy's Asset Protection - China Grove Hex Converter Utility"
 APP_SHORT_NAME = "Macy's AP China Grove Hex Utility"
-APP_VERSION = "1.1.3"
+APP_VERSION = "1.1.4"
 APP_STATE_DIR = Path(os.environ.get("APPDATA", str(Path.home()))) / "AP_Access_Control_Converter"
 SETTINGS_FILE = APP_STATE_DIR / "settings.json"
 EXPORT_TYPE_CHOICES = ["Excel Workbook (.xlsx)", "CSV Report (.csv)", "TXT Report (.txt)", "PDF Report (.pdf)"]
@@ -73,6 +73,7 @@ UI_WARN_SOFT = "#fff7df"
 UI_WARN_TEXT = "#7a4b00"
 UI_BAD_SOFT = "#fff1f0"
 UI_BAD_TEXT = "#991b1b"
+UI_CARD_SHADOW = "#e6ebf2"
 TkRoot = TkinterDnD.Tk if TkinterDnD else tk.Tk
 
 
@@ -1254,7 +1255,7 @@ class ConverterApp(TkRoot):
         hover = "#eef2f6"
         button = tk.Menubutton(
             parent,
-            text=f"{text} v",
+            text=f"{text} ▾",
             image=icon_photo,
             compound="left" if icon_photo else "none",
             bg=bg,
@@ -1266,7 +1267,7 @@ class ConverterApp(TkRoot):
             highlightthickness=1,
             highlightbackground=UI_BORDER,
             font=("Segoe UI", 9, "bold"),
-            padx=13,
+            padx=14,
             pady=8,
             cursor="hand2",
         )
@@ -1289,6 +1290,9 @@ class ConverterApp(TkRoot):
 
     def _card(self, parent: tk.Widget, bg: str = UI_SURFACE_ALT, border: str = UI_BORDER) -> tk.Frame:
         return tk.Frame(parent, bg=bg, highlightthickness=1, highlightbackground=border)
+
+    def _info_strip(self, parent: tk.Widget, bg: str) -> tk.Frame:
+        return tk.Frame(parent, bg=bg, highlightthickness=1, highlightbackground=UI_CARD_SHADOW)
 
     def _dialog_header(
         self,
@@ -2043,14 +2047,14 @@ class ConverterApp(TkRoot):
             self.focus_icon_label = None
         self.focus_heading_label = tk.Label(status_head, text="CURRENT AREA", bg=UI_SURFACE, fg=UI_MUTED, font=("Segoe UI", 8, "bold"))
         self.focus_heading_label.pack(side="left")
-        self.focus_value_frame = tk.Frame(status_card, bg=UI_RED_SOFT)
+        self.focus_value_frame = self._info_strip(status_card, UI_RED_SOFT)
         self.focus_value_frame.pack(fill="x", padx=10, pady=(0, 9))
         self.nav_status_label = tk.Label(
             self.focus_value_frame,
             textvariable=self.nav_status,
             bg=UI_RED_SOFT,
             fg=UI_BLUE,
-            wraplength=198,
+            wraplength=194,
             justify="left",
             anchor="w",
             height=2,
@@ -2082,14 +2086,14 @@ class ConverterApp(TkRoot):
             self.guide_icon_label = None
         self.guide_heading_label = tk.Label(tip_head, text="QUICK TIP", bg=UI_SURFACE, fg=UI_MUTED, font=("Segoe UI", 8, "bold"))
         self.guide_heading_label.pack(side="left")
-        self.guide_value_frame = tk.Frame(tip_card, bg=UI_RED_SOFT)
+        self.guide_value_frame = self._info_strip(tip_card, UI_RED_SOFT)
         self.guide_value_frame.pack(fill="x", padx=10, pady=(0, 9))
         self.sidebar_tip_label = tk.Label(
             self.guide_value_frame,
             textvariable=self.sidebar_tip_var,
             bg=UI_RED_SOFT,
             fg=UI_TEXT,
-            wraplength=198,
+            wraplength=194,
             justify="left",
             anchor="w",
             height=2,

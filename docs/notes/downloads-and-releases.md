@@ -12,7 +12,7 @@ Checksum file:
 
 Current SHA-256:
 
-`3dfeb795c6f62596345cd27692b72a5ea4617c232b8d2a3ca20a3561a6d39bdb`
+`09402ce256e3e5a20e9526d8bd8e04ed3e8d081f3cfcbdc62976eaa77a3fa0f1`
 
 ## Important URLs
 
@@ -36,7 +36,7 @@ Get-FileHash .\Macys_AP_China_Grove_Hex_Utility.exe -Algorithm SHA256
 The hash should match:
 
 ```text
-3dfeb795c6f62596345cd27692b72a5ea4617c232b8d2a3ca20a3561a6d39bdb
+09402ce256e3e5a20e9526d8bd8e04ed3e8d081f3cfcbdc62976eaa77a3fa0f1
 ```
 
 If the hash does not match, delete the downloaded EXE and download it again from the repository link above.
@@ -56,6 +56,7 @@ Future improvement: code signing would make Windows trust the EXE more.
 
 Release-note files are kept in the repository root:
 
+- `RELEASE_NOTES_v1.1.4.md`
 - `RELEASE_NOTES_v1.1.3.md`
 - `RELEASE_NOTES_v1.1.2.md`
 - `RELEASE_NOTES_v1.1.1.md`

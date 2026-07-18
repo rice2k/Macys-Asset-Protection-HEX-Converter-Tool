@@ -2,7 +2,7 @@
 
 ## Current Version
 
-Current version: `1.1.3`
+Current version: `1.1.4`
 
 Current test EXE:
 
@@ -10,7 +10,7 @@ Current test EXE:
 
 Current checksum:
 
-`3dfeb795c6f62596345cd27692b72a5ea4617c232b8d2a3ca20a3561a6d39bdb`
+`09402ce256e3e5a20e9526d8bd8e04ed3e8d081f3cfcbdc62976eaa77a3fa0f1`
 
 Related pages:
 
@@ -22,7 +22,8 @@ Related pages:
 
 | Version | Tag | Archive Branch | Summary |
 | --- | --- | --- | --- |
-| `1.1.3` | [`v1.1.3`](https://github.com/rice2k/Macys-Asset-Protection-HEX-Converter-Tool/tree/v1.1.3) | `archive/v1.1.3` | Current UI polish build. Adds click-to-copy result values, a cleaner Results toolbar, sidebar tips, and aligned History rows. |
+| `1.1.4` | [`v1.1.4`](https://github.com/rice2k/Macys-Asset-Protection-HEX-Converter-Tool/tree/v1.1.4) | `archive/v1.1.4` | Current visual polish build. Refines dropdown carets, sidebar strips, and reliable temp-path packaging. |
+| `1.1.3` | [`v1.1.3`](https://github.com/rice2k/Macys-Asset-Protection-HEX-Converter-Tool/tree/v1.1.3) | `archive/v1.1.3` | Adds click-to-copy result values, a cleaner Results toolbar, sidebar tips, and aligned History rows. |
 | `1.1.2` | [`v1.1.2`](https://github.com/rice2k/Macys-Asset-Protection-HEX-Converter-Tool/tree/v1.1.2) | `archive/v1.1.2` | Corrects status strip review logic, adds warning-count completion messages, and hardens scanner state initialization. |
 | `1.1.1` | [`v1.1.1`](https://github.com/rice2k/Macys-Asset-Protection-HEX-Converter-Tool/tree/v1.1.1) | `archive/v1.1.1` | Adds scanner input, clickable status navigation, polished Help/About, cleaner imports, and improved Results alignment. |
 | `1.1.0` | [`v1.1.0`](https://github.com/rice2k/Macys-Asset-Protection-HEX-Converter-Tool/tree/v1.1.0) | `archive/v1.1.0` | Paste cleanup preview, full-row copy, right-click menus, clear recent exports, release-note scaffolding. |

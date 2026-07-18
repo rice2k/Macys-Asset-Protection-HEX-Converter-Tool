@@ -4,7 +4,7 @@
 
 Current maintained app: Windows desktop EXE built from `desktop_app.py`
 
-Current version: `1.1.3`
+Current version: `1.1.4`
 
 Full option map: [Every Option Reference](every-option-reference.md)
 

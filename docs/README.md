@@ -38,7 +38,7 @@ This folder contains the detailed notes for the Macy's Asset Protection China Gr
 
 ## Current Version
 
-Current app version: `1.1.3`
+Current app version: `1.1.4`
 
 Current EXE:
 
@@ -46,7 +46,7 @@ Current EXE:
 
 Current SHA-256:
 
-`3dfeb795c6f62596345cd27692b72a5ea4617c232b8d2a3ca20a3561a6d39bdb`
+`09402ce256e3e5a20e9526d8bd8e04ed3e8d081f3cfcbdc62976eaa77a3fa0f1`
 
 ## Project Structure
 

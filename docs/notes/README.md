@@ -31,7 +31,7 @@ This notes folder is the detailed GitHub documentation area for the project.
 
 Name: Macy's Asset Protection China Grove Hex Converter Utility
 
-Version: `1.1.3`
+Version: `1.1.4`
 
 Purpose: Convert access-control HEX IDs to Facility Code/Card Number, reverse FC/CN pairs back to HEX, clean imported access-control data, and export readable reports.
 
