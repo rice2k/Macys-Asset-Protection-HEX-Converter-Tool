@@ -1,7 +1,7 @@
 Macy's Asset Protection - China Grove Hex Converter Utility
 README
 
-App Version: 1.1.1
+App Version: 1.1.2
 
 Purpose
 -------
@@ -34,7 +34,7 @@ Checksum file:
 https://raw.githubusercontent.com/rice2k/Macys-Asset-Protection-HEX-Converter-Tool/main/dist/Macys_AP_China_Grove_Hex_Utility.exe.sha256.txt
 
 Current SHA-256:
-c59785d64bae67432ef893c08e67ac87dd32c1e6dbd231f46236351cb52ba216
+24084805a9db05273f50b8e594bf39cefbb9c0c878ba0e72426afd626025ad4a
 
 Windows may show a SmartScreen warning because the EXE is not code-signed yet.
 For testing, users can choose More info, then Run anyway.

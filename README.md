@@ -2,7 +2,7 @@
 
 ![Macy's Asset Protection China Grove Hex Converter Utility](docs/images/github-banner.png)
 
-![Version](https://img.shields.io/badge/version-1.1.1-e51b2d)
+![Version](https://img.shields.io/badge/version-1.1.2-e51b2d)
 ![Platform](https://img.shields.io/badge/platform-Windows-0b66c3)
 ![App Type](https://img.shields.io/badge/app-desktop%20utility-166534)
 [![Download Test EXE](https://img.shields.io/badge/download-test%20EXE-e51b2d)](https://github.com/rice2k/Macys-Asset-Protection-HEX-Converter-Tool/raw/main/dist/Macys_AP_China_Grove_Hex_Utility.exe)
@@ -45,11 +45,11 @@ The utility converts access-control HEX values into Facility Code and Card Numbe
 
 ## Current Test Build
 
-Current version: `1.1.1`
+Current version: `1.1.2`
 
 Current SHA-256:
 
-`c59785d64bae67432ef893c08e67ac87dd32c1e6dbd231f46236351cb52ba216`
+`24084805a9db05273f50b8e594bf39cefbb9c0c878ba0e72426afd626025ad4a`
 
 Windows may show a SmartScreen warning because the EXE is not code-signed yet. For testing, choose **More info**, then **Run anyway**.
 
@@ -178,7 +178,7 @@ Current recommended next improvements:
 
 ## Known Issues
 
-No app-breaking issues are currently documented for version `1.1.1`.
+No app-breaking issues are currently documented for version `1.1.2`.
 
 See [Troubleshooting](docs/notes/troubleshooting.md) for common testing notes.
 
@@ -194,7 +194,8 @@ The archived HTML versions are reference material only. The maintained app is th
 
 | Version | Tag | Notes |
 | --- | --- | --- |
-| `1.1.1` | [`v1.1.1`](https://github.com/rice2k/Macys-Asset-Protection-HEX-Converter-Tool/tree/v1.1.1) | Current test build; scanner input, clickable status navigation, polished Help/About, cleaner imports, and improved Results alignment. |
+| `1.1.2` | [`v1.1.2`](https://github.com/rice2k/Macys-Asset-Protection-HEX-Converter-Tool/tree/v1.1.2) | Current bugfix build; corrected status strip review logic, warning-count messages, and scanner state hardening. |
+| `1.1.1` | [`v1.1.1`](https://github.com/rice2k/Macys-Asset-Protection-HEX-Converter-Tool/tree/v1.1.1) | Scanner input, clickable status navigation, polished Help/About, cleaner imports, and improved Results alignment. |
 | `1.1.0` | [`v1.1.0`](https://github.com/rice2k/Macys-Asset-Protection-HEX-Converter-Tool/tree/v1.1.0) | Workflow polish, paste cleanup preview, right-click copy menus, recent export cleanup. |
 | `1.0.9` | [`v1.0.9`](https://github.com/rice2k/Macys-Asset-Protection-HEX-Converter-Tool/tree/v1.0.9) | Almost-done baseline before v1.1.x workflow/documentation polish. |
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.2
+
+- Fixed the footer and sidebar status logic so a completed run with zero invalid rows no longer shows Needs Review just because the status sentence contains the word invalid.
+- Added warning counts to Batch Converter and Unconvert Batch completion messages so review status is based on actual invalid rows or warnings.
+- Hardened Batch Scanner Input session count initialization so scanner state is created with the main app state.
+- Updated project documentation for the v1.1.2 bugfix build.
+
 ## 1.1.1
 
 - Added Batch Scanner Input so keyboard-style handheld scanners can place each new scan at the top of the Input Queue.

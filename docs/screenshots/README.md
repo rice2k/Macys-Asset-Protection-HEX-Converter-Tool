@@ -1,6 +1,6 @@
 # Screenshot Guide
 
-This folder stores the current GitHub screenshots for version `1.1.1`.
+This folder stores the current GitHub screenshots for version `1.1.2`.
 
 ## Current Screenshots
 

@@ -48,7 +48,7 @@ PROJECT_URL = "https://github.com/rice2k/Macys-Asset-Protection-HEX-Converter-To
 CONTACT_EMAIL = "christopher.schumacher@macys.com"
 APP_DISPLAY_NAME = "Macy's Asset Protection - China Grove Hex Converter Utility"
 APP_SHORT_NAME = "Macy's AP China Grove Hex Utility"
-APP_VERSION = "1.1.1"
+APP_VERSION = "1.1.2"
 APP_STATE_DIR = Path(os.environ.get("APPDATA", str(Path.home()))) / "AP_Access_Control_Converter"
 SETTINGS_FILE = APP_STATE_DIR / "settings.json"
 EXPORT_TYPE_CHOICES = ["Excel Workbook (.xlsx)", "CSV Report (.csv)", "TXT Report (.txt)", "PDF Report (.pdf)"]
@@ -874,6 +874,7 @@ class ConverterApp(TkRoot):
         self.sort_reverse = False
         self.active_tab_index = 0
         self.status_target_tab = 0
+        self.batch_scan_count = 0
         self._batch_scan_after: str | None = None
         self._single_scan_after: str | None = None
         self.last_single_auto_value = ""
@@ -2035,7 +2036,6 @@ class ConverterApp(TkRoot):
         scan_title_row = tk.Frame(scan_copy, bg=UI_SURFACE_ALT)
         scan_title_row.pack(fill="x")
         tk.Label(scan_title_row, text="Scanner Input", bg=UI_SURFACE_ALT, fg=UI_TEXT, font=("Segoe UI", 10, "bold")).pack(side="left")
-        self.batch_scan_count = 0
         self.batch_scan_count_var = tk.StringVar(value="0 scans this session")
         tk.Label(
             scan_title_row,
@@ -2802,12 +2802,20 @@ class ConverterApp(TkRoot):
 
     def _compact_status(self, message: str) -> str:
         text = re.sub(r"\s+", " ", str(message or "")).strip()
-        converted = re.match(r"Converted (\d+) valid line\(s\); (\d+) invalid line\(s\)\.", text)
+        converted = re.match(r"Converted (\d+) valid line\(s\); (\d+) invalid line\(s\)(?:; (\d+) warning\(s\))?\.", text)
         if converted:
-            return f"{converted.group(1)} valid / {converted.group(2)} invalid"
-        unconverted = re.match(r"Unconverted (\d+) valid pair\(s\); (\d+) invalid line\(s\)\.", text)
+            warning_text = ""
+            if converted.group(3) and int(converted.group(3)) > 0:
+                warning_count = int(converted.group(3))
+                warning_text = f" / {warning_count} warn"
+            return f"{converted.group(1)} valid / {converted.group(2)} invalid{warning_text}"
+        unconverted = re.match(r"Unconverted (\d+) valid pair\(s\); (\d+) invalid line\(s\)(?:; (\d+) warning\(s\))?\.", text)
         if unconverted:
-            return f"{unconverted.group(1)} valid / {unconverted.group(2)} invalid"
+            warning_text = ""
+            if unconverted.group(3) and int(unconverted.group(3)) > 0:
+                warning_count = int(unconverted.group(3))
+                warning_text = f" / {warning_count} warn"
+            return f"{unconverted.group(1)} valid / {unconverted.group(2)} invalid{warning_text}"
         kept = re.match(r"Kept (\d+) valid row\(s\); removed (\d+) invalid row\(s\)\.", text)
         if kept:
             return f"{kept.group(1)} valid / {kept.group(2)} removed"
@@ -2823,6 +2831,15 @@ class ConverterApp(TkRoot):
         if state in {"Ready", "Needs Review", "Exported"}:
             return state
         text = message.lower()
+        run_complete = re.match(
+            r"^(?:converted|unconverted)\s+\d+\s+valid\s+(?:line|pair)\(s\);\s+"
+            r"(\d+)\s+invalid\s+line\(s\)(?:;\s+(\d+)\s+warning\(s\))?\.",
+            text,
+        )
+        if run_complete:
+            invalid_count = int(run_complete.group(1))
+            warning_count = int(run_complete.group(2) or 0)
+            return "Needs Review" if invalid_count or warning_count else "Ready"
         if text.startswith(("cleared", "removed", "kept", "workspace", "settings", "sample", "clipboard", "opened", "copied")):
             return "Ready"
         if any(word in text for word in ("failed", "error", "invalid", "warning", "review", "unavailable")):
@@ -3190,10 +3207,17 @@ class ConverterApp(TkRoot):
         self.render_results()
         total = len(self.results) + len(self.invalid)
         warn_count = sum(len(row.warnings) for row in self.results)
-        self.add_history("HEX to FC/CN", total, len(self.results), len(self.invalid), warn_count)
-        self.set_status(f"Converted {len(self.results)} valid line(s); {len(self.invalid)} invalid line(s).")
         if total == 0:
+            self.set_status("No input: add at least one ID before converting.", "Needs Review", target_tab=0)
             messagebox.showinfo("No input", "Add at least one ID before converting.")
+            return
+        self.add_history("HEX to FC/CN", total, len(self.results), len(self.invalid), warn_count)
+        state = "Needs Review" if self.invalid or warn_count else "Ready"
+        self.set_status(
+            f"Converted {len(self.results)} valid line(s); {len(self.invalid)} invalid line(s); {warn_count} warning(s).",
+            state,
+            target_tab=0,
+        )
 
     def convert_unconvert_batch(self) -> None:
         converted_at = datetime.now().strftime("%m/%d/%Y %I:%M:%S %p")
@@ -3202,10 +3226,17 @@ class ConverterApp(TkRoot):
         self.render_unconvert_results()
         total = len(self.unconvert_results) + len(self.unconvert_invalid)
         warn_count = sum(len(row.warnings) for row in self.unconvert_results)
-        self.add_history("FC/CN to HEX", total, len(self.unconvert_results), len(self.unconvert_invalid), warn_count)
-        self.set_status(f"Unconverted {len(self.unconvert_results)} valid pair(s); {len(self.unconvert_invalid)} invalid line(s).")
         if total == 0:
+            self.set_status("No input: add at least one FC/CN pair before running Unconvert.", "Needs Review", target_tab=3)
             messagebox.showinfo("No input", "Add at least one FC/CN pair before running Unconvert.")
+            return
+        self.add_history("FC/CN to HEX", total, len(self.unconvert_results), len(self.unconvert_invalid), warn_count)
+        state = "Needs Review" if self.unconvert_invalid or warn_count else "Ready"
+        self.set_status(
+            f"Unconverted {len(self.unconvert_results)} valid pair(s); {len(self.unconvert_invalid)} invalid line(s); {warn_count} warning(s).",
+            state,
+            target_tab=3,
+        )
 
     def clear_unconvert(self) -> None:
         self.unconvert_text.delete("1.0", "end")

@@ -2,7 +2,7 @@
 
 ## Current Status
 
-Current app version: `1.1.1`
+Current app version: `1.1.2`
 
 Current status: test EXE is available from the repository.
 
@@ -12,7 +12,7 @@ Direct download:
 
 ## Known Issues
 
-No app-breaking issue is currently documented for version `1.1.1`.
+No app-breaking issue is currently documented for version `1.1.2`.
 
 Known limitations:
 
